@@ -76,7 +76,7 @@ def update_user(
         activity = models.activity.Activity(
             user_id=user.id,
             activity_type="MODE_CHANGE",
-            description=f"User switched trading mode from {user.trading_mode} to {user_in.trading_mode}"
+            description=f"Trading mode updated to {user_in.trading_mode}"
         )
         db.add(activity)
 

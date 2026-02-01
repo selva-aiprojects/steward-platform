@@ -3,7 +3,10 @@ import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2 } from 'lucide-react';
 import { fetchStrategies, fetchProjections, fetchUser, updateUser } from "../services/api";
 
+import { useUser } from "../context/UserContext";
+
 export function TradingHub() {
+    const { user: contextUser } = useUser();
     const [strategies, setStrategies] = useState([]);
     const [projections, setProjections] = useState([]);
     const [user, setUser] = useState(null);
@@ -12,11 +15,12 @@ export function TradingHub() {
 
     useEffect(() => {
         const loadData = async () => {
+            if (!contextUser) return;
             try {
                 const [strats, projs, userData] = await Promise.all([
                     fetchStrategies(),
                     fetchProjections(),
-                    fetchUser(1) // Assuming demo user 1
+                    fetchUser(contextUser.id)
                 ]);
                 setStrategies(strats);
                 setProjections(projs);
@@ -28,17 +32,27 @@ export function TradingHub() {
             }
         };
         loadData();
-    }, []);
+    }, [contextUser]);
 
     const toggleTradingMode = async () => {
         if (!user) return;
+
+        // Optimistic UI update
+        const oldMode = user.trading_mode;
+        const newMode = oldMode === 'AUTO' ? 'MANUAL' : 'AUTO';
+
         setToggling(true);
-        const newMode = user.trading_mode === 'AUTO' ? 'MANUAL' : 'AUTO';
         try {
             const updated = await updateUser(user.id, { trading_mode: newMode });
-            if (updated) setUser(updated);
+            if (updated) {
+                setUser(updated);
+            } else {
+                // Revert if failed
+                setUser({ ...user, trading_mode: oldMode });
+            }
         } catch (err) {
             console.error("Failed to toggle mode:", err);
+            setUser({ ...user, trading_mode: oldMode });
         } finally {
             setToggling(false);
         }

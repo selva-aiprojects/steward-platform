@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from "../components/ui/card";
 import { User, Wallet, Shield, PieChart, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
-import { fetchUsers, fetchAllPortfolios } from "../services/api";
+import { fetchUsers, fetchAllPortfolios, updateUser, createAuditLog } from "../services/api";
+import { useUser } from "../context/UserContext";
 
 export function Users() {
     const [users, setUsers] = useState([]);
@@ -80,24 +81,41 @@ export function Users() {
         }
     };
 
-    const handleSaveConfig = () => {
-        // In real implementation: API call to update user settings AND create audit log
-        console.log("Saving Config for", selectedUser.name, {
-            tradingMode,
-            allowedSectors,
-            adminComment,
-            admin: "SuperAdmin" // Context here
-        });
+    const { user: currentUser } = useUser();
 
-        // Optimistic Update
-        setUsers(users.map(u => u.id === selectedUser.id ? {
-            ...u,
-            trading_mode: tradingMode,
-            allowed_sectors: allowedSectors
-        } : u));
+    const handleSaveConfig = async () => {
+        try {
+            // 1. Update User Policy
+            await updateUser(selectedUser.id, {
+                trading_mode: tradingMode,
+                allowed_sectors: allowedSectors.join(','),
+                // We don't send admin comment to update user, only to audit
+            });
 
-        setIsModalOpen(false);
-        setAdminComment('');
+            // 2. Create Audit Log
+            if (currentUser) {
+                await createAuditLog({
+                    action: "UPDATE_USER_POLICY",
+                    admin_id: currentUser.id,
+                    target_user_id: selectedUser.id,
+                    details: JSON.stringify({ tradingMode, allowedSectors }),
+                    reason: adminComment
+                });
+            }
+
+            // Optimistic Update
+            setUsers(users.map(u => u.id === selectedUser.id ? {
+                ...u,
+                trading_mode: tradingMode,
+                allowed_sectors: allowedSectors
+            } : u));
+
+            setIsModalOpen(false);
+            setAdminComment('');
+        } catch (error) {
+            console.error("Failed to save configuration:", error);
+            alert("Failed to update user policy. Please checks logs.");
+        }
     };
 
     const SECTORS = ['Technology', 'Healthcare', 'Manufacturing', 'Finance', 'Energy', 'Consumer'];
@@ -239,8 +257,8 @@ export function Users() {
                                             key={sector}
                                             onClick={() => toggleSector(sector)}
                                             className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-all border ${allowedSectors.includes(sector)
-                                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                                    : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'
+                                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">

@@ -107,6 +107,21 @@ export const fetchDailyPnL = async (userId = 1) => {
     }
 };
 
+export const createAuditLog = async (logData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/audit/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(logData)
+        });
+        if (!response.ok) throw new Error('Failed to create audit log');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchPortfolioSummary = async (userId = 1) => {
     try {
         const response = await fetch(`${BASE_URL}/portfolio/?user_id=${userId}`);
