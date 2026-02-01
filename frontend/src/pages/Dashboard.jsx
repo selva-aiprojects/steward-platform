@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
     ArrowUpRight, ArrowDownRight, Activity,
-    TrendingUp, Shield, BarChart3, Clock,
+    TrendingUp, Shield, BarChart2, Clock,
     AlertCircle, Search, Settings, Loader2
 } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
@@ -46,7 +46,7 @@ export function Dashboard() {
     }
 
     const metrics = [
-        { label: 'Total Equity', value: `$${(summary?.invested_amount + summary?.cash_balance).toLocaleString()}`, change: '+14.2%', icon: BarChart3, color: 'text-primary' },
+        { label: 'Total Equity', value: `$${(summary?.invested_amount + summary?.cash_balance).toLocaleString()}`, change: '+14.2%', icon: BarChart2, color: 'text-primary' },
         { label: 'Open Exposure', value: `$${summary?.invested_amount.toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
         { label: 'Daily Alpha', value: `+${summary?.win_rate}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
         { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },

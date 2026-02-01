@@ -18,7 +18,7 @@ const allocationData = [
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
-const Portfolio: React.FC = () => {
+const Portfolio = () => {
   const [isTradeModalOpen, setIsTradeModalOpen] = React.useState(false);
   const [selectedSymbol, setSelectedSymbol] = React.useState('AAPL');
 
