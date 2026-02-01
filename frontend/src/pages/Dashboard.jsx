@@ -3,19 +3,20 @@ import io from 'socket.io-client';
 import { Card } from "../components/ui/card";
 import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
-    CartesianGrid, Tooltip, ResponsiveContainer
+    CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2, DollarSign, Target, Calendar, Search, Clock, Settings } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus } from "../services/api";
+import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
 export function Dashboard() {
-    const { user } = useUser();
+    const { user, selectedUser, setSelectedUser } = useUser();
     const [period, setPeriod] = useState('This Week');
     const [summary, setSummary] = useState(null);
+    const [allUsers, setAllUsers] = useState([]);
     const [recentTrades, setRecentTrades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [marketMoversState, setMarketMovers] = useState([]);
@@ -65,25 +66,59 @@ export function Dashboard() {
     }, [user]);
 
     useEffect(() => {
+        const loadInitialData = async () => {
+            if (user?.role === 'ADMIN') {
+                const users = await fetchUsers();
+                setAllUsers(users);
+            }
+        };
+        loadInitialData();
+    }, [user]);
+
+    useEffect(() => {
         const loadData = async () => {
             if (!user) return;
+            setLoading(true);
             try {
-                const [sumData, tradeData, historyData, status] = await Promise.all([
-                    fetchPortfolioSummary(user.id),
-                    fetchTrades(user.id),
-                    fetchPortfolioHistory(user.id),
-                    fetchExchangeStatus()
-                ]);
-                setSummary(sumData);
-                setRecentTrades(tradeData.slice(0, 3));
-                setChartData(historyData.length > 0 ? historyData : [
-                    { name: 'Mon', value: 0 },
-                    { name: 'Tue', value: 0 },
-                    { name: 'Wed', value: 0 },
-                    { name: 'Thu', value: 0 },
-                    { name: 'Fri', value: 0 },
-                ]);
-                setExchangeStatus(status);
+                if (selectedUser) {
+                    // Specific User View
+                    const [sumData, tradeData, historyData, status] = await Promise.all([
+                        fetchPortfolioSummary(selectedUser.id),
+                        fetchTrades(selectedUser.id),
+                        fetchPortfolioHistory(selectedUser.id),
+                        fetchExchangeStatus()
+                    ]);
+                    setSummary(sumData);
+                    setRecentTrades(tradeData.slice(0, 3));
+                    setChartData(historyData.length > 0 ? historyData : [
+                        { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
+                    ]);
+                    setExchangeStatus(status);
+                } else if (user.role === 'ADMIN') {
+                    // Global Platform View for Admins
+                    const [portfolios, tradeData, historyData, status] = await Promise.all([
+                        fetchAllPortfolios(),
+                        fetchTrades(),
+                        fetchPortfolioHistory(),
+                        fetchExchangeStatus()
+                    ]);
+
+                    const aggregate = portfolios.reduce((acc, p) => ({
+                        invested_amount: acc.invested_amount + (p.invested_amount || 0),
+                        cash_balance: acc.cash_balance + (p.cash_balance || 0),
+                        win_rate: acc.win_rate + (p.win_rate || 0),
+                        positions_count: acc.positions_count + (p.positions_count || 0)
+                    }), { invested_amount: 0, cash_balance: 0, win_rate: 0, positions_count: 0 });
+
+                    if (portfolios.length > 0) aggregate.win_rate = (aggregate.win_rate / portfolios.length).toFixed(1);
+
+                    setSummary(aggregate);
+                    setRecentTrades(tradeData.slice(0, 3));
+                    setChartData(historyData.length > 0 ? historyData : [
+                        { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
+                    ]);
+                    setExchangeStatus(status);
+                }
             } catch (err) {
                 console.error("Dashboard Load Error:", err);
             } finally {
@@ -91,7 +126,7 @@ export function Dashboard() {
             }
         };
         loadData();
-    }, [user]);
+    }, [user, selectedUser]);
 
     const metrics = [
         {
@@ -173,7 +208,7 @@ export function Dashboard() {
             <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
-                        {user?.role === 'ADMIN' ? 'Administrator Command' :
+                        {user?.role === 'ADMIN' ? (selectedUser ? `Auditing: ${selectedUser.name}` : 'Platform Executive Control') :
                             user?.role === 'AUDITOR' ? 'Compliance Oversight' :
                                 user?.role === 'BUSINESS_OWNER' ? 'Executive Dashboard' :
                                     `Welcome, ${user?.name || 'Investor'}`}
@@ -185,24 +220,51 @@ export function Dashboard() {
                                     'bg-primary'
                             }`} />
                         <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
-                            {user?.role === 'ADMIN' ? 'Global System Oversight: ACTIVE' :
+                            {user?.role === 'ADMIN' ? (selectedUser ? 'User Inspection Mode: ACTIVE' : 'Global System Oversight: ACTIVE') :
                                 user?.role === 'AUDITOR' ? 'Audit Logging: ENABLED' :
                                     user?.role === 'BUSINESS_OWNER' ? 'Revenue Monitoring: PASSIVE' :
                                         'Personal Wealth Agent: ACTIVE'}
                         </p>
                     </div>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start w-full md:w-auto overflow-x-auto">
-                    {['Today', 'This Week', 'This Year'].map((p) => (
-                        <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`flex-1 md:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all whitespace-nowrap ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
-                                }`}
-                        >
-                            {p}
-                        </button>
-                    ))}
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    {user?.role === 'ADMIN' && (
+                        <div className="flex items-center gap-3 bg-white border border-slate-200 p-1.5 rounded-xl shadow-sm">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Scope</span>
+                            <select
+                                className="bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest text-slate-700 focus:ring-0 rounded-lg py-1 px-3 cursor-pointer"
+                                value={selectedUser?.id || 'GLOBAL'}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'GLOBAL') {
+                                        setSelectedUser(null);
+                                    } else {
+                                        const u = allUsers.find(user => user.id === parseInt(val));
+                                        if (u) setSelectedUser(u);
+                                    }
+                                }}
+                            >
+                                <option value="GLOBAL">Platform Summary</option>
+                                <optgroup label="Active Users">
+                                    {allUsers.map(u => (
+                                        <option key={u.id} value={u.id}>{u.name}</option>
+                                    ))}
+                                </optgroup>
+                            </select>
+                        </div>
+                    )}
+                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
+                        {['Today', 'This Week', 'This Year'].map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`flex-1 md:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all whitespace-nowrap ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
+                                    }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 

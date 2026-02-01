@@ -16,20 +16,23 @@ const mockPerformance = [
 ];
 
 export function Reports() {
-    const { user } = useUser();
+    const { user, selectedUser } = useUser();
     const [timeframe, setTimeframe] = useState('Daily');
     const [trades, setTrades] = useState([]);
     const [performance, setPerformance] = useState([]);
     const [strategies, setStrategies] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const viewId = selectedUser?.id || (user?.role === 'ADMIN' ? null : user?.id);
+
     useEffect(() => {
         const loadData = async () => {
+            setLoading(true);
             try {
                 const [tradeData, summaryData, dailyPnL] = await Promise.all([
-                    fetchTrades(),
+                    fetchTrades(viewId),
                     fetchStrategies(),
-                    fetchDailyPnL(user?.id)
+                    fetchDailyPnL(viewId)
                 ]);
                 setTrades(tradeData.filter(t => t.decision_logic));
                 setStrategies(summaryData);
@@ -47,7 +50,7 @@ export function Reports() {
             }
         };
         loadData();
-    }, []);
+    }, [viewId]);
 
     const downloadReport = () => {
         const doc = new jsPDF();

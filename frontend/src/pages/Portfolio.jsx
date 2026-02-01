@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Activity, PieChart as PieChartIcon, Target, Shield, Zap, RefreshCcw, Loader2, Plus, GripVertical } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
 import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections } from "../services/api";
@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const Portfolio = () => {
-  const { user } = useUser();
+  const { user, selectedUser } = useUser();
   const [activeHoldings, setActiveHoldings] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -18,18 +18,20 @@ const Portfolio = () => {
   const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState(null);
 
+  const viewId = selectedUser?.id || user?.id;
   const isManual = user?.trading_mode === 'MANUAL';
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!viewId) return;
+      setLoading(true);
       try {
         const [holdingsData, watchlistData, sumData, projData, historyData] = await Promise.all([
-          fetchHoldings(user.id),
+          fetchHoldings(viewId),
           fetchWatchlist(),
-          fetchPortfolioSummary(user.id),
+          fetchPortfolioSummary(viewId),
           fetchProjections(),
-          fetchPortfolioHistory(user.id)
+          fetchPortfolioHistory(viewId)
         ]);
         setActiveHoldings(holdingsData);
         setWatchlist(watchlistData);
@@ -43,7 +45,7 @@ const Portfolio = () => {
       }
     };
     loadData();
-  }, [user]);
+  }, [viewId]);
 
   const handleDragStart = (e, item) => {
     if (!isManual) return;

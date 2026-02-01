@@ -88,7 +88,8 @@ export const fetchTrades = async (userId) => {
 
 export const fetchPortfolioHistory = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/portfolio/history?user_id=${userId}`);
+        const url = userId ? `${BASE_URL}/portfolio/history?user_id=${userId}` : `${BASE_URL}/portfolio/history`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch history');
         return await response.json();
     } catch (error) {
@@ -99,7 +100,8 @@ export const fetchPortfolioHistory = async (userId) => {
 
 export const fetchDailyPnL = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/trades/daily-pnl?user_id=${userId}`);
+        const url = userId ? `${BASE_URL}/trades/daily-pnl?user_id=${userId}` : `${BASE_URL}/trades/daily-pnl`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch daily pnl');
         return await response.json();
     } catch (error) {
