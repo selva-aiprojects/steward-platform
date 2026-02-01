@@ -43,82 +43,140 @@ export function TradingHub() {
                 ))}
             </div>
 
-            <div className="space-y-4">
-                <h2 className="text-xl font-bold text-slate-900 px-1">Active Automated Strategies</h2>
-                <div className="grid grid-cols-1 gap-4">
-                    {strategies.map((strat) => (
-                        <Card key={strat.id} className="p-6 border-slate-200 shadow-sm hover:border-primary/30 transition-all group">
-                            <div className="flex flex-wrap items-center justify-between gap-6">
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white ${strat.status === 'RUNNING' ? 'bg-green-500' : 'bg-slate-300'
-                                        }`}>
-                                        {strat.symbol.substring(0, 2)}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900">{strat.name}</h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs font-bold text-slate-500">{strat.symbol}</span>
-                                            <span className="h-1 w-1 rounded-full bg-slate-300" />
-                                            <span className={`text-[10px] font-black ${strat.status === 'RUNNING' ? 'text-green-600' : 'text-slate-400'
-                                                }`}>{strat.status}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Active Automated Strategies */}
+                <div className="lg:col-span-8 space-y-6">
+                    <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
+                    <div className="grid grid-cols-1 gap-4">
+                        {strategies.map((strat) => (
+                            <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
+                                <div className="flex flex-wrap items-center justify-between gap-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white ${strat.status === 'RUNNING' ? 'bg-primary' : 'bg-slate-300'
+                                            }`}>
+                                            {strat.symbol.substring(0, 2)}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-slate-900 leading-none">{strat.name}</h3>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{strat.symbol}</span>
+                                                <span className="h-1 w-1 rounded-full bg-slate-200" />
+                                                <span className={`text-[10px] font-black uppercase ${strat.status === 'RUNNING' ? 'text-green-500' : 'text-slate-400'
+                                                    }`}>{strat.status}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex-1 grid grid-cols-3 gap-4 border-l border-r px-8 border-slate-100">
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Session Profit</p>
-                                        <p className={`text-sm font-bold ${strat.pnl.startsWith('+') ? 'text-green-600' : 'text-slate-900'}`}>{strat.pnl}</p>
+                                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 border-l border-r px-8 border-slate-50">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Profitability</p>
+                                            <p className={`text-sm font-black ${strat.pnl.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{strat.pnl}</p>
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Drawdown</p>
+                                            <p className="text-sm font-black text-slate-900">1.2%</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">State</p>
+                                            <p className="text-sm font-black text-slate-500 uppercase text-[10px]">Optimizing</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Drawdown</p>
-                                        <p className="text-sm font-bold text-slate-900">1.2%</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Execution Mode</p>
-                                        <p className="text-sm font-bold text-slate-900">Auto-Optimizing</p>
-                                    </div>
-                                </div>
 
-                                <div className="flex items-center gap-2">
-                                    {strat.status === 'RUNNING' ? (
-                                        <button className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
-                                            <Pause size={20} />
+                                    <div className="flex items-center gap-2">
+                                        {strat.status === 'RUNNING' ? (
+                                            <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all">
+                                                <Pause size={18} />
+                                            </button>
+                                        ) : (
+                                            <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-green-50 rounded-xl transition-all">
+                                                <Play size={18} />
+                                            </button>
+                                        )}
+                                        <button className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all">
+                                            CFG
                                         </button>
-                                    ) : (
-                                        <button className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                                            <Play size={20} />
-                                        </button>
-                                    )}
-                                    <button className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200">
-                                        Configuration
-                                    </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+
+                {/* AI Next Day Projections */}
+                <div className="lg:col-span-4 space-y-6">
+                    <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Next-Day Projections</h2>
+                    <Card className="p-6 border-primary/20 bg-green-50/30 shadow-xl shadow-primary/5">
+                        <div className="flex items-center gap-2 mb-6">
+                            <TrendingUp size={18} className="text-primary" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Alpha Recommendation</span>
+                        </div>
+
+                        <div className="space-y-4">
+                            {[
+                                { ticker: 'NVDA', move: '+3.8%', action: 'ACCUMULATE', logic: 'Post-earnings momentum continuation' },
+                                { ticker: 'AAPL', move: '-1.2%', action: 'TRIM', logic: 'Resistance at $195 with volume decay' },
+                                { ticker: 'TSLA', move: '+5.4%', action: 'BUY', logic: 'FSD V12 rollout hype cycle' },
+                            ].map((proj, i) => (
+                                <div key={i} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm group hover:border-primary/50 transition-all cursor-pointer">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-black text-slate-900">{proj.ticker}</span>
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${proj.move.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            }`}>{proj.move}</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-bold leading-relaxed">{proj.logic}</p>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <span className="text-[9px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md">{proj.action}</span>
+                                        <ArrowUpRight size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 p-4 rounded-2xl bg-slate-900 text-white border-none">
+                            <h4 className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <Shield size={14} className="text-primary" />
+                                Logic Validation
+                            </h4>
+                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
+                                Recommendations are based on 14-day trailing sentiment analysis and real-time order flow data.
+                                <span className="text-primary font-black ml-1">Live data feed active.</span>
+                            </p>
+                        </div>
+                    </Card>
                 </div>
             </div>
 
-            <Card className="p-8 bg-slate-900 text-white border-none shadow-2xl overflow-hidden relative">
+            <Card className="p-10 bg-[#0A2A4D] text-white border-none shadow-2xl overflow-hidden relative">
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div className="max-w-md">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="px-2 py-0.5 rounded bg-blue-500 text-[10px] font-black uppercase tracking-widest">Global Watcher</span>
-                            <span className="text-blue-400 text-xs font-bold leading-none">Agent ID: SS-88-ALPHA</span>
+                    <div className="max-w-xl">
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest">Global Watcher Alpha</span>
+                            <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: US-EAST-1</span>
                         </div>
-                        <h3 className="text-2xl font-bold mb-3 font-heading">Steward AI is monitoring 480 market triggers.</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                            Autonomous trading is active for the next market session. Your risk settings permit up to **$25,000** exposure per trade with a **-2%** hard stop.
+                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight">Steward AI is currently monitoring 842 market triggers.</h3>
+                        <p className="text-slate-300 text-sm leading-relaxed mb-8 font-medium">
+                            The engine has detected a Bullish Divergence across the Mag-7 complex. Asset allocation is being shifted from **Fixed Income** to **High-Growth Equity** automatically. Emergency stop-loss threshold is fixed at **-2.5%** net portfolio value.
                         </p>
-                        <div className="flex gap-4">
-                            <button className="px-6 py-2 bg-white text-slate-900 rounded-xl font-black text-xs hover:scale-105 transition-transform">Emergency Stop All</button>
-                            <button className="px-6 py-2 bg-white/10 text-white rounded-xl font-bold text-xs border border-white/20 hover:bg-white/20 transition-colors">View Logic Tree</button>
+                        <div className="flex flex-wrap gap-4">
+                            <button className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black text-xs hover:scale-105 transition-transform uppercase tracking-widest shadow-lg">Emergency Stop All</button>
+                            <button className="px-8 py-3 bg-white/10 text-white rounded-xl font-black text-xs border border-white/20 hover:bg-white/20 transition-all uppercase tracking-widest">View Decision Tree</button>
+                        </div>
+                    </div>
+
+                    <div className="hidden lg:grid grid-cols-2 gap-4 flex-shrink-0">
+                        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                            <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1">HFT Latency</p>
+                            <p className="text-2xl font-black text-white">42ms</p>
+                        </div>
+                        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                            <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1">Confidence</p>
+                            <p className="text-2xl font-black text-green-400">92%</p>
                         </div>
                     </div>
                 </div>
                 {/* Visual accents */}
-                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/20 to-transparent pointer-events-none" />
+                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
+                <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
             </Card>
         </div>
     );
