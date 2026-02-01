@@ -44,6 +44,9 @@ export function Dashboard() {
     const [marketMoversState, setMarketMovers] = useState(marketMovers);
     const [socketStatus, setSocketStatus] = useState('disconnected');
 
+    // Admin Telemetry State
+    const [adminTelemetry, setAdminTelemetry] = useState(null);
+
     useEffect(() => {
         // 1. Initialize Socket
         const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:8000', {
@@ -54,30 +57,35 @@ export function Dashboard() {
         socket.on('connect', () => {
             setSocketStatus('connected');
             console.log("Socket connected:", socket.id);
+            // Request Role-Based Stream
+            socket.emit('join_stream', { role: user?.role || 'USER' });
         });
 
         socket.on('disconnect', () => {
             setSocketStatus('disconnected');
         });
 
-        // 2. Listen for market updates
+        // 2. Listen for market updates (Public)
         socket.on('market_update', (data) => {
             setMarketMovers(prev => {
-                // Check if symbol exists
                 const exists = prev.find(m => m.symbol === data.symbol);
                 if (exists) {
                     return prev.map(m => m.symbol === data.symbol ? { ...m, ...data, type: data.change.includes('+') ? 'up' : 'down' } : m);
                 } else {
-                    // Add new mover, keep list at 4 items
                     return [{ ...data, type: data.change.includes('+') ? 'up' : 'down' }, ...prev].slice(0, 4);
                 }
             });
         });
 
+        // 3. Listen for Admin Metrics (Private)
+        socket.on('admin_metrics', (data) => {
+            setAdminTelemetry(data);
+        });
+
         return () => {
             socket.disconnect();
         };
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -105,7 +113,13 @@ export function Dashboard() {
         { label: 'Total Equity', value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`, change: '+14.2%', icon: BarChart2, color: 'text-primary' },
         { label: 'Open Exposure', value: `$${(summary?.invested_amount || 0).toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
         { label: 'Daily Alpha', value: `+${summary?.win_rate || 0}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
-        { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
+        {
+            label: user?.role === 'ADMIN' ? 'Live System Load' : 'System Health',
+            value: user?.role === 'ADMIN' && adminTelemetry ? adminTelemetry.system_load : '100%',
+            change: user?.role === 'ADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : 'Latency 42ms',
+            icon: Shield,
+            color: 'text-green-600'
+        },
     ];
 
     useEffect(() => {
