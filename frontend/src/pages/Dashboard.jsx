@@ -192,9 +192,9 @@ export function Dashboard() {
                     </h1>
                     <div className="flex items-center gap-2 mt-2">
                         <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'ADMIN' ? 'bg-indigo-500' :
-                                user?.role === 'AUDITOR' ? 'bg-amber-500' :
-                                    user?.role === 'BUSINESS_OWNER' ? 'bg-purple-500' :
-                                        'bg-primary'
+                            user?.role === 'AUDITOR' ? 'bg-amber-500' :
+                                user?.role === 'BUSINESS_OWNER' ? 'bg-purple-500' :
+                                    'bg-primary'
                             }`} />
                         <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
                             {user?.role === 'ADMIN' ? 'Global System Oversight: ACTIVE' :
@@ -356,7 +356,7 @@ export function Dashboard() {
                                     </span>
                                     <div>
                                         <h4 className="text-xs font-black text-slate-900">
-                                            {user?.role === 'AUDITOR' && <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8px] uppercase mr-2 mr-2">Verified</span>}
+                                            {user?.role === 'AUDITOR' && <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8px] uppercase mr-2 text-primary font-black">Verified</span>}
                                             {log.action} <span className="text-primary">{log.symbol}</span>
                                         </h4>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: AI-Steward</p>

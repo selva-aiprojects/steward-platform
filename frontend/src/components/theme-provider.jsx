@@ -32,10 +32,15 @@ export function ThemeProvider({
 
     const value = {
         theme,
-        setTheme: (theme) => {
-            localStorage.setItem(storageKey, theme)
-            setTheme(theme)
+        setTheme: (t) => {
+            localStorage.setItem(storageKey, t)
+            setTheme(t)
         },
+        toggleTheme: () => {
+            const next = theme === 'light' ? 'dark' : 'light'
+            localStorage.setItem(storageKey, next)
+            setTheme(next)
+        }
     }
 
     return (

@@ -6,7 +6,7 @@ import {
     Briefcase, Activity
 } from "lucide-react"
 import { useUser } from "../../context/UserContext"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../theme-provider"
 import logo from "../../assets/logo.png"
 
 export function Layout({ children }) {
@@ -135,6 +135,28 @@ export function Layout({ children }) {
             {/* Main Content */}
             <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                 <div className="max-w-[1600px] mx-auto">
+                    {user && (
+                        <div className="mb-8 p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                                    <ShieldCheck size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Session Active</h2>
+                                    <h1 className="text-xl font-black text-slate-900 leading-none">Greetings, <span className="text-primary">{user.name}</span>!!</h1>
+                                </div>
+                            </div>
+                            <div className="hidden md:flex flex-col items-end">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Market Connection: Secure</span>
+                                </div>
+                                <span className="text-[10px] font-bold bg-[#0A2A4D] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
+                                    Role: {user.role}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {children}
                 </div>
             </main>
