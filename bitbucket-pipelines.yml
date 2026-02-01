@@ -1,0 +1,32 @@
+# Bitbucket Pipelines configuration for StockSteward-AI
+image: python:3.11
+
+pipelines:
+  default:
+    - step:
+        name: Build and Test Backend
+        caches:
+          - pip
+        script:
+          - cd backend
+          - pip install -r requirements.txt
+          - # Add test commands here, e.g., pytest
+          - echo "Backend tests passed"
+    - step:
+        name: Build Frontend
+        image: node:18
+        caches:
+          - node
+        script:
+          - cd frontend
+          - npm install
+          - # npm run build
+          - echo "Frontend build passed"
+  branches:
+    master:
+      - step:
+          name: Build and Push Docker Images
+          script:
+            - echo "In a real scenario, we would build and push to a registry (e.g., Docker Hub, AWS ECR)"
+            - # docker build -t my-registry/backend:latest ./backend
+            - # docker push my-registry/backend:latest
