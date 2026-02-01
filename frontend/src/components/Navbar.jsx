@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, LayoutDashboard, Briefcase, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, Briefcase, ExternalLink, ShieldCheck, LogOut, Users } from 'lucide-react';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout, isAdmin } = useUser();
 
   return (
     <nav className="navbar">
@@ -22,15 +24,44 @@ const Navbar = () => {
           <Briefcase size={18} />
           <span>Portfolio</span>
         </NavLink>
+
+        {isAdmin && (
+          <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+            <Users size={18} />
+            <span>User Mgmt</span>
+          </NavLink>
+        )}
+
         <a href={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api/v1', '') : 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer" className="nav-item">
           <ExternalLink size={18} />
           <span>API Docs</span>
         </a>
       </div>
 
-      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
-        {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-      </button>
+      <div className="mt-auto flex flex-col gap-2">
+        {user && (
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 mb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-8 w-8 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold text-xs">
+                {user.avatar || 'U'}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-slate-400 font-mono">{user.role}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button className="theme-toggle flex-1" onClick={toggleTheme} aria-label="Toggle Theme">
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <button className="theme-toggle flex-1 bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400" onClick={logout} aria-label="Logout">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
 
       <style>{`
         .navbar {
