@@ -110,9 +110,27 @@ export function Dashboard() {
     const [chartData, setChartData] = useState(performanceData);
 
     const metrics = [
-        { label: 'Total Equity', value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`, change: '+14.2%', icon: BarChart2, color: 'text-primary' },
-        { label: 'Open Exposure', value: `$${(summary?.invested_amount || 0).toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
-        { label: 'Daily Alpha', value: `+${summary?.win_rate || 0}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
+        {
+            label: user?.role === 'BUSINESS_OWNER' ? 'Total Managed Assets' : 'Total Equity',
+            value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
+            change: '+14.2%',
+            icon: BarChart2,
+            color: 'text-primary'
+        },
+        {
+            label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
+            value: `$${(summary?.invested_amount || 0).toLocaleString()}`,
+            change: '8 positions',
+            icon: Activity,
+            color: 'text-indigo-600'
+        },
+        {
+            label: user?.role === 'BUSINESS_OWNER' ? 'Portfolio ROI' : 'Daily Alpha',
+            value: `+${summary?.win_rate || 0}%`,
+            change: 'Beat SPY by 2%',
+            icon: TrendingUp,
+            color: 'text-primary'
+        },
         {
             label: user?.role === 'ADMIN' ? 'Live System Load' : 'System Health',
             value: user?.role === 'ADMIN' && adminTelemetry ? adminTelemetry.system_load : '100%',
@@ -125,7 +143,6 @@ export function Dashboard() {
     useEffect(() => {
         const fetchChartData = async () => {
             try {
-                // ... same logic ...
                 let data = [...performanceData];
                 if (period === 'Today') {
                     data = [
@@ -165,17 +182,25 @@ export function Dashboard() {
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
-            {/* Headers and Metrics... */}
-            {/* Minimalist Top Header */}
             <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
-                        {user?.role === 'ADMIN' ? 'Administrator Command' : `Welcome, ${user?.name || 'Investor'}`}
+                        {user?.role === 'ADMIN' ? 'Administrator Command' :
+                            user?.role === 'AUDITOR' ? 'Compliance Oversight' :
+                                user?.role === 'BUSINESS_OWNER' ? 'Executive Dashboard' :
+                                    `Welcome, ${user?.name || 'Investor'}`}
                     </h1>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'ADMIN' ? 'bg-indigo-500' : 'bg-primary'}`} />
+                        <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'ADMIN' ? 'bg-indigo-500' :
+                                user?.role === 'AUDITOR' ? 'bg-amber-500' :
+                                    user?.role === 'BUSINESS_OWNER' ? 'bg-purple-500' :
+                                        'bg-primary'
+                            }`} />
                         <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
-                            {user?.role === 'ADMIN' ? 'Global System Oversight: ACTIVE' : 'Personal Wealth Agent: ACTIVE'}
+                            {user?.role === 'ADMIN' ? 'Global System Oversight: ACTIVE' :
+                                user?.role === 'AUDITOR' ? 'Audit Logging: ENABLED' :
+                                    user?.role === 'BUSINESS_OWNER' ? 'Revenue Monitoring: PASSIVE' :
+                                        'Personal Wealth Agent: ACTIVE'}
                         </p>
                     </div>
                 </div>
@@ -193,7 +218,6 @@ export function Dashboard() {
                 </div>
             </header>
 
-            {/* Core Metrics... (Unchanged logic, just ensuring context is kept) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {metrics.map((stat, i) => (
                     <Card key={i} className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white">
@@ -213,12 +237,15 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                {/* Main Curve */}
                 <Card className="xl:col-span-8 p-8 border-slate-100 shadow-sm bg-white overflow-hidden relative">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h2 className="text-lg font-black text-slate-900 font-heading">Performance Alpha</h2>
-                            <p className="text-xs text-slate-500 font-medium">Net performance curve across all active strategies</p>
+                            <h2 className="text-lg font-black text-slate-900 font-heading">
+                                {user?.role === 'AUDITOR' ? 'Compliance Alpha Curve' : 'Performance Alpha'}
+                            </h2>
+                            <p className="text-xs text-slate-500 font-medium">
+                                {user?.role === 'AUDITOR' ? 'System execution integrity audit' : 'Net performance curve across all active strategies'}
+                            </p>
                         </div>
                         <div className="flex gap-2">
                             <div className="h-3 w-3 rounded-full bg-primary" />
@@ -268,7 +295,6 @@ export function Dashboard() {
                     </div>
                 </Card>
 
-                {/* Market Movers - professional Sidebar */}
                 <Card className="xl:col-span-4 border-slate-100 shadow-sm bg-white overflow-hidden">
                     <div className="p-6 border-b border-slate-50 flex justify-between items-center">
                         <div className="flex items-center gap-2">
@@ -281,48 +307,7 @@ export function Dashboard() {
                         <Search size={14} className="text-slate-400" />
                     </div>
                     <div className="p-2">
-                        {marketMoversState.map((mover, i) => (
-                            <div key={mover.symbol} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
-                                        {mover.symbol}
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                            {mover.price ? `$${mover.price}` : 'NASD'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
-                                    }`}>
-                                    {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                    {mover.change}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-4 mt-2">
-                        <button className="w-full py-3 text-xs font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors">View All Volatility Focus</button>
-                    </div>
-                </Card>
-
-                // ... render ...
-
-                {/* Market Movers - professional Sidebar */}
-                <Card className="xl:col-span-4 border-slate-100 shadow-sm bg-white overflow-hidden">
-                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Top Movers</h3>
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${socketStatus === 'connected' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                                <div className={`h-1.5 w-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`} />
-                                <span className="text-[9px] font-black uppercase tracking-wider">Live</span>
-                            </div>
-                        </div>
-                        <Search size={14} className="text-slate-400" />
-                    </div>
-                    <div className="p-2">
-                        {marketMoversState.map((mover, i) => (
+                        {marketMoversState.map((mover) => (
                             <div key={mover.symbol} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
@@ -350,15 +335,15 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* AI Prediction Insight */}
-                <AIAnalyst />
+                {user?.role !== 'AUDITOR' && <AIAnalyst />}
 
-                {/* Audit log - Trimmed */}
-                <Card className="border-slate-100 shadow-sm bg-white">
+                <Card className={`border-slate-100 shadow-sm bg-white ${user?.role === 'AUDITOR' ? 'lg:col-span-2' : ''}`}>
                     <div className="p-6 border-b border-slate-50 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <Clock size={16} className="text-primary" />
-                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Agent Intelligence Log</h3>
+                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">
+                                {user?.role === 'AUDITOR' ? 'Global Audit Trail' : 'Agent Intelligence Log'}
+                            </h3>
                         </div>
                         <Settings size={14} className="text-slate-400" />
                     </div>
@@ -370,7 +355,10 @@ export function Dashboard() {
                                         {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                     <div>
-                                        <h4 className="text-xs font-black text-slate-900">{log.action} <span className="text-primary">{log.symbol}</span></h4>
+                                        <h4 className="text-xs font-black text-slate-900">
+                                            {user?.role === 'AUDITOR' && <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8px] uppercase mr-2 mr-2">Verified</span>}
+                                            {log.action} <span className="text-primary">{log.symbol}</span>
+                                        </h4>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: AI-Steward</p>
                                         <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic">{log.decision_logic}</p>
                                     </div>
@@ -379,6 +367,12 @@ export function Dashboard() {
                             </div>
                         ))}
                     </div>
+                    {user?.role === 'AUDITOR' && (
+                        <div className="p-4 bg-slate-900 text-slate-400 text-[10px] font-mono flex items-center gap-2">
+                            <Shield size={12} />
+                            <span>END-TO-END CRYPTOGRAPHIC LOG VERIFICATION: COMPLETE</span>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

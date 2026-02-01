@@ -15,6 +15,7 @@ const mockPerformance = [
 ];
 
 export function Reports() {
+    const { user } = useUser();
     const [timeframe, setTimeframe] = useState('Daily');
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,8 +101,16 @@ export function Reports() {
         <div className="space-y-8 animate-in fade-in duration-500">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Performance Reports</h1>
-                    <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none">System Analytics & Audit</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">
+                        {user?.role === 'AUDITOR' ? 'Compliance Audit Journal' :
+                            user?.role === 'BUSINESS_OWNER' ? 'Executive ROI Ledger' :
+                                'Performance Reports'}
+                    </h1>
+                    <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none">
+                        {user?.role === 'AUDITOR' ? 'Algorithmic Execution Integrity Audit' :
+                            user?.role === 'BUSINESS_OWNER' ? 'Revenue & Performance Metrics' :
+                                'System Analytics & Audit'}
+                    </p>
                 </div>
                 <div className="flex gap-4">
                     <button

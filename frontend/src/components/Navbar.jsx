@@ -24,27 +24,40 @@ const Navbar = () => {
           <LayoutDashboard size={18} />
           <span>Dashboard</span>
         </NavLink>
-        <NavLink to="/portfolio" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-          <Briefcase size={18} />
-          <span>Portfolio</span>
+
+        {user?.role !== 'AUDITOR' && (
+          <>
+            <NavLink to="/trading" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <Zap size={18} />
+              <span>Trading Hub</span>
+            </NavLink>
+            <NavLink to="/portfolio" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <Briefcase size={18} />
+              <span>Portfolio</span>
+            </NavLink>
+          </>
+        )}
+
+        <NavLink to="/reports" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+          <BarChart2 size={18} />
+          <span>Reports</span>
         </NavLink>
-        <Link to="/reports" className={`nav-item ${location.pathname === '/reports' ? 'active' : ''}`}>
-          <BarChart2 size={20} />
-          <span className="font-bold">Reports</span>
-        </Link>
 
-        <div className="my-2 border-t border-white/10 mx-4" />
-
-        <Link to="/subscription" className={`nav-item ${location.pathname === '/subscription' ? 'active' : ''} text-amber-400 hover:text-amber-300 hover:bg-amber-400/10`}>
-          <Zap size={20} className="fill-amber-400/20" />
-          <span className="font-black tracking-wide">UPGRADE</span>
-        </Link>
+        {(user?.role === 'USER' || user?.role === 'BUSINESS_OWNER') && (
+          <>
+            <div className="my-2 border-t border-white/10 mx-4" />
+            <Link to="/subscription" className={`nav-item ${location.pathname === '/subscription' ? 'active' : ''} text-amber-400 hover:text-amber-300 hover:bg-amber-400/10`}>
+              <Zap size={20} className="fill-amber-400/20" />
+              <span className="font-black tracking-wide">UPGRADE</span>
+            </Link>
+          </>
+        )}
 
         {isAdmin && (
-          <Link to="/users" className={`nav-item ${location.pathname === '/users' ? 'active' : ''}`}>
+          <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <Users size={18} />
             <span>User Mgmt</span>
-          </Link>
+          </NavLink>
         )}
 
         <a href={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api/v1', '') : 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer" className="nav-item">

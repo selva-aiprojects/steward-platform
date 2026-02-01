@@ -14,17 +14,6 @@ export const UserProvider = ({ children }) => {
         const storedUser = localStorage.getItem('stocksteward_user');
         if (storedUser) {
             setUser(JSON.parse(storedUser));
-        } else {
-            // AUTO-LOGIN AS SUPERADMIN (User Request)
-            const superAdmin = {
-                id: 999,
-                name: 'Super Admin',
-                email: 'admin@stocksteward.ai',
-                role: 'ADMIN',
-                avatar: 'SA'
-            };
-            setUser(superAdmin);
-            localStorage.setItem('stocksteward_user', JSON.stringify(superAdmin));
         }
         setLoading(false);
     }, []);
