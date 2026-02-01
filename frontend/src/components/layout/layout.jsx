@@ -1,6 +1,7 @@
 import { ModeToggle } from "../mode-toggle"
 import { Link } from "react-router-dom"
 import { LayoutDashboard, Wallet, BookOpen, Users as UsersIcon } from "lucide-react"
+import logo from "../../assets/logo.png"
 
 export function Layout({ children }) {
     return (
@@ -10,7 +11,7 @@ export function Layout({ children }) {
                 <div className="mb-0 pl-1 py-1">
                     <Link to="/" className="flex items-center gap-3 group">
                         <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 p-1 transition-all group-hover:scale-110">
-                            <img src="/logo.png" alt="StockSteward Logo" className="h-full w-full object-contain" />
+                            <img src={logo} alt="StockSteward Logo" className="h-full w-full object-contain" />
                         </div>
                         <div className="flex flex-col">
                             <div className="font-heading text-xl font-bold tracking-tight text-foreground leading-none">
