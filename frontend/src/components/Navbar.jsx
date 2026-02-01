@@ -1,8 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, LayoutDashboard, Briefcase, ExternalLink, ShieldCheck, LogOut, Users } from 'lucide-react';
+import {
+  Sun, Moon, LayoutDashboard, Briefcase,
+  ExternalLink, ShieldCheck, LogOut, Users,
+  BarChart2, Zap
+} from 'lucide-react';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -24,12 +28,23 @@ const Navbar = () => {
           <Briefcase size={18} />
           <span>Portfolio</span>
         </NavLink>
+        <Link to="/reports" className={`nav-item ${location.pathname === '/reports' ? 'active' : ''}`}>
+          <BarChart2 size={20} />
+          <span className="font-bold">Reports</span>
+        </Link>
+
+        <div className="my-2 border-t border-white/10 mx-4" />
+
+        <Link to="/subscription" className={`nav-item ${location.pathname === '/subscription' ? 'active' : ''} text-amber-400 hover:text-amber-300 hover:bg-amber-400/10`}>
+          <Zap size={20} className="fill-amber-400/20" />
+          <span className="font-black tracking-wide">UPGRADE</span>
+        </Link>
 
         {isAdmin && (
-          <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+          <Link to="/users" className={`nav-item ${location.pathname === '/users' ? 'active' : ''}`}>
             <Users size={18} />
             <span>User Mgmt</span>
-          </NavLink>
+          </Link>
         )}
 
         <a href={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api/v1', '') : 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer" className="nav-item">
@@ -57,8 +72,9 @@ const Navbar = () => {
           <button className="theme-toggle flex-1" onClick={toggleTheme} aria-label="Toggle Theme">
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
-          <button className="theme-toggle flex-1 bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400" onClick={logout} aria-label="Logout">
-            <LogOut size={18} />
+          <button className="theme-toggle flex-[2] bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400 gap-2" onClick={logout} aria-label="Logout">
+            <LogOut size={16} />
+            <span className="text-xs font-bold uppercase tracking-wider">Logout</span>
           </button>
         </div>
       </div>
