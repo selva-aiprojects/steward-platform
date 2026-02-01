@@ -56,6 +56,13 @@ export function Dashboard() {
 
     const [chartData, setChartData] = useState(performanceData);
 
+    const metrics = [
+        { label: 'Total Equity', value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`, change: '+14.2%', icon: BarChart2, color: 'text-primary' },
+        { label: 'Open Exposure', value: `$${(summary?.invested_amount || 0).toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
+        { label: 'Daily Alpha', value: `+${summary?.win_rate || 0}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
+        { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
+    ];
+
     useEffect(() => {
         const fetchChartData = async () => {
             try {
