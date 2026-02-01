@@ -10,6 +10,10 @@
     --foreground: 211 75% 17%;
     /* #0A2A4D (Navy) */
 
+    --bg-sidebar: 211 75% 17%;
+    /* Navy #0A2A4D */
+    --bg-sidebar-gradient: linear-gradient(180deg, #0A2A4D 0%, #020617 100%);
+
     --card: 0 0% 100%;
     --card-foreground: 211 75% 17%;
 
