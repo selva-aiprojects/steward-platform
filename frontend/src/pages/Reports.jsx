@@ -3,6 +3,8 @@ import { Card } from "../components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2 } from 'lucide-react';
 import { fetchTrades } from "../services/api";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const mockPerformance = [
     { name: 'Mon', user: 4000, agent: 2400 },
@@ -32,6 +34,59 @@ export function Reports() {
         loadData();
     }, []);
 
+    const downloadReport = () => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFontSize(20);
+        doc.text("StockSteward AI - Executive Performance Report", 14, 22);
+
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(`Period: ${timeframe}`, 14, 35);
+
+        // Section 1: Algorithmic Summary
+        doc.setFontSize(14);
+        doc.text("Algorithmic Trading Ledger", 14, 50);
+
+        const algoData = [
+            ['Alpha Mean Reversion v4', '$2.4M', '68.4%', '+$12,450', 'STABLE'],
+            ['Groq Llama-3 Scalper', '$840K', '92.1%', '+$5,800', 'OPTIMIZING'],
+            ['Sentiment Arbitrage v1.2', '$120K', '44.8%', '-$420', 'RE-CALIBRATING'],
+        ];
+
+        doc.autoTable({
+            startY: 55,
+            head: [['Strategy Engine', 'Volume', 'Avg Win Rate', 'Period PnL', 'Status']],
+            body: algoData,
+            theme: 'grid',
+            headStyles: { fillColor: [10, 42, 77] }, // #0A2A4D
+        });
+
+        // Section 2: Execution Journal
+        let finalY = doc.lastAutoTable.finalY + 20;
+        doc.setFontSize(14);
+        doc.text("Execution Intelligence Journal", 14, finalY);
+
+        const journalData = trades.map(t => [
+            new Date(t.timestamp).toLocaleTimeString(),
+            t.symbol,
+            t.action,
+            `$${t.price}`,
+            t.decision_logic.substring(0, 50) + '...'
+        ]);
+
+        doc.autoTable({
+            startY: finalY + 5,
+            head: [['Time', 'Symbol', 'Action', 'Price', 'Logic Snapshot']],
+            body: journalData,
+            theme: 'striped',
+            headStyles: { fillColor: [45, 189, 66] }, // Primary Green
+        });
+
+        doc.save(`steward-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    };
+
     if (loading) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
@@ -48,17 +103,26 @@ export function Reports() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Performance Reports</h1>
                     <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none">System Analytics & Audit</p>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                    {['Daily', 'Weekly', 'Yearly'].map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => setTimeframe(t)}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${timeframe === t ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                        >
-                            {t}
-                        </button>
-                    ))}
+                <div className="flex gap-4">
+                    <button
+                        onClick={downloadReport}
+                        className="flex items-center gap-2 bg-[#0A2A4D] text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-indigo-900/20"
+                    >
+                        <Download size={16} />
+                        Export PDF
+                    </button>
+                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        {['Daily', 'Weekly', 'Yearly'].map((t) => (
+                            <button
+                                key={t}
+                                onClick={() => setTimeframe(t)}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${timeframe === t ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'
+                                    }`}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
@@ -169,7 +233,7 @@ export function Reports() {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-tighter ${row.status === 'STABLE' ? 'bg-green-50 text-green-700' :
-                                                row.status === 'OPTIMIZING' ? 'bg-primary/10 text-primary' : 'bg-orange-50 text-orange-600'
+                                            row.status === 'OPTIMIZING' ? 'bg-primary/10 text-primary' : 'bg-orange-50 text-orange-600'
                                             }`}>{row.status}</span>
                                     </td>
                                 </tr>
@@ -194,7 +258,7 @@ export function Reports() {
                                     </div>
                                     <h3 className="text-2xl font-black text-slate-900">{entry.symbol}</h3>
                                     <span className={`inline-block mt-2 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest ${entry.action === 'BUY' ? 'bg-green-500 text-white' :
-                                            entry.action === 'SELL' ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'
+                                        entry.action === 'SELL' ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'
                                         }`}>{entry.action}</span>
                                 </div>
 
