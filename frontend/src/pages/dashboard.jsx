@@ -63,15 +63,27 @@ export function Dashboard() {
                     <h3 className="font-semibold mb-4">Recent Activity</h3>
                     <div className="space-y-4">
                         {/* Mock Items */}
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center">
-                                <div className="ml-4 space-y-1">
-                                    <p className="text-sm font-medium leading-none">Bought AAPL</p>
-                                    <p className="text-xs text-muted-foreground">Strategy: SMACrossover</p>
+                        {activityItems.length > 0 ? (
+                            activityItems.map((i) => (
+                                <div key={i} className="flex items-center">
+                                    <div className="ml-4 space-y-1">
+                                        <p className="text-sm font-medium leading-none">Bought AAPL</p>
+                                        <p className="text-xs text-muted-foreground">Strategy: SMACrossover</p>
+                                    </div>
+                                    <div className="ml-auto font-medium">+$250.00</div>
                                 </div>
-                                <div className="ml-auto font-medium">+$250.00</div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed p-8 text-center transition-all hover:bg-muted/10">
+                                <div className="rounded-full bg-background p-4 mb-4 shadow-sm ring-1 ring-border">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2 opacity-50"><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></svg>
+                                </div>
+                                <h3 className="font-semibold text-lg text-foreground mb-1">Waiting for Market Data</h3>
+                                <p className="text-sm max-w-sm mx-auto mb-4">
+                                    Your agents are ready. Once the simulation creates orders, your equity curve will populate here in real-time.
+                                </p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>

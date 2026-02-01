@@ -2,8 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "./components/theme-provider"
 import { Layout } from "./components/layout/layout"
-import { Dashboard } from "./pages/dashboard"
-import { Portfolio } from "./pages/portfolio"
+import { Dashboard } from "./pages/Dashboard"
+import { Portfolio } from "./pages/Portfolio"
+import { Users } from "./pages/Users"
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/users" element={<Users />} />
           </Routes>
         </Layout>
       </Router>
