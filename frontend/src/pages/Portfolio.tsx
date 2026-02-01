@@ -1,5 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { Card } from "../components/ui/card";
 import { Briefcase, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 const mockHoldings = [
@@ -18,181 +19,145 @@ const allocationData = [
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
 const Portfolio: React.FC = () => {
+  const [isTradeModalOpen, setIsTradeModalOpen] = React.useState(false);
+  const [selectedSymbol, setSelectedSymbol] = React.useState('AAPL');
+
   return (
-    <div className="portfolio-container">
-      <header className="page-header">
-        <div className="header-eyebrow">
-          <span className="badge-virtual">VIRTUAL HOLDINGS</span>
+    <div className="portfolio-container pb-20">
+      <header className="page-header flex justify-between items-end">
+        <div>
+          <div className="header-eyebrow">
+            <span className="badge-virtual">VIRTUAL HOLDINGS</span>
+          </div>
+          <h1>Simulated Portfolio</h1>
+          <p>Detailed breakdown of your virtual assets and positions.</p>
         </div>
-        <h1>Simulated Portfolio</h1>
-        <p>Detailed breakdown of your virtual assets and positions.</p>
+        <button
+          onClick={() => setIsTradeModalOpen(true)}
+          className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+        >
+          <ArrowUpRight size={18} />
+          Execute Manual Trade
+        </button>
       </header>
 
-      <div className="portfolio-grid">
-        <div className="holdings-section">
-          <div className="section-header">
-            <Briefcase size={20} />
-            <h2>Current Holdings</h2>
+      {/* Manual Trade Modal Override */}
+      {isTradeModalOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border w-full max-w-md rounded-2xl shadow-2xl p-6 relative animate-in zoom-in duration-200">
+            <button
+              onClick={() => setIsTradeModalOpen(false)}
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mb-1">Manual Trade Terminal</h2>
+            <p className="text-xs text-muted-foreground mb-6">User Override: Bypassing AI Steward logic.</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select Ticker</label>
+                <select
+                  value={selectedSymbol}
+                  onChange={(e) => setSelectedSymbol(e.target.value)}
+                  className="w-full mt-1 bg-muted/50 border rounded-lg p-3 text-sm font-bold focus:ring-2 focus:ring-primary outline-none"
+                >
+                  <option>AAPL</option>
+                  <option>NVDA</option>
+                  <option>TSLA</option>
+                  <option>AMD</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button className="py-4 rounded-xl bg-green-500 text-white font-black text-sm hover:bg-green-600 transition-colors">BUY</button>
+                <button className="py-4 rounded-xl bg-red-500 text-white font-black text-sm hover:bg-red-600 transition-colors">SELL</button>
+              </div>
+
+              <button
+                className="w-full py-3 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground font-bold text-xs hover:bg-muted/10"
+                onClick={() => setIsTradeModalOpen(false)}
+              >
+                Cancel and Let Agent Decide
+              </button>
+            </div>
           </div>
-          <div className="table-wrapper">
-            <table className="holdings-table">
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+        <Card className="lg:col-span-8 p-0 border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-50 flex items-center gap-3">
+            <Briefcase size={20} className="text-primary" />
+            <h2 className="font-black text-slate-900 uppercase text-sm tracking-widest">Current Holdings</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
               <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Quantity</th>
-                  <th>Avg. Price</th>
-                  <th>Current</th>
-                  <th>PnL</th>
-                  <th>Change</th>
+                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-slate-50/50">
+                  <th className="px-6 py-4">Symbol</th>
+                  <th className="px-6 py-4">Qty</th>
+                  <th className="px-6 py-4">Avg Price</th>
+                  <th className="px-6 py-4">Current</th>
+                  <th className="px-6 py-4">PnL</th>
+                  <th className="px-6 py-4 text-right">Change</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-50">
                 {mockHoldings.map((holding) => (
-                  <tr key={holding.symbol}>
-                    <td className="font-bold">{holding.symbol}</td>
-                    <td>{holding.quantity}</td>
-                    <td>${holding.avgPrice.toFixed(2)}</td>
-                    <td>${holding.currentPrice.toFixed(2)}</td>
-                    <td className={holding.pnl >= 0 ? 'text-success' : 'text-danger'}>
+                  <tr key={holding.symbol} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-5 font-black text-slate-900">{holding.symbol}</td>
+                    <td className="px-6 py-5 font-medium text-slate-600">{holding.quantity}</td>
+                    <td className="px-6 py-5 font-medium text-slate-600">${holding.avgPrice.toFixed(2)}</td>
+                    <td className="px-6 py-5 font-medium text-slate-600">${holding.currentPrice.toFixed(2)}</td>
+                    <td className={`px-6 py-5 font-bold ${holding.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {holding.pnl >= 0 ? '+' : ''}${Math.abs(holding.pnl).toFixed(2)}
                     </td>
-                    <td className={holding.pnlPct >= 0 ? 'text-success-bg' : 'text-danger-bg'}>
-                      <div className="pct-badge">
-                        {holding.pnlPct >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                    <td className="px-6 py-5 text-right">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${holding.pnlPct >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+                        }`}>
+                        {holding.pnlPct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                         {Math.abs(holding.pnlPct)}%
-                      </div>
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
-        <div className="allocation-section">
-          <h2>Asset Allocation</h2>
-          <div className="pie-wrapper">
-            <ResponsiveContainer width="100%" height={250}>
+        <Card className="lg:col-span-4 p-8 border-slate-100 shadow-sm">
+          <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-8">Asset Allocation</h2>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={allocationData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  outerRadius={85}
+                  paddingAngle={8}
                   dataKey="value"
+                  stroke="none"
                 >
                   {allocationData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend verticalAlign="bottom" height={36} />
+                <Legend verticalAlign="bottom" align="center" iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </Card>
       </div>
 
-      <style>{`
-        .portfolio-container {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-6);
-        }
-
-        .portfolio-grid {
-          display: grid;
-          grid-template-columns: 1fr 340px;
-          gap: var(--space-6);
-        }
-
-        .holdings-section, .allocation-section {
-          background-color: var(--bg-surface);
-          padding: var(--space-6);
-          border-radius: 1rem;
-          border: 1px solid var(--border-subtle);
-          box-shadow: var(--shadow-sm);
-        }
-
-        .section-header {
-          display: flex;
-          align-items: center;
-          gap: var(--space-3);
-          margin-bottom: var(--space-4);
-          color: var(--brand-primary);
-        }
-
-        .section-header h2 {
-          color: var(--text-primary);
-          font-size: 1.25rem;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-        }
-
-        .holdings-table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-        }
-
-        .holdings-table th {
-          padding: var(--space-3) var(--space-4);
-          color: var(--text-secondary);
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          border-bottom: 2px solid var(--border-subtle);
-        }
-
-        .holdings-table td {
-          padding: var(--space-4);
-          border-bottom: 1px solid var(--border-subtle);
-          font-size: 0.875rem;
-        }
-
-        .font-bold { font-weight: 700; }
-        
-        .text-success { color: var(--success); }
-        .text-danger { color: var(--danger); }
-
-        .pct-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 2px;
-          padding: 2px 8px;
-          border-radius: 9999px;
-          font-size: 0.75rem;
-          font-weight: 700;
-        }
-
-        .text-success-bg .pct-badge {
-          background-color: rgba(16, 185, 129, 0.1);
-          color: var(--success);
-        }
-
-        .text-danger-bg .pct-badge {
-          background-color: rgba(239, 68, 68, 0.1);
-          color: var(--danger);
-        }
-
-        .pie-wrapper {
-          height: 250px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-      `}</style>
-
-      <footer className="compliance-footer">
-        <p>
-          <strong>Compliance Disclaimer:</strong> StockSteward AI provides a simulated trading environment.
-          The data displayed here does not represent real financial transactions.
-          No guarantee of profits is implied or provided. Independent financial advice should be sought before
-          engaging in real-market activities. All trade signals are generated for educational purposes.
+      <footer className="mt-12 p-8 rounded-2xl bg-slate-50 border border-slate-100">
+        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+          <strong className="text-slate-900 font-black uppercase tracking-widest mr-2">Compliance Disclaimer:</strong>
+          StockSteward AI provides a simulated trading environment. The data displayed here does not represent real financial transactions. No guarantee of profits is implied or provided. Independent financial advice should be sought before engaging in real-market activities. All trade signals are generated for educational purposes.
         </p>
       </footer>
     </div>

@@ -25,23 +25,35 @@ export function Layout({ children }) {
                     </div>
                 </div>
 
-                <nav className="space-y-2 flex-1">
-                    <Link to="/" className="flex items-center gap-2 p-2 rounded hover:bg-accent text-sm font-medium">
+                <nav className="space-y-1 flex-1">
+                    <Link to="/" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/70 hover:text-white">
                         <LayoutDashboard size={18} />
-                        Dashboard
+                        Executive Dashboard
                     </Link>
-                    <Link to="/portfolio" className="flex items-center gap-2 p-2 rounded hover:bg-accent text-sm font-medium">
+                    <Link to="/trading" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/70 hover:text-white">
+                        <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/20 text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="m17 5-5-3-5 3" /><path d="m17 19-5 3-5-3" /><path d="M2 12h20" /><path d="m5 7-3 5 3 5" /><path d="m19 7 3 5-3 5" /></svg>
+                        </div>
+                        Trading Hub
+                    </Link>
+                    <Link to="/portfolio" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/70 hover:text-white">
                         <Wallet size={18} />
-                        Portfolio
+                        My Portfolio
                     </Link>
-                    <Link to="/users" className="flex items-center gap-2 p-2 rounded hover:bg-accent text-sm font-medium">
+                    <Link to="/reports" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/70 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+                        Strategy Reports
+                    </Link>
+                    <Link to="/users" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/70 hover:text-white">
                         <UsersIcon size={18} />
-                        Users
+                        User Management
                     </Link>
-                    <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded hover:bg-accent text-sm font-medium">
-                        <BookOpen size={18} />
-                        API Docs
-                    </a>
+                    <div className="pt-4 mt-4 border-t border-white/10">
+                        <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium text-white/40 hover:text-white">
+                            <BookOpen size={18} />
+                            API Specs
+                        </a>
+                    </div>
                 </nav>
 
                 <div className="mt-auto pt-4 border-t">

@@ -1,197 +1,208 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Card } from "../components/ui/card" // Mock card for now, or just use div
+import React, { useState } from 'react';
+import { Card } from "../components/ui/card";
+import {
+    LineChart, Line, AreaChart, Area, XAxis, YAxis,
+    CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+import {
+    ArrowUpRight, ArrowDownRight, Activity,
+    TrendingUp, Shield, BarChart3, Clock,
+    AlertCircle, Search, Settings
+} from 'lucide-react';
+import { AIAnalyst } from "../components/AIAnalyst";
 
-const data = [
-    { name: 'Jan', value: 100000 },
-    { name: 'Feb', value: 102000 },
-    { name: 'Mar', value: 101500 },
-    { name: 'Apr', value: 105000 },
-    { name: 'May', value: 108000 },
-    { name: 'Jun', value: 112000 },
+const performanceData = [
+    { name: '08:00', value: 2400 },
+    { name: '10:00', value: 3200 },
+    { name: '12:00', value: 2800 },
+    { name: '14:00', value: 4500 },
+    { name: '16:00', value: 4100 },
+    { name: '18:00', value: 5000 },
 ];
 
-const activityItems = [
-    { id: 1, action: "Bought AAPL", strategy: "SMACrossover", pnl: "+$250.00" },
-    { id: 2, action: "Sold TSLA", strategy: "RSI Reversal", pnl: "+$120.50" },
-    { id: 3, action: "Bought MSFT", strategy: "Momentum", pnl: "-$45.00" },
-    { id: 4, action: "Bought GOOGL", strategy: "MeanReversion", pnl: "+$85.20" },
-];
-
-const gainers = [
-    { symbol: "NVDA", price: "$122.50", change: "+4.2%" },
-    { symbol: "AMD", price: "$165.20", change: "+3.8%" },
-    { symbol: "MSFT", price: "$420.10", change: "+1.5%" },
-];
-
-const losers = [
-    { symbol: "TSLA", price: "$172.40", change: "-2.1%" },
-    { symbol: "AAPL", price: "$182.30", change: "-0.8%" },
+const marketMovers = [
+    { symbol: 'NVDA', change: '+12.4%', type: 'up' },
+    { symbol: 'TSLA', change: '-4.2%', type: 'down' },
+    { symbol: 'AMD', change: '+2.1%', type: 'up' },
+    { symbol: 'AAPL', change: '+0.8%', type: 'up' },
+    { symbol: 'MSFT', change: '-1.5%', type: 'down' },
 ];
 
 export function Dashboard() {
+    const [period, setPeriod] = useState('Today');
+
     return (
-        <div className="space-y-8 pb-10">
-            <div className="flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
+
+            {/* Minimalist Top Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Executive Summary</h2>
-                    <p className="text-muted-foreground">Portfolio metrics and proactive market intelligence.</p>
-                </div>
-                {/* AI Insights Highlight */}
-                <div className="hidden lg:flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl p-3 max-w-md">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-                    </div>
-                    <div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-primary">AI Steward Active</div>
-                        <div className="text-sm font-medium">Predicting high momentum in Semiconductors.</div>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Executive Overview</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">Live Agent Streaming Status: ACTIVE</p>
                     </div>
                 </div>
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start md:self-center">
+                    {['Today', 'This Week', 'This Year'].map((p) => (
+                        <button
+                            key={p}
+                            onClick={() => setPeriod(p)}
+                            className={`px-4 py-2 text-xs font-black rounded-lg transition-all ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
+                                }`}
+                        >
+                            {p}
+                        </button>
+                    ))}
+                </div>
+            </header>
+
+            {/* Core Metrics - Trimmed & Professional */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Total Equity', value: '$84,250.00', change: '+14.2%', icon: BarChart3, color: 'text-primary' },
+                    { label: 'Open Exposure', value: '$12,400.00', change: '8 positions', icon: Activity, color: 'text-indigo-600' },
+                    { label: 'Daily Alpha', value: '+4.52%', change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
+                    { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
+                ].map((stat, i) => (
+                    <Card key={i} className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${stat.color}`}>
+                                <stat.icon size={18} />
+                            </div>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                {stat.change}
+                            </span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</h3>
+                    </Card>
+                ))}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md">
-                    <div className="text-sm font-medium text-muted-foreground">Total Equity</div>
-                    <div className="text-3xl font-bold mt-1">$112,450.00</div>
-                    <div className="flex items-center gap-1 text-xs text-green-500 font-medium mt-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
-                        +12.4%
-                    </div>
-                </div>
-                <div className="rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md">
-                    <div className="text-sm font-medium text-muted-foreground">Open Exposure</div>
-                    <div className="text-3xl font-bold mt-1">$45,200.00</div>
-                    <p className="text-xs text-muted-foreground mt-2">Risk Level: Moderate</p>
-                </div>
-                <div className="rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md border-l-4 border-l-primary">
-                    <div className="text-sm font-medium text-muted-foreground">AI Daily Alpha</div>
-                    <div className="text-3xl font-bold mt-1 text-primary">+$1,450.00</div>
-                    <p className="text-xs text-muted-foreground mt-2">Driven by Strategy: MeanReversion</p>
-                </div>
-                <div className="rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md">
-                    <div className="text-sm font-medium text-muted-foreground">System Health</div>
-                    <div className="text-3xl font-bold mt-1">Optimal</div>
-                    <div className="flex items-center gap-1 text-xs text-blue-500 font-medium mt-2">
-                        9 Agents Operational
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-12">
-                {/* Main Graph */}
-                <div className="md:col-span-8 rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm p-6 overflow-hidden">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                {/* Main Curve - Trimmed Chart Card */}
+                <Card className="xl:col-span-8 p-8 border-slate-100 shadow-sm bg-white overflow-hidden relative">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-lg font-bold">Portfolio Performance</h3>
-                            <p className="text-xs text-muted-foreground">Simulated growth over last 6 months</p>
+                            <h2 className="text-lg font-black text-slate-900 font-heading">Performance Alpha</h2>
+                            <p className="text-xs text-slate-500 font-medium">Net performance curve across all active strategies</p>
                         </div>
-                        <div className="flex bg-muted/30 p-1 rounded-lg gap-1">
-                            {['1D', '1W', '1M', '6M', '1Y'].map(t => (
-                                <button key={t} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-colors ${t === '6M' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                                    {t}
-                                </button>
-                            ))}
+                        <div className="flex gap-2">
+                            <div className="h-3 w-3 rounded-full bg-primary" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Steward Equity</span>
                         </div>
                     </div>
-                    <div className="h-[300px]">
+                    <div className="h-[350px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data}>
+                            <AreaChart data={performanceData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--ss-green)" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="var(--ss-green)" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.05} vertical={false} />
-                                <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))', fontSize: '12px' }}
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="name"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
                                 />
-                                <Line type="monotone" dataKey="value" stroke="var(--ss-green)" strokeWidth={3} dot={{ fill: 'var(--ss-green)', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                            </LineChart>
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
+                                    tickFormatter={(val) => `$${val}`}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        borderRadius: '16px',
+                                        border: 'none',
+                                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="value"
+                                    stroke="hsl(var(--primary))"
+                                    strokeWidth={4}
+                                    fillOpacity={1}
+                                    fill="url(#colorValue)"
+                                />
+                            </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </Card>
 
-                {/* AI Insights Sidebar */}
-                <div className="md:col-span-4 flex flex-col gap-6">
-                    <div className="rounded-2xl border bg-primary text-primary-foreground shadow-lg p-6 relative overflow-hidden">
-                        <div className="relative z-10">
-                            <h3 className="font-bold text-lg mb-2">Groq AI Prediction</h3>
-                            <p className="text-xs text-primary-foreground/80 mb-6 leading-relaxed">
-                                Our "Reasoning" model suggests high probability of upside in **Semiconductors (SOXX)** based on technical breakouts.
-                            </p>
-                            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-md">
-                                <div className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground/60 mb-1">Steward Conviction</div>
-                                <div className="text-2xl font-black">84% Strong Buy</div>
-                            </div>
-                        </div>
-                        {/* Abstract Background Element */}
-                        <div className="absolute -right-4 -bottom-4 h-32 w-32 bg-white/10 rounded-full blur-2xl" />
+                {/* Market Movers - professional Sidebar */}
+                <Card className="xl:col-span-4 border-slate-100 shadow-sm bg-white overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Top Movers</h3>
+                        <Search size={14} className="text-slate-400" />
                     </div>
-
-                    <div className="rounded-2xl border bg-card shadow-sm p-6">
-                        <h3 className="font-bold text-sm mb-4 uppercase tracking-wider text-muted-foreground">Market Movers</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="text-[10px] font-bold text-green-500 uppercase mb-2">Top Gainers</div>
-                                {gainers.map(g => (
-                                    <div key={g.symbol} className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold">{g.symbol}</span>
-                                        <span className="text-sm font-medium text-green-500">{g.change}</span>
+                    <div className="p-2">
+                        {marketMovers.map((mover, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
+                                        {mover.symbol}
                                     </div>
-                                ))}
-                            </div>
-                            <div className="pt-2 border-t border-dashed">
-                                <div className="text-[10px] font-bold text-red-500 uppercase mb-2">Top Losers</div>
-                                {losers.map(l => (
-                                    <div key={l.symbol} className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-bold">{l.symbol}</span>
-                                        <span className="text-sm font-medium text-red-500">{l.change}</span>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">NASD</p>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Trading Agents Feed */}
-            <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-                <div className="border-b p-6 flex items-center justify-between">
-                    <h3 className="font-bold tracking-tight">Agent Audit Log</h3>
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                        </span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Live Feed</span>
-                    </div>
-                </div>
-                <div className="p-6">
-                    <div className="space-y-6">
-                        {activityItems.map((i) => (
-                            <div key={i.id} className="flex items-start gap-4 pb-6 border-b border-dashed last:border-0 last:pb-0">
-                                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="m17 5-5-3-5 3" /><path d="m17 19-5 3-5-3" /><path d="M2 12h20" /><path d="m5 7-3 5 3 5" /><path d="m19 7 3 5-3 5" /></svg>
                                 </div>
-                                <div className="flex-1 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-bold">{i.action}</p>
-                                        <span className={`text-sm font-bold ${i.pnl.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{i.pnl}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs text-muted-foreground">Agent: **StrategyAgent**</span>
-                                        <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                                        <span className="text-xs text-muted-foreground">Model: Groq Llama 3</span>
-                                    </div>
+                                <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
+                                    }`}>
+                                    {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                    {mover.change}
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                    <div className="p-4 mt-2">
+                        <button className="w-full py-3 text-xs font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors">View All Volatility Focus</button>
+                    </div>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* AI Prediction Insight */}
+                <AIAnalyst />
+
+                {/* Audit log - Trimmed */}
+                <Card className="border-slate-100 shadow-sm bg-white">
+                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-primary" />
+                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Agent Intelligence Log</h3>
+                        </div>
+                        <Settings size={14} className="text-slate-400" />
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                        {[
+                            { time: '14:20', agent: 'Sentinel-V3', action: 'SELL Order', ticker: 'TSLA', reason: 'Hard stop hit at -2.0%', status: 'success' },
+                            { time: '13:05', agent: 'Llama-Scalp', action: 'Signal Detected', ticker: 'NVDA', reason: 'High-conviction RSI divergence', status: 'info' },
+                            { time: '10:15', agent: 'Sentinel-V3', action: 'BUY Order', ticker: 'AAPL', reason: 'Auto-balancing long portfolio', status: 'success' },
+                        ].map((log, i) => (
+                            <div key={i} className="p-5 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                                <div className="flex gap-4">
+                                    <span className="text-[10px] font-black text-slate-300 mt-1">{log.time}</span>
+                                    <div>
+                                        <h4 className="text-xs font-black text-slate-900">{log.action} <span className="text-primary">{log.ticker}</span></h4>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: {log.agent}</p>
+                                        <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic">{log.reason}</p>
+                                    </div>
+                                </div>
+                                <div className={`h-2 w-2 rounded-full mt-1 ${log.status === 'success' ? 'bg-green-500' : 'bg-primary'}`} />
+                            </div>
+                        ))}
+                    </div>
+                </Card>
             </div>
         </div>
-    )
+    );
 }
-
