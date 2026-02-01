@@ -4,4 +4,5 @@ from .trade import Trade
 from .strategy import Strategy
 from .projection import Projection
 from .activity import Activity
+from .audit_log import AuditLog
 

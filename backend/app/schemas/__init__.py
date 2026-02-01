@@ -3,3 +3,4 @@ from .portfolio import PortfolioBase, PortfolioCreate, PortfolioResponse, Portfo
 from .trade import TradeProposal, TradeResponse, TradeResult
 from . import strategy
 from . import projection
+from .audit_log import AuditLogCreate, AuditLogResponse
