@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2 } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus } from "../services/api";
+import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
@@ -11,26 +11,32 @@ export function TradingHub() {
     const [projections, setProjections] = useState([]);
     const [summary, setSummary] = useState(null);
     const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms' });
-    const [user, setUser] = useState(null); // Re-added this line as it was implicitly removed by the instruction's snippet but is crucial for the component's logic.
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState(false);
+    const [executing, setExecuting] = useState(false);
+    const [orderTicker, setOrderTicker] = useState('AAPL');
+    const [orderQty, setOrderQty] = useState(10);
+    const [activeHoldings, setActiveHoldings] = useState([]);
 
     useEffect(() => {
         const loadData = async () => {
             if (!contextUser) return;
             try {
-                const [strats, projs, userData, sumData, status] = await Promise.all([
+                const [strats, projs, userData, sumData, status, currentHoldings] = await Promise.all([
                     fetchStrategies(),
                     fetchProjections(),
                     fetchUser(contextUser.id),
                     fetchPortfolioSummary(contextUser.id),
-                    fetchExchangeStatus()
+                    fetchExchangeStatus(),
+                    fetchHoldings(contextUser.id)
                 ]);
                 setStrategies(strats);
                 setProjections(projs);
                 setUser(userData);
                 setSummary(sumData);
                 setExchangeStatus(status);
+                setActiveHoldings(currentHoldings);
             } catch (err) {
                 console.error("Trading Hub Fetch Error:", err);
             } finally {
@@ -42,25 +48,45 @@ export function TradingHub() {
 
     const toggleTradingMode = async () => {
         if (!user) return;
-
-        // Optimistic UI update
         const oldMode = user.trading_mode;
         const newMode = oldMode === 'AUTO' ? 'MANUAL' : 'AUTO';
 
         setToggling(true);
         try {
             const updated = await updateUser(user.id, { trading_mode: newMode });
-            if (updated) {
-                setUser(updated);
-            } else {
-                // Revert if failed
-                setUser({ ...user, trading_mode: oldMode });
-            }
+            if (updated) setUser(updated);
         } catch (err) {
             console.error("Failed to toggle mode:", err);
-            setUser({ ...user, trading_mode: oldMode });
         } finally {
             setToggling(false);
+        }
+    };
+
+    const handleManualTrade = async (action) => {
+        if (!user || user.trading_mode !== 'MANUAL') return;
+
+        setExecuting(true);
+        try {
+            const tradeData = {
+                symbol: orderTicker,
+                action: action, // BUY or SELL
+                price: 180.25, // Mock live price for now
+                quantity: orderQty,
+                type: 'MANUAL',
+                decision_logic: `User manual override: Explicit ${action} command executed via Trading Hub.`
+            };
+
+            const result = await executeTrade(user.id, tradeData);
+            if (result) {
+                // Refresh holdings
+                const updatedHoldings = await fetchHoldings(user.id);
+                setActiveHoldings(updatedHoldings);
+                alert(`${action} successful: ${orderQty} units of ${orderTicker}`);
+            }
+        } catch (err) {
+            console.error("Manual trade failed:", err);
+        } finally {
+            setExecuting(false);
         }
     };
 
@@ -127,37 +153,74 @@ export function TradingHub() {
                 </button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                    {
-                        label: 'Total Algorithmic Volume',
-                        value: strategies.length > 0 ? `$${(strategies.reduce((a, b) => a + (parseInt(b.trades?.replace(/[^0-9]/g, '') || 0) * 1000), 0) / 1000).toFixed(1)}M` : '$0',
-                        icon: RefreshCcw,
-                        color: 'text-indigo-600'
-                    },
-                    {
-                        label: 'Active Algo Positions',
-                        value: strategies.filter(s => s.status === 'STABLE').length.toString(),
-                        icon: Target,
-                        color: 'text-green-600'
-                    },
-                    {
-                        label: 'Avg Daily Alpha',
-                        value: strategies.length > 0 ? `${(strategies.reduce((a, b) => a + parseFloat(b.win || 0), 0) / strategies.length).toFixed(1)}%` : '0%',
-                        icon: TrendingUp,
-                        color: 'text-primary'
-                    },
-                ].map((stat, i) => (
-                    <Card key={i} className="p-6 border-slate-200 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-2">{stat.label}</p>
-                            <h3 className="text-2xl font-bold text-slate-900">{stat.value}</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <Card className="p-6 border-slate-200 shadow-sm col-span-1 lg:col-span-3">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-slate-900 rounded-lg text-primary">
+                                <Activity size={20} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Manual Order Ticket</h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Direct Exchange Access</p>
+                            </div>
                         </div>
-                        <div className={`p-3 bg-slate-50 rounded-xl ${stat.color}`}>
-                            <stat.icon size={22} />
+                        {user?.trading_mode === 'AUTO' && (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-100 rounded-lg">
+                                <Lock size={12} className="text-amber-600" />
+                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">AI Managed</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`flex flex-col md:flex-row gap-6 items-end ${user?.trading_mode === 'AUTO' ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
+                        <div className="flex-1 w-full space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
+                            <input
+                                type="text"
+                                value={orderTicker}
+                                onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                placeholder="AAPL, TSLA, BTC..."
+                            />
                         </div>
-                    </Card>
-                ))}
+                        <div className="w-full md:w-32 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units</label>
+                            <input
+                                type="number"
+                                value={orderQty}
+                                onChange={(e) => setOrderQty(parseInt(e.target.value))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                            />
+                        </div>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                                onClick={() => handleManualTrade('BUY')}
+                                disabled={executing}
+                                className="flex-1 md:flex-none bg-green-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
+                                Buy
+                            </button>
+                            <button
+                                onClick={() => handleManualTrade('SELL')}
+                                disabled={executing}
+                                className="flex-1 md:flex-none bg-red-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingDown size={16} />}
+                                Sell
+                            </button>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="p-6 border-slate-200 shadow-sm flex flex-col justify-center items-center text-center bg-slate-50 border-dashed">
+                    <div className="h-12 w-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 mb-3">
+                        <ArrowRight size={20} />
+                    </div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Hold Status</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-tight">No active orders pending manual confirmation.</p>
+                </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

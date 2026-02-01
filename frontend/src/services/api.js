@@ -170,6 +170,25 @@ export const fetchExchangeStatus = async () => {
     }
 };
 
+export const executeTrade = async (userId, tradeData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/trades/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                ...tradeData,
+                timestamp: new Date().toISOString()
+            })
+        });
+        if (!response.ok) throw new Error('Trade execution failed');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchMarketMovers = async () => {
     try {
         const response = await fetch(`${BASE_URL}/market/movers/`);
