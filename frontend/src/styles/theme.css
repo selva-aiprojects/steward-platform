@@ -41,7 +41,10 @@
 :root {
   --bg-app: #ffffff;
   --bg-surface: #ffffff;
-  --bg-sidebar: #0A2A4D;
+  --bg-sidebar: linear-gradient(180deg, #0A2A4D 0%, #020617 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --sidebar-active: rgba(45, 189, 66, 0.15);
+  /* Primary Green tint */
   --bg-header: rgba(255, 255, 255, 0.8);
 
   --text-primary: #0f172a;
