@@ -5,13 +5,16 @@ pipelines:
   default:
     - step:
         name: Build and Test Backend
+        image: python:3.11
         caches:
           - pip
         script:
           - cd backend
           - pip install -r requirements.txt
-          - # Add test commands here, e.g., pytest
-          - echo "Backend tests passed"
+          - pip install pylint pytest httpx
+          - pylint app --fail-under=8.0 --disable=C0111,C0103
+          - export PYTHONPATH=$PYTHONPATH:.
+          - pytest
     - step:
         name: Build Frontend
         image: node:18
