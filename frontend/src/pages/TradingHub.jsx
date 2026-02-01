@@ -15,9 +15,38 @@ export function TradingHub() {
     const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState(false);
     const [executing, setExecuting] = useState(false);
+    const [provisioning, setProvisioning] = useState(false);
+    const [showLaunchModal, setShowLaunchModal] = useState(false);
+    const [newStratSymbol, setNewStratSymbol] = useState('TSLA');
+    const [newStratName, setNewStratName] = useState('Tesla Momentum');
+    const [logs, setLogs] = useState([
+        { id: 1, time: new Date().toLocaleTimeString(), msg: "Initializing Global Watcher node...", type: 'system' },
+        { id: 2, time: new Date().toLocaleTimeString(), msg: "Analyzing RSI divergence on Mag-7 complex...", type: 'logic' }
+    ]);
     const [orderTicker, setOrderTicker] = useState('AAPL');
     const [orderQty, setOrderQty] = useState(10);
     const [activeHoldings, setActiveHoldings] = useState([]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const types = ['logic', 'system', 'trade'];
+            const msgs = [
+                "Evaluating order book depth on NVDA...",
+                "Sentiment analysis shift detected on social nodes.",
+                "Adjusting stop-loss threshold for active mandates.",
+                "Handshake pulse successful with NASDAQ execution node.",
+                "Optimization loop 842 completed."
+            ];
+            const newLog = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString(),
+                msg: msgs[Math.floor(Math.random() * msgs.length)],
+                type: types[Math.floor(Math.random() * types.length)]
+            };
+            setLogs(prev => [newLog, ...prev].slice(0, 10));
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const loadData = async () => {
@@ -90,6 +119,30 @@ export function TradingHub() {
         }
     };
 
+    const handleLaunchStrategy = async () => {
+        if (!contextUser) return;
+        setProvisioning(true);
+        try {
+            const stratData = {
+                name: newStratName,
+                symbol: newStratSymbol,
+                status: 'RUNNING',
+                pnl: '+$0.00',
+                trades: '0'
+            };
+            const result = await launchStrategy(contextUser.id, stratData);
+            if (result) {
+                setStrategies(prev => [...prev, result]);
+                setShowLaunchModal(false);
+                alert(`Strategy ${newStratName} (${newStratSymbol}) successfully provisioned and deployed.`);
+            }
+        } catch (err) {
+            console.error("Launch failed:", err);
+        } finally {
+            setProvisioning(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
@@ -147,11 +200,79 @@ export function TradingHub() {
                     </div>
                 </div>
 
-                <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 group">
+                <button
+                    onClick={() => setShowLaunchModal(true)}
+                    className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 group"
+                >
                     <Zap size={18} fill="currentColor" className="group-hover:animate-bounce" />
                     Launch New Strategy
                 </button>
             </header>
+
+            {/* Strategy Provisioning Modal */}
+            {showLaunchModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-green-500" />
+                        <button
+                            onClick={() => !provisioning && setShowLaunchModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="text-center mb-8">
+                            <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary shadow-inner">
+                                <Zap size={32} fill="currentColor" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Provision Agent Mandate</h3>
+                            <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Deploy New Autonomous Trading Node</p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Strategy Name</label>
+                                <input
+                                    type="text"
+                                    value={newStratName}
+                                    onChange={(e) => setNewStratName(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Asset/Ticker</label>
+                                <input
+                                    type="text"
+                                    value={newStratSymbol}
+                                    onChange={(e) => setNewStratSymbol(e.target.value.toUpperCase())}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                />
+                            </div>
+
+                            <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
+                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                    <span className="opacity-60">Execution Tier</span>
+                                    <span className="text-primary">ULTRA-LOW LATENCY</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                    <span className="opacity-60">Risk Profile</span>
+                                    <span className="text-green-400 font-bold">BALANCED</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleLaunchStrategy}
+                                disabled={provisioning}
+                                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
+                            >
+                                {provisioning ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} fill="currentColor" />}
+                                {provisioning ? 'Initializing Node...' : 'Confirm Deployment'}
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="p-6 border-slate-200 shadow-sm col-span-1 lg:col-span-3">
@@ -225,74 +346,99 @@ export function TradingHub() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Active Automated Strategies */}
-                <div className="lg:col-span-8 space-y-6 relative group">
-                    <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
+                <div className="lg:col-span-8 flex flex-col gap-8">
+                    <div className="space-y-6 relative group">
+                        <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
 
-                    {user?.trading_mode === 'AUTO' && (
-                        <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/40 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-slate-200 animate-in fade-in duration-300">
-                            <div className="bg-white p-4 rounded-full shadow-xl mb-4 text-[#0A2A4D]">
-                                <Lock size={32} />
+                        {user?.trading_mode === 'AUTO' && (
+                            <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/40 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-slate-200 animate-in fade-in duration-300">
+                                <div className="bg-white p-4 rounded-full shadow-xl mb-4 text-[#0A2A4D]">
+                                    <Lock size={32} />
+                                </div>
+                                <h3 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-wide">Manual Controls Locked</h3>
+                                <p className="max-w-xs text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                                    Steward AI is currently managing all active strategies. Switch to <span className="text-[#0A2A4D]">Manual Mode</span> to override.
+                                </p>
                             </div>
-                            <h3 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-wide">Manual Controls Locked</h3>
-                            <p className="max-w-xs text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
-                                Steward AI is currently managing all active strategies. Switch to <span className="text-[#0A2A4D]">Manual Mode</span> to override.
-                            </p>
-                        </div>
-                    )}
+                        )}
 
-                    <div className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
-                        {strategies.map((strat) => (
-                            <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
-                                <div className="flex flex-wrap items-center justify-between gap-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white ${strat.status === 'RUNNING' ? 'bg-primary' : 'bg-slate-300'
-                                            }`}>
-                                            {strat.symbol.substring(0, 2)}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-slate-900 leading-none">{strat.name}</h3>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{strat.symbol}</span>
-                                                <span className="h-1 w-1 rounded-full bg-slate-200" />
-                                                <span className={`text-[10px] font-black uppercase ${strat.status === 'RUNNING' ? 'text-green-500' : 'text-slate-400'
-                                                    }`}>{strat.status}</span>
+                        <div className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
+                            {strategies.map((strat) => (
+                                <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
+                                    <div className="flex flex-wrap items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white ${strat.status === 'RUNNING' ? 'bg-primary' : 'bg-slate-300'
+                                                }`}>
+                                                {strat.symbol.substring(0, 2)}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-900 leading-none">{strat.name}</h3>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{strat.symbol}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-slate-200" />
+                                                    <span className={`text-[10px] font-black uppercase ${strat.status === 'RUNNING' ? 'text-green-500' : 'text-slate-400'
+                                                        }`}>{strat.status}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 border-l border-r px-8 border-slate-50">
-                                        <div>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Profitability</p>
-                                            <p className={`text-sm font-black ${strat.pnl.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{strat.pnl}</p>
+                                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 border-l border-r px-8 border-slate-50">
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Profitability</p>
+                                                <p className={`text-sm font-black ${strat.pnl.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{strat.pnl}</p>
+                                            </div>
+                                            <div className="hidden md:block">
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Drawdown</p>
+                                                <p className="text-sm font-black text-slate-900">1.2%</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">State</p>
+                                                <p className="text-sm font-black text-slate-500 uppercase text-[10px]">Optimizing</p>
+                                            </div>
                                         </div>
-                                        <div className="hidden md:block">
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Drawdown</p>
-                                            <p className="text-sm font-black text-slate-900">1.2%</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">State</p>
-                                            <p className="text-sm font-black text-slate-500 uppercase text-[10px]">Optimizing</p>
-                                        </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-2">
-                                        {strat.status === 'RUNNING' ? (
-                                            <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all">
-                                                <Pause size={18} />
+                                        <div className="flex items-center gap-2">
+                                            {strat.status === 'RUNNING' ? (
+                                                <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all">
+                                                    <Pause size={18} />
+                                                </button>
+                                            ) : (
+                                                <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-green-50 rounded-xl transition-all">
+                                                    <Play size={18} />
+                                                </button>
+                                            )}
+                                            <button className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all">
+                                                CFG
                                             </button>
-                                        ) : (
-                                            <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-green-50 rounded-xl transition-all">
-                                                <Play size={18} />
-                                            </button>
-                                        )}
-                                        <button className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all">
-                                            CFG
-                                        </button>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
-                        ))}
+                                </Card>
+                            ))}
+                        </div>
                     </div>
+
+                    {/* Agent Thought Stream */}
+                    <Card className="border-slate-200 shadow-sm overflow-hidden bg-white">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <div className="flex items-center gap-2">
+                                <Activity size={14} className="text-primary animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Agent Thought Stream</span>
+                            </div>
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Live Telemetry</span>
+                        </div>
+                        <div className="p-4 space-y-3 h-[240px] overflow-y-auto font-mono scrollbar-hide">
+                            {logs.map((log) => (
+                                <div key={log.id} className="flex gap-3 text-[10px] animate-in slide-in-from-left-2 duration-300">
+                                    <span className="text-slate-400 shrink-0">[{log.time}]</span>
+                                    <span className={`font-bold ${log.type === 'logic' ? 'text-indigo-600' : log.type === 'system' ? 'text-slate-500' : 'text-primary'
+                                        }`}>
+                                        {log.type.toUpperCase()}:
+                                    </span>
+                                    <span className="text-slate-700">{log.msg}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
                 </div>
 
                 {/* AI Next Day Projections */}

@@ -160,6 +160,36 @@ export const fetchWatchlist = async () => {
     }
 };
 
+export const depositFunds = async (userId, amount) => {
+    try {
+        const response = await fetch(`${BASE_URL}/portfolio/deposit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, amount })
+        });
+        if (!response.ok) throw new Error('Deposit failed');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const launchStrategy = async (userId, strategyData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/strategies/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, ...strategyData })
+        });
+        if (!response.ok) throw new Error('Strategy launch failed');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchExchangeStatus = async () => {
     try {
         const response = await fetch(`${BASE_URL}/market/status/`);

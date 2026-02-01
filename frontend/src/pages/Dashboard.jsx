@@ -8,7 +8,7 @@ import {
 import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2, DollarSign, Target, Calendar, Search, Clock, Settings } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios } from "../services/api";
+import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
@@ -19,6 +19,7 @@ export function Dashboard() {
     const [allUsers, setAllUsers] = useState([]);
     const [recentTrades, setRecentTrades] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [depositing, setDepositing] = useState(false);
     const [marketMoversState, setMarketMovers] = useState([]);
     const [adminTelemetry, setAdminTelemetry] = useState(null);
     const [chartData, setChartData] = useState([]);
@@ -128,6 +129,28 @@ export function Dashboard() {
         loadData();
     }, [user, selectedUser]);
 
+    const handleQuickDeposit = async () => {
+        const viewId = selectedUser?.id || user?.id;
+        if (!viewId) return;
+        setDepositing(true);
+        try {
+            const result = await depositFunds(viewId, 1000); // Quick $1000
+            if (result) {
+                const [sumData, historyData] = await Promise.all([
+                    fetchPortfolioSummary(viewId),
+                    fetchPortfolioHistory(viewId)
+                ]);
+                setSummary(sumData);
+                setChartData(historyData);
+                alert("Quick Deposit of $1,000 successful.");
+            }
+        } catch (err) {
+            console.error("Quick deposit failed:", err);
+        } finally {
+            setDepositing(false);
+        }
+    };
+
     const metrics = [
         {
             label: user?.role === 'BUSINESS_OWNER' ? 'Total Managed Assets' : 'Total Equity',
@@ -136,6 +159,23 @@ export function Dashboard() {
             icon: BarChart2,
             color: 'text-primary',
             link: '/portfolio'
+        },
+        {
+            label: 'Ready Capital',
+            value: summary ? `$${(summary.cash_balance || 0).toLocaleString()}` : '$0',
+            change: '+1.2%',
+            icon: DollarSign,
+            color: 'text-indigo-600',
+            link: '/portfolio',
+            action: (
+                <button
+                    onClick={(e) => { e.preventDefault(); handleQuickDeposit(); }}
+                    disabled={depositing}
+                    className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-400 hover:text-indigo-600 transition-colors"
+                >
+                    {depositing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                </button>
+            )
         },
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
@@ -276,10 +316,13 @@ export function Dashboard() {
                                 <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${stat.color}`}>
                                     <stat.icon size={18} />
                                 </div>
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
-                                    }`}>
-                                    {stat.change}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {stat.action}
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+                                        }`}>
+                                        {stat.change}
+                                    </span>
+                                </div>
                             </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
                             <h3 className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</h3>

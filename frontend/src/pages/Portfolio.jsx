@@ -3,7 +3,7 @@ import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Act
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections } from "../services/api";
+import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds } from "../services/api";
 import { useUser } from '../context/UserContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -16,6 +16,9 @@ const Portfolio = () => {
   const [projections, setProjections] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [depositing, setDepositing] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(5000);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const viewId = selectedUser?.id || user?.id;
@@ -46,6 +49,25 @@ const Portfolio = () => {
     };
     loadData();
   }, [viewId]);
+
+  const handleDeposit = async () => {
+    if (!viewId || depositAmount <= 0) return;
+    setDepositing(true);
+    try {
+      const result = await depositFunds(viewId, depositAmount);
+      if (result) {
+        // Refresh summary to show new balance
+        const updatedSummary = await fetchPortfolioSummary(viewId);
+        setSummary(updatedSummary);
+        setShowDepositModal(false);
+        alert(`Successfully deposited $${depositAmount.toLocaleString()} into your vault.`);
+      }
+    } catch (err) {
+      console.error("Deposit failed:", err);
+    } finally {
+      setDepositing(false);
+    }
+  };
 
   const handleDragStart = (e, item) => {
     if (!isManual) return;
@@ -104,12 +126,77 @@ const Portfolio = () => {
               ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
-          <Link to="/trading" className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+          <button
+            onClick={() => setShowDepositModal(true)}
+            className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} />
+            Deposit
+          </button>
+          <Link to="/trading" className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-slate-900/20">
             <Zap size={18} fill="currentColor" />
-            Quick Action
+            Launch
           </Link>
         </div>
       </header>
+
+      {/* Deposit Modal */}
+      {showDepositModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-indigo-600" />
+            <button
+              onClick={() => !depositing && setShowDepositModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary shadow-inner">
+                <DollarSign size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Inject Capital</h3>
+              <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Connect to Virtual Liquidity Pool</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (USD)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(parseInt(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-8 pr-4 py-4 text-xl font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="opacity-60">Network Fee</span>
+                  <span className="text-green-400">0.00% (PRO)</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="opacity-60">Processing Time</span>
+                  <span className="text-primary font-bold">Instant</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleDeposit}
+                disabled={depositing}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
+              >
+                {depositing ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />}
+                {depositing ? 'Securing Funds...' : 'Execute Deposit'}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Interactive Workbench */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
