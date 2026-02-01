@@ -5,75 +5,75 @@
 @layer base {
   :root {
     /* Brand - Light Mode */
-    --background: 210 20% 98%;
-    /* Light Greyish background */
+    --background: 210 40% 98%;
+    /* #F8FAFC */
     --foreground: 211 75% 17%;
-    /* Navy Text (#0A2A4D is 211 H, 75 S, 17 L) */
+    /* #0A2A4D (Navy) */
 
     --card: 0 0% 100%;
     --card-foreground: 211 75% 17%;
-    /* Navy */
 
     --popover: 0 0% 100%;
     --popover-foreground: 211 75% 17%;
 
     --primary: 129 62% 46%;
-    /* Green #2DBD42 approx (HSL: 129, 62%, 46%) */
+    /* #2DBD42 (Green) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 211 75% 17%;
+    /* Navy as Secondary */
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 90%;
-    /* Light Blue/Grey #CCD1D9 */
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 20% 98%;
+    /* Light Grey/Blue tint */
+    --accent-foreground: 211 75% 17%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 211 75% 17%;
     /* Navy Ring */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+    /* 12px from kit */
   }
 
   .dark {
     /* Brand - Dark Mode */
-    --background: 211 75% 17%;
-    /* #0A2A4D Navy Background */
+    --background: 222 47% 11%;
+    /* Dark Navy #0A2A4D base or #020617 */
     --foreground: 210 40% 98%;
 
-    --card: 211 60% 14%;
-    /* Slightly darker navy/black for cards */
+    --card: 217 33% 17%;
+    /* Darker Navy #1e293b approx */
     --card-foreground: 210 40% 98%;
 
-    --popover: 211 60% 14%;
+    --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 129 62% 46%;
     /* Green #2DBD42 */
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 25%;
-    /* Muted navy */
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 25%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217.2 32.6% 25%;
+    --accent: 217 33% 25%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 25%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 217 33% 25%;
+    --input: 217 33% 17%;
     --ring: 129 62% 46%;
     /* Green Ring */
   }

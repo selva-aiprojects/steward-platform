@@ -7,6 +7,7 @@ class TradeProposal(BaseModel):
     action: str  # BUY, SELL
     quantity: int
     price: Optional[float] = None # Optional for Market orders
+    request_id: Optional[str] = None
 
 class TradeResponse(BaseModel):
     id: int
@@ -29,4 +30,6 @@ class TradeResult(BaseModel):
     status: str
     reason: Optional[str] = None
     trace_id: str
+    risk_score: Optional[int] = None
+    execution_result: Optional[Dict[str, Any]] = None
     trace: List[Dict[str, Any]]

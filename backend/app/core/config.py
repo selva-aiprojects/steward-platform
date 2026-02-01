@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     
     # Execution Mode: CRITICAL for architecture compliance
     # Start in PAPER_TRADING by default for safety
-    EXECUTION_MODE: Literal["PAPER_TRADING", "LIVE_TRADING"] = "PAPER_TRADING"
+    EXECUTION_MODE: str = "PAPER_TRADING"
     
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/stocksteward"
@@ -18,5 +18,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 settings = Settings()
