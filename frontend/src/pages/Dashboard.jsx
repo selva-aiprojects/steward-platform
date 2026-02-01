@@ -12,6 +12,24 @@ import {
 import { AIAnalyst } from "../components/AIAnalyst";
 import { fetchPortfolioSummary, fetchTrades } from "../services/api";
 
+// Fallback static data for charts
+const performanceData = [
+    { name: 'Mon', value: 4000 },
+    { name: 'Tue', value: 3000 },
+    { name: 'Wed', value: 2000 },
+    { name: 'Thu', value: 2780 },
+    { name: 'Fri', value: 1890 },
+    { name: 'Sat', value: 2390 },
+    { name: 'Sun', value: 3490 },
+];
+
+const marketMovers = [
+    { symbol: 'TSLA', change: '+3.2%', type: 'up' },
+    { symbol: 'AAPL', change: '-1.4%', type: 'down' },
+    { symbol: 'NVDA', change: '+2.8%', type: 'up' },
+    { symbol: 'MSFT', change: '+0.9%', type: 'up' },
+];
+
 export function Dashboard() {
     const [period, setPeriod] = useState('Today');
     const [summary, setSummary] = useState(null);
