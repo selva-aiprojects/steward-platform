@@ -10,6 +10,13 @@ const data = [
     { name: 'Jun', value: 112000 },
 ];
 
+const activityItems = [
+    { id: 1, action: "Bought AAPL", strategy: "SMACrossover", pnl: "+$250.00" },
+    { id: 2, action: "Sold TSLA", strategy: "RSI Reversal", pnl: "+$120.50" },
+    { id: 3, action: "Bought MSFT", strategy: "Momentum", pnl: "-$45.00" },
+    { id: 4, action: "Bought GOOGL", strategy: "MeanReversion", pnl: "+$85.20" },
+];
+
 export function Dashboard() {
     return (
         <div className="space-y-6">
