@@ -3,7 +3,7 @@ import { Link, useLocation, NavLink } from "react-router-dom"
 import {
     LayoutDashboard, Wallet, Users as UsersIcon, Menu, X,
     LogOut, Sun, Moon, Zap, BarChart2, ShieldCheck, FileText,
-    Briefcase, Activity
+    Briefcase, Activity, HelpCircle
 } from "lucide-react"
 import { useUser } from "../../context/UserContext"
 import { useTheme } from "../theme-provider"
@@ -146,14 +146,25 @@ export function Layout({ children }) {
                                     <h1 className="text-xl font-black text-slate-900 leading-none">Greetings, <span className="text-primary">{user.name}</span>!!</h1>
                                 </div>
                             </div>
-                            <div className="hidden md:flex flex-col items-end">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Market Connection: Secure</span>
+                            <div className="hidden md:flex flex-col items-end gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex flex-col items-end">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Market Connection: Secure</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold bg-[#0A2A4D] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
+                                            Role: {user.role}
+                                        </span>
+                                    </div>
+                                    <Link
+                                        to="/help"
+                                        className="h-10 w-10 rounded-xl bg-slate-900 flex items-center justify-center text-white hover:bg-primary transition-all shadow-lg hover:shadow-primary/20 group"
+                                        title="User Manual"
+                                    >
+                                        <HelpCircle size={20} className="group-hover:rotate-12 transition-transform" />
+                                    </Link>
                                 </div>
-                                <span className="text-[10px] font-bold bg-[#0A2A4D] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
-                                    Role: {user.role}
-                                </span>
                             </div>
                         </div>
                     )}
