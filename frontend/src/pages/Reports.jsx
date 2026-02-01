@@ -3,6 +3,7 @@ import { Card } from "../components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2 } from 'lucide-react';
 import { fetchTrades } from "../services/api";
+import { useUser } from "../context/UserContext";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
