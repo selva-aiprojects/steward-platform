@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Card } from "../components/ui/card";
+import { useNavigate, Link } from "react-router-dom";
 import { Briefcase, ArrowUpRight, ArrowDownRight, GripVertical, Lock, ShieldCheck, Database, Award, Plus, Trash2 } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 
@@ -103,27 +104,28 @@ const Portfolio = () => {
 
           <div className="space-y-3 min-h-[200px]">
             {activeHoldings.map((stock) => (
-              <div
-                key={stock.id}
-                draggable={isManual}
-                onDragStart={(e) => handleDragStart(e, stock)}
-                className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between group ${isManual ? 'cursor-grab active:cursor-grabbing hover:border-primary/50 hover:shadow-md' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  {isManual && <GripVertical className="text-slate-300" size={16} />}
-                  <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700">{stock.symbol.substring(0, 1)}</div>
-                  <div>
-                    <p className="font-black text-slate-900 text-sm">{stock.symbol}</p>
-                    <p className="text-[10px] text-slate-500 font-mono">${stock.currentPrice.toFixed(2)}</p>
+              <Link to="/trading" key={stock.id} className="block">
+                <div
+                  draggable={isManual}
+                  onDragStart={(e) => handleDragStart(e, stock)}
+                  className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-primary/40 hover:shadow-md transition-all ${isManual ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isManual && <GripVertical className="text-slate-300" size={16} />}
+                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
+                    <div>
+                      <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">${stock.currentPrice.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-black ${stock.pnlPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {stock.pnlPct >= 0 ? '+' : ''}{stock.pnlPct}%
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">PnL</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-sm font-black ${stock.pnlPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {stock.pnlPct >= 0 ? '+' : ''}{stock.pnlPct}%
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">PnL</p>
-                </div>
-              </div>
+              </Link>
             ))}
             {activeHoldings.length === 0 && (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 rounded-xl p-8">
@@ -144,21 +146,19 @@ const Portfolio = () => {
           </h3>
           <div className="grid grid-cols-2 gap-3">
             {watchlist.map((stock) => (
-              <div
-                key={stock.id}
-                draggable={isManual}
-                onDragStart={(e) => handleDragStart(e, stock)}
-                className={`bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between ${isManual ? 'cursor-grab hover:bg-slate-100 hover:border-slate-300' : 'opacity-50'}`}
-              >
-                <div>
-                  <p className="font-black text-slate-900 text-sm">{stock.symbol}</p>
-                  <span className="text-[10px] text-slate-500 font-bold tracking-wider">NASD</span>
+              <Link to="/trading" key={stock.id}>
+                <div
+                  draggable={isManual}
+                  onDragStart={(e) => handleDragStart(e, stock)}
+                  className={`p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between h-24 group hover:bg-white hover:border-primary/30 hover:shadow-md transition-all ${isManual ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
+                    {isManual && <GripVertical className="text-slate-300" size={12} />}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono">${stock.currentPrice.toFixed(2)}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-700">${stock.currentPrice.toFixed(0)}</span>
-                  {isManual && <div className="h-6 w-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-primary"><Plus size={12} /></div>}
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
           <div className="mt-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100">

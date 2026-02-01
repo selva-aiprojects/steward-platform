@@ -11,6 +11,7 @@ import {
     AlertCircle, Search, Settings, Loader2
 } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
+import { useNavigate, Link } from "react-router-dom";
 import { fetchPortfolioSummary, fetchTrades } from "../services/api";
 
 // Fallback static data for charts
@@ -115,28 +116,32 @@ export function Dashboard() {
             value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
             change: '+14.2%',
             icon: BarChart2,
-            color: 'text-primary'
+            color: 'text-primary',
+            link: '/portfolio'
         },
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
             value: `$${(summary?.invested_amount || 0).toLocaleString()}`,
             change: '8 positions',
             icon: Activity,
-            color: 'text-indigo-600'
+            color: 'text-indigo-600',
+            link: '/portfolio'
         },
         {
             label: user?.role === 'BUSINESS_OWNER' ? 'Portfolio ROI' : 'Daily Alpha',
             value: `+${summary?.win_rate || 0}%`,
             change: 'Beat SPY by 2%',
             icon: TrendingUp,
-            color: 'text-primary'
+            color: 'text-primary',
+            link: '/reports'
         },
         {
             label: user?.role === 'ADMIN' ? 'Live System Load' : 'System Health',
             value: user?.role === 'ADMIN' && adminTelemetry ? adminTelemetry.system_load : '100%',
             change: user?.role === 'ADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : 'Latency 42ms',
             icon: Shield,
-            color: 'text-green-600'
+            color: 'text-green-600',
+            link: user?.role === 'ADMIN' ? '/users' : '/'
         },
     ];
 
@@ -220,19 +225,21 @@ export function Dashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {metrics.map((stat, i) => (
-                    <Card key={i} className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${stat.color}`}>
-                                <stat.icon size={18} />
+                    <Link to={stat.link} key={i}>
+                        <Card className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white h-full cursor-pointer">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${stat.color}`}>
+                                    <stat.icon size={18} />
+                                </div>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                    {stat.change}
+                                </span>
                             </div>
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stat.change.startsWith('+') ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
-                                }`}>
-                                {stat.change}
-                            </span>
-                        </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</h3>
-                    </Card>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</h3>
+                        </Card>
+                    </Link>
                 ))}
             </div>
 
@@ -308,28 +315,30 @@ export function Dashboard() {
                     </div>
                     <div className="p-2">
                         {marketMoversState.map((mover) => (
-                            <div key={mover.symbol} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
-                                        {mover.symbol}
+                            <Link to="/trading" key={mover.symbol}>
+                                <div className="flex items-center justify-between p-4 hover:bg-indigo-50/50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300 group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs group-hover:bg-white group-hover:border-primary/20 group-hover:text-primary transition-all shadow-sm">
+                                            {mover.symbol}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                {mover.price ? `$${mover.price}` : 'NASD'}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                            {mover.price ? `$${mover.price}` : 'NASD'}
-                                        </p>
+                                    <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
+                                        }`}>
+                                        {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                        {mover.change}
                                     </div>
                                 </div>
-                                <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
-                                    }`}>
-                                    {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                    {mover.change}
-                                </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                     <div className="p-4 mt-2">
-                        <button className="w-full py-3 text-xs font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors">View All Volatility Focus</button>
+                        <Link to="/trading" className="block w-full text-center py-3 text-xs font-black bg-slate-50 text-slate-500 hover:bg-slate-900 hover:text-white rounded-xl uppercase tracking-widest transition-all">View All Volatility Focus</Link>
                     </div>
                 </Card>
             </div>
@@ -349,22 +358,24 @@ export function Dashboard() {
                     </div>
                     <div className="divide-y divide-slate-50">
                         {recentTrades.map((log, i) => (
-                            <div key={i} className="p-5 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
-                                <div className="flex gap-4">
-                                    <span className="text-[10px] font-black text-slate-300 mt-1">
-                                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <div>
-                                        <h4 className="text-xs font-black text-slate-900">
-                                            {user?.role === 'AUDITOR' && <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8px] uppercase mr-2 text-primary font-black">Verified</span>}
-                                            {log.action} <span className="text-primary">{log.symbol}</span>
-                                        </h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: AI-Steward</p>
-                                        <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic">{log.decision_logic}</p>
+                            <Link to="/reports" key={i}>
+                                <div className="p-5 flex items-start justify-between gap-4 hover:bg-indigo-50/50 transition-colors group">
+                                    <div className="flex gap-4">
+                                        <span className="text-[10px] font-black text-slate-300 mt-1">
+                                            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        <div>
+                                            <h4 className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">
+                                                {user?.role === 'AUDITOR' && <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8px] uppercase mr-2 text-primary font-black">Verified</span>}
+                                                {log.action} <span className="text-primary">{log.symbol}</span>
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: AI-Steward</p>
+                                            <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic group-hover:bg-white transition-colors">{log.decision_logic}</p>
+                                        </div>
                                     </div>
+                                    <div className="h-2 w-2 rounded-full mt-1 bg-green-500 group-hover:animate-ping" />
                                 </div>
-                                <div className="h-2 w-2 rounded-full mt-1 bg-green-500" />
-                            </div>
+                            </Link>
                         ))}
                     </div>
                     {user?.role === 'AUDITOR' && (

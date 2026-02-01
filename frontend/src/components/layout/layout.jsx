@@ -21,10 +21,10 @@ export function Layout({ children }) {
         <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
             {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between p-4 bg-[#0A2A4D] text-white sticky top-0 z-50 shadow-md">
-                <div className="flex items-center gap-2">
+                <Link to="/" className="flex items-center gap-2">
                     <img src={logo} alt="Logo" className="h-6 w-6" />
                     <span className="font-heading font-black text-sm tracking-tight text-white">Stock<span className="text-green-400">Steward</span></span>
-                </div>
+                </Link>
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-white/10 rounded-lg">
                     {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
@@ -37,17 +37,17 @@ export function Layout({ children }) {
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
                 <div className="mb-10 p-8 hidden md:block">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 border border-white/20 shadow-xl overflow-hidden">
+                    <Link to="/" className="flex items-center gap-4 group">
+                        <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 border border-white/20 shadow-xl overflow-hidden group-hover:scale-105 transition-transform">
                             <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
                         </div>
                         <div className="flex flex-col">
-                            <div className="font-heading text-xl font-black tracking-tight text-white leading-none">
+                            <div className="font-heading text-xl font-black tracking-tight text-white leading-none group-hover:text-green-400 transition-colors">
                                 Stock<span className="text-primary text-green-400">Steward</span>
                             </div>
                             <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mt-1.5 ml-0.5">AI PLATFORM</span>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
                 <nav className="space-y-1.5 px-4 flex-1 py-6 md:py-0 overflow-y-auto">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from "../components/ui/card";
 import { Check, X, Zap, Shield, Globe, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from "../context/UserContext";
 
 const TIERS = [
@@ -67,6 +68,7 @@ const TIERS = [
 ];
 
 export default function Subscription() {
+    const navigate = useNavigate();
     const { user } = useUser();
     const [billingCycle, setBillingCycle] = useState('monthly');
 
@@ -117,7 +119,13 @@ export default function Subscription() {
                             {tier.price !== 'Free' && tier.price !== 'Custom' && <span className={`ml-1 text-sm ${tier.id === 'enterprise' ? 'text-slate-500' : 'text-slate-400'}`}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>}
                         </div>
 
-                        <button className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all hover:opacity-90 mb-8 shadow-lg ${tier.btnColor}`}>
+                        <button
+                            onClick={() => {
+                                window.alert('Order Initiated: StockSteward Agent Provisioning in progress...');
+                                navigate('/');
+                            }}
+                            className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all hover:opacity-90 mb-8 shadow-lg ${tier.btnColor}`}
+                        >
                             {tier.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
                         </button>
 
