@@ -30,7 +30,10 @@ const marketMovers = [
     { symbol: 'MSFT', change: '+0.9%', type: 'up' },
 ];
 
+import { useUser } from "../context/UserContext";
+
 export function Dashboard() {
+    const { user } = useUser();
     const [period, setPeriod] = useState('Today');
     const [summary, setSummary] = useState(null);
     const [recentTrades, setRecentTrades] = useState([]);
@@ -38,9 +41,11 @@ export function Dashboard() {
 
     useEffect(() => {
         const loadData = async () => {
+            if (!user) return;
             try {
+                // Use actual user ID instead of hardcoded 1
                 const [sumData, tradeData] = await Promise.all([
-                    fetchPortfolioSummary(1),
+                    fetchPortfolioSummary(user.id),
                     fetchTrades()
                 ]);
                 setSummary(sumData);
@@ -52,7 +57,7 @@ export function Dashboard() {
             }
         };
         loadData();
-    }, []);
+    }, [user]);
 
     const [chartData, setChartData] = useState(performanceData);
 
@@ -110,10 +115,14 @@ export function Dashboard() {
             {/* Minimalist Top Header */}
             <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">Executive Overview</h1>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
+                        {user?.role === 'ADMIN' ? 'Administrator Command' : `Welcome, ${user?.name || 'Investor'}`}
+                    </h1>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">Live Agent Streaming Status: ACTIVE</p>
+                        <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'ADMIN' ? 'bg-indigo-500' : 'bg-primary'}`} />
+                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
+                            {user?.role === 'ADMIN' ? 'Global System Oversight: ACTIVE' : 'Personal Wealth Agent: ACTIVE'}
+                        </p>
                     </div>
                 </div>
                 <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start w-full md:w-auto overflow-x-auto">
