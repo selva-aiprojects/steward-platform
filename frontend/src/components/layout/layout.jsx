@@ -1,11 +1,19 @@
 import React, { useState } from "react"
-import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Wallet, Users as UsersIcon, Menu, X } from "lucide-react"
+import { Link, useLocation, NavLink } from "react-router-dom"
+import {
+    LayoutDashboard, Wallet, Users as UsersIcon, Menu, X,
+    LogOut, Sun, Moon, Zap, BarChart2, ShieldCheck, FileText,
+    Briefcase, Activity
+} from "lucide-react"
+import { useUser } from "../../context/UserContext"
+import { useTheme } from "../../context/ThemeContext"
 import logo from "../../assets/logo.png"
 
 export function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const { user, logout, isAdmin } = useUser();
+    const { theme, toggleTheme } = useTheme();
 
     const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -42,40 +50,76 @@ export function Layout({ children }) {
                     </div>
                 </div>
 
-                <nav className="space-y-2 px-6 flex-1 py-10 md:py-0 overflow-y-auto">
-                    <Link to="/" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold group ${location.pathname === '/' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
-                        <LayoutDashboard size={20} className={`${location.pathname === '/' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
+                <nav className="space-y-1.5 px-4 flex-1 py-6 md:py-0 overflow-y-auto">
+                    <NavLink to="/" onClick={closeMenu} end className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                        <LayoutDashboard size={18} className={`${location.pathname === '/' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
                         <span>Dashboard</span>
-                    </Link>
-                    <Link to="/trading" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold group ${location.pathname === '/trading' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-lg transition-all border ${location.pathname === '/trading' ? 'bg-green-500 text-white border-green-500' : 'bg-green-500/10 text-green-400 group-hover:bg-green-500 group-hover:text-white border-green-500/20'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="m17 5-5-3-5 3" /><path d="m17 19-5 3-5-3" /><path d="M2 12h20" /><path d="m5 7-3 5 3 5" /><path d="m19 7 3 5-3 5" /></svg>
-                        </div>
-                        <span>Trading Hub</span>
-                    </Link>
-                    <Link to="/portfolio" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold group ${location.pathname === '/portfolio' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
-                        <Wallet size={20} className={`${location.pathname === '/portfolio' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
-                        <span>Portfolio</span>
-                    </Link>
-                    <Link to="/reports" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold group ${location.pathname === '/reports' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${location.pathname === '/reports' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+                    </NavLink>
+
+                    {user?.role !== 'AUDITOR' && (
+                        <>
+                            <NavLink to="/trading" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <Zap size={18} className={`${location.pathname === '/trading' ? 'text-green-400' : 'text-slate-400 group-hover:text-green-400'} transition-colors`} />
+                                <span>Trading Hub</span>
+                            </NavLink>
+                            <NavLink to="/portfolio" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <Briefcase size={18} className={`${location.pathname === '/portfolio' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
+                                <span>Portfolio</span>
+                            </NavLink>
+                        </>
+                    )}
+
+                    <NavLink to="/reports" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                        <BarChart2 size={18} className={`${location.pathname === '/reports' ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'} transition-colors`} />
                         <span>Reports</span>
-                    </Link>
-                    <Link to="/users" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold group ${location.pathname === '/users' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
-                        <UsersIcon size={20} className={`${location.pathname === '/users' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
-                        <span>Users</span>
-                    </Link>
+                    </NavLink>
+
+                    {(user?.role === 'USER' || user?.role === 'BUSINESS_OWNER') && (
+                        <>
+                            <div className="my-2 border-t border-white/10 mx-4" />
+                            <Link to="/subscription" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-black group hover:bg-amber-400/10 ${location.pathname === '/subscription' ? 'bg-amber-400/20 text-amber-400 border border-amber-400/20 shadow-lg shadow-amber-900/20' : 'text-amber-400/70 hover:text-amber-400'}`}>
+                                <Zap size={18} className="fill-amber-400/20" />
+                                <span className="tracking-wide">UPGRADE</span>
+                            </Link>
+                        </>
+                    )}
+
+                    {isAdmin && (
+                        <NavLink to="/users" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                            <UsersIcon size={18} className={`${location.pathname === '/users' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
+                            <span>User Mgmt</span>
+                        </NavLink>
+                    )}
                 </nav>
 
-                <div className="mt-auto p-6 border-t border-white/5 bg-black/20">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">
-                            SS
+                <div className="mt-auto p-4 border-t border-white/5 bg-black/20">
+                    {user && (
+                        <div className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-white/5 border border-white/5">
+                            <div className="h-8 w-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-300 border border-indigo-500/20">
+                                {user.avatar || user.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-xs font-black text-white leading-none truncate">{user.name}</p>
+                                <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1.5 truncate">{user.role}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-xs font-black text-white leading-none">Admin Terminal</p>
-                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">Live Connection</p>
-                        </div>
+                    )}
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            className="flex-1 flex items-center justify-center p-2.5 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                            aria-label="Toggle Theme"
+                        >
+                            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                        </button>
+                        <button
+                            onClick={logout}
+                            className="flex-[2] flex items-center justify-center gap-2 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest"
+                        >
+                            <LogOut size={14} />
+                            <span>Logout</span>
+                        </button>
                     </div>
                 </div>
             </div>
