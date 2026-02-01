@@ -71,10 +71,51 @@ export function Dashboard() {
     ];
 
 
+    const [chartData, setChartData] = useState(performanceData);
+
+    useEffect(() => {
+        const fetchChartData = async () => {
+            // Mock fetching history for now as per backend availability, 
+            // but structured to accept real data
+            try {
+                // In a real app: const history = await fetchPortfolioHistory(1);
+                // For now, we simulate dynamic slicing of the static data or extended mock data
+
+                // Stimulate data change based on period
+                let data = [...performanceData];
+                if (period === 'Today') {
+                    // Hourly granularity simulation
+                    data = [
+                        { name: '9AM', value: 4000 },
+                        { name: '10AM', value: 4200 },
+                        { name: '11AM', value: 4100 },
+                        { name: '12PM', value: 4300 },
+                        { name: '1PM', value: 4250 },
+                        { name: '2PM', value: 4400 },
+                    ];
+                } else if (period === 'This Week') {
+                    // Daily
+                    data = performanceData;
+                } else {
+                    // Monthly simulation
+                    data = [
+                        { name: 'Jan', value: 4000 },
+                        { name: 'Feb', value: 5500 },
+                        { name: 'Mar', value: 4800 },
+                        { name: 'Apr', value: 6200 },
+                    ];
+                }
+                setChartData(data);
+            } catch (e) {
+                console.error("Chart data error", e);
+            }
+        };
+        fetchChartData();
+    }, [period]);
+
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
-
-            {/* Minimalist Top Header */}
+            {/* Headers and Metrics... */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Executive Overview</h1>
@@ -97,7 +138,7 @@ export function Dashboard() {
                 </div>
             </header>
 
-            {/* Core Metrics - Trimmed & Professional */}
+            {/* Core Metrics... (Unchanged logic, just ensuring context is kept) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {metrics.map((stat, i) => (
                     <Card key={i} className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white">
@@ -117,7 +158,7 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                {/* Main Curve - Trimmed Chart Card */}
+                {/* Main Curve */}
                 <Card className="xl:col-span-8 p-8 border-slate-100 shadow-sm bg-white overflow-hidden relative">
                     <div className="flex items-center justify-between mb-8">
                         <div>
@@ -131,7 +172,7 @@ export function Dashboard() {
                     </div>
                     <div className="h-[350px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={performanceData}>
+                            <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
