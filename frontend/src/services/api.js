@@ -11,6 +11,32 @@ export const fetchUsers = async () => {
     }
 };
 
+export const fetchUser = async (userId = 1) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch user');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const updateUser = async (userId, data) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Failed to update user');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchAllPortfolios = async () => {
     try {
         const response = await fetch(`${BASE_URL}/portfolio/`);

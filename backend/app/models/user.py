@@ -9,5 +9,6 @@ class User(Base):
     hashed_password = Column(String)
     full_name = Column(String, index=True)
     risk_tolerance = Column(String, default="MODERATE") # LOW, MODERATE, HIGH, AGGRESSIVE
+    trading_mode = Column(String, default="AUTO") # AUTO, MANUAL
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)

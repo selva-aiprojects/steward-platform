@@ -43,7 +43,9 @@ class ExecutionAgent(BaseAgent):
         if mode == "LIVE_TRADING":
             broker = LiveBrokerAdapter()
         else:
-            broker = PaperTradingEngine()
+            # Fetch default portfolio_id from context or DB
+            portfolio_id = context.get("user_profile", {}).get("portfolio_id", 1)
+            broker = PaperTradingEngine(portfolio_id=portfolio_id)
             
         try:
             # 5. Execution

@@ -59,15 +59,32 @@ def read_user(
 
 @router.put("/{user_id}", response_model=schemas.UserResponse)
 def update_user(
+    *,
+    db: Session = Depends(get_db),
     user_id: int,
     user_in: schemas.UserUpdate,
 ) -> Any:
     """
     Update a user.
     """
-    return {
-        "id": user_id,
-        "email": user_in.email or "user@example.com",
-        "full_name": user_in.full_name or "Test User",
-        "is_active": True
-    }
+    user = db.query(models.user.User).filter(models.user.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if trading mode is changing
+    if user_in.trading_mode and user_in.trading_mode != user.trading_mode:
+        activity = models.activity.Activity(
+            user_id=user.id,
+            activity_type="MODE_CHANGE",
+            description=f"User switched trading mode from {user.trading_mode} to {user_in.trading_mode}"
+        )
+        db.add(activity)
+
+    update_data = user_in.model_dump(exclude_unset=True)
+    for field in update_data:
+        setattr(user, field, update_data[field])
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

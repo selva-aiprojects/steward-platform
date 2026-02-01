@@ -5,6 +5,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     risk_tolerance: Optional[str] = "MODERATE"
+    trading_mode: Optional[str] = "AUTO"
     is_active: bool = True
 
 class UserCreate(UserBase):
@@ -14,6 +15,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     password: Optional[str] = None
+    trading_mode: Optional[str] = None
     is_active: Optional[bool] = None
 
 class UserResponse(UserBase):

@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
-import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2 } from 'lucide-react';
-import { fetchStrategies, fetchProjections } from "../services/api";
+import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2 } from 'lucide-react';
+import { fetchStrategies, fetchProjections, fetchUser, updateUser } from "../services/api";
 
 export function TradingHub() {
     const [strategies, setStrategies] = useState([]);
     const [projections, setProjections] = useState([]);
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [toggling, setToggling] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [strats, projs] = await Promise.all([
+                const [strats, projs, userData] = await Promise.all([
                     fetchStrategies(),
-                    fetchProjections()
+                    fetchProjections(),
+                    fetchUser(1) // Assuming demo user 1
                 ]);
                 setStrategies(strats);
                 setProjections(projs);
+                setUser(userData);
             } catch (err) {
                 console.error("Trading Hub Fetch Error:", err);
             } finally {
@@ -26,26 +30,69 @@ export function TradingHub() {
         loadData();
     }, []);
 
+    const toggleTradingMode = async () => {
+        if (!user) return;
+        setToggling(true);
+        const newMode = user.trading_mode === 'AUTO' ? 'MANUAL' : 'AUTO';
+        try {
+            const updated = await updateUser(user.id, { trading_mode: newMode });
+            if (updated) setUser(updated);
+        } catch (err) {
+            console.error("Failed to toggle mode:", err);
+        } finally {
+            setToggling(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
                 <Loader2 className="animate-spin mb-4" size={32} />
-                <p className="font-bold uppercase text-[10px] tracking-widest text-[#0A2A4D]">Loading Trading intelligence...</p>
+                <p className="font-bold uppercase text-[10px] tracking-widest text-[#0A2A4D]">Synchronizing Execution Parameters...</p>
             </div>
         );
     }
 
 
+
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <header className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Trading Hub</h1>
                     <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                        Algo Engine: Online & Monitoring 14 Parallel Threads
+                        <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+                        Algo Engine: {user?.trading_mode === 'AUTO' ? 'Autonomous Mode Active' : 'Manual Override Active'}
                     </p>
                 </div>
+
+                <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                    <button
+                        onClick={toggleTradingMode}
+                        disabled={toggling}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'AUTO'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                            : 'bg-white text-slate-400 hover:text-slate-600'
+                            }`}
+                    >
+                        {user?.trading_mode === 'AUTO' ? <Shield size={14} /> : <Settings2 size={14} />}
+                        Steward Auto
+                    </button>
+                    <button
+                        onClick={toggleTradingMode}
+                        disabled={toggling}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'MANUAL'
+                            ? 'bg-[#0A2A4D] text-white shadow-lg'
+                            : 'bg-white text-slate-400 hover:text-slate-600'
+                            }`}
+                    >
+                        {user?.trading_mode === 'MANUAL' ? <Unlock size={14} /> : <Lock size={14} />}
+                        Manual Mode
+                    </button>
+                </div>
+
+                <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+
                 <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
                     <Zap size={18} fill="currentColor" />
                     Launch New Strategy
@@ -72,9 +119,22 @@ export function TradingHub() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Active Automated Strategies */}
-                <div className="lg:col-span-8 space-y-6">
+                <div className="lg:col-span-8 space-y-6 relative group">
                     <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
-                    <div className="grid grid-cols-1 gap-4">
+
+                    {user?.trading_mode === 'AUTO' && (
+                        <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/40 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-slate-200 animate-in fade-in duration-300">
+                            <div className="bg-white p-4 rounded-full shadow-xl mb-4 text-[#0A2A4D]">
+                                <Lock size={32} />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-wide">Manual Controls Locked</h3>
+                            <p className="max-w-xs text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                                Steward AI is currently managing all active strategies. Switch to <span className="text-[#0A2A4D]">Manual Mode</span> to override.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
                         {strategies.map((strat) => (
                             <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
                                 <div className="flex flex-wrap items-center justify-between gap-6">

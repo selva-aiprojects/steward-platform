@@ -20,18 +20,30 @@ class TradeDecisionAgent(BaseAgent):
         market_data = context.get("market_data", {})
         
         current_price = market_data.get("current_price", 0)
+        risk_tolerance = user_profile.get("risk_tolerance", "MODERATE")
         
-        if signal.get("signal") == "BUY":
-            # Simple sizing logic
-            quantity = 10 # Placeholder
+        # Smart Sizing Logic
+        risk_multipliers = {
+            "LOW": 10,
+            "MODERATE": 50,
+            "HIGH": 100,
+            "AGGRESSIVE": 250
+        }
+        
+        base_quantity = risk_multipliers.get(risk_tolerance, 50)
+        
+        if signal.get("signal") in ["BUY", "SELL"]:
+            action = signal.get("signal")
+            quantity = base_quantity
             
             return {
                 "trade_proposal": {
-                    "action": "BUY",
+                    "action": action,
                     "symbol": market_data.get("symbol"),
                     "quantity": quantity,
                     "price": current_price,
-                    "estimated_total": quantity * current_price
+                    "estimated_total": quantity * current_price,
+                    "logic": f"Execution for {risk_tolerance} profile based on {signal.get('strategy_used')} signal."
                 }
             }
             

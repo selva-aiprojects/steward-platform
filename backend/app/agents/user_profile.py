@@ -15,14 +15,33 @@ class UserProfileAgent(BaseAgent):
         super().__init__(name="UserProfileAgent")
 
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        user_id = context.get("user_id")
+        from app.core.database import SessionLocal
+        from app.models.user import User
         
-        # Placeholder logic: Fetch from DB later
-        # For now, return a default profile
-        return {
-            "user_profile": {
-                "id": user_id,
-                "risk_tolerance": "MODERATE",
-                "max_drawdown_limit": 0.10  # 10%
+        user_id = context.get("user_id", 1) # Default to 1 for demo
+        
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                # Fallback to default if not found
+                return {
+                    "user_profile": {
+                        "id": user_id,
+                        "risk_tolerance": "MODERATE",
+                        "trading_mode": "AUTO",
+                        "max_drawdown_limit": 0.10
+                    }
+                }
+            
+            return {
+                "user_profile": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "risk_tolerance": user.risk_tolerance,
+                    "trading_mode": user.trading_mode,
+                    "max_drawdown_limit": 0.05 if user.risk_tolerance == "LOW" else 0.15
+                }
             }
-        }
+        finally:
+            db.close()

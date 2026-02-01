@@ -16,29 +16,50 @@ class StrategyAgent(BaseAgent):
         super().__init__(name="StrategyAgent")
 
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        from app.strategies.sma_crossover import SMACrossoverStrategy
-        from app.strategies.mean_reversion import MeanReversionStrategy
-
+        from groq import Groq
+        import os
+        import json
+        
+        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
         market_data = context.get("market_data", {})
-        trend = market_data.get("trend", "NEUTRAL") # Provided by MarketDataAgent
+        user_profile = context.get("user_profile", {})
         
-        # Strategy Selection Logic (Regime Switching)
-        if trend in ["BULLISH", "BEARISH"]:
-            active_strategy = SMACrossoverStrategy()
-            strategy_name = "SMACrossover"
-        else:
-            active_strategy = MeanReversionStrategy()
-            strategy_name = "MeanReversion"
+        prompt = f"""
+        Analyze the following market data and provide a trading signal (BUY, SELL, or HOLD).
+        Market Data: {json.dumps(market_data)}
+        User Risk Profile: {user_profile.get('risk_tolerance')}
+        
+        Return ONLY a JSON object:
+        {{
+            "signal": "BUY|SELL|HOLD",
+            "confidence": 0.0-1.0,
+            "rationale": "short explanation",
+            "strategy_used": "Name of strategy"
+        }}
+        """
+        
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-70b-8192",
+                response_format={"type": "json_object"}
+            )
+            analysis = json.loads(chat_completion.choices[0].message.content)
+        except Exception as e:
+            # Fallback to deterministic logic if Groq fails
+            analysis = {
+                "signal": "HOLD", 
+                "confidence": 0.5, 
+                "rationale": f"AI model offline ({str(e)})", 
+                "strategy_used": "Safety-Fallback"
+            }
             
-        # Execute Analysis
-        analysis_result = active_strategy.analyze(market_data)
-        
         return {
             "strategy_signal": {
-                "strategy_used": strategy_name,
-                "signal": analysis_result["signal"],
-                "confidence": analysis_result["confidence"],
-                "rationale": analysis_result["rationale"],
-                "regime_detected": trend
+                "strategy_used": analysis.get("strategy_used"),
+                "signal": analysis.get("signal"),
+                "confidence": analysis.get("confidence"),
+                "rationale": analysis.get("rationale"),
+                "regime_detected": market_data.get("trend")
             }
         }
