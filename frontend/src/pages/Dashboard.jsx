@@ -54,37 +54,14 @@ export function Dashboard() {
         loadData();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
-                <Loader2 className="animate-spin mb-4" size={48} />
-                <p className="font-black uppercase text-xs tracking-[0.3em] text-[#0A2A4D]">Establishing Secure Data Tunnel...</p>
-            </div>
-        );
-    }
-
-    const metrics = [
-        { label: 'Total Equity', value: `$${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`, change: '+14.2%', icon: BarChart2, color: 'text-primary' },
-        { label: 'Open Exposure', value: `$${(summary?.invested_amount || 0).toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
-        { label: 'Daily Alpha', value: `+${summary?.win_rate || 0}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
-        { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
-    ];
-
-
     const [chartData, setChartData] = useState(performanceData);
 
     useEffect(() => {
         const fetchChartData = async () => {
-            // Mock fetching history for now as per backend availability, 
-            // but structured to accept real data
             try {
-                // In a real app: const history = await fetchPortfolioHistory(1);
-                // For now, we simulate dynamic slicing of the static data or extended mock data
-
-                // Stimulate data change based on period
+                // ... same logic ...
                 let data = [...performanceData];
                 if (period === 'Today') {
-                    // Hourly granularity simulation
                     data = [
                         { name: '9AM', value: 4000 },
                         { name: '10AM', value: 4200 },
@@ -94,10 +71,8 @@ export function Dashboard() {
                         { name: '2PM', value: 4400 },
                     ];
                 } else if (period === 'This Week') {
-                    // Daily
                     data = performanceData;
                 } else {
-                    // Monthly simulation
                     data = [
                         { name: 'Jan', value: 4000 },
                         { name: 'Feb', value: 5500 },
@@ -112,6 +87,15 @@ export function Dashboard() {
         };
         fetchChartData();
     }, [period]);
+
+    if (loading) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={48} />
+                <p className="font-black uppercase text-xs tracking-[0.3em] text-[#0A2A4D]">Establishing Secure Data Tunnel...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
