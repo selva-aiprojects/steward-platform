@@ -3,36 +3,36 @@ import { NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { Sun, Moon, LayoutDashboard, Briefcase, ExternalLink, ShieldCheck } from 'lucide-react';
 
-const Navbar: React.FC = () => {
-    const { theme, toggleTheme } = useTheme();
+const Navbar = () => {
+  const { theme, toggleTheme } = useTheme();
 
-    return (
-        <nav className="navbar">
-            <div className="nav-brand">
-                <ShieldCheck className="brand-icon" size={24} />
-                <span>StockSteward AI</span>
-            </div>
+  return (
+    <nav className="navbar">
+      <div className="nav-brand">
+        <ShieldCheck className="brand-icon" size={24} />
+        <span>StockSteward AI</span>
+      </div>
 
-            <div className="nav-links">
-                <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                    <LayoutDashboard size={18} />
-                    <span>Dashboard</span>
-                </NavLink>
-                <NavLink to="/portfolio" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                    <Briefcase size={18} />
-                    <span>Portfolio</span>
-                </NavLink>
-                <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" className="nav-item">
-                    <ExternalLink size={18} />
-                    <span>API Docs</span>
-                </a>
-            </div>
+      <div className="nav-links">
+        <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+          <LayoutDashboard size={18} />
+          <span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/portfolio" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+          <Briefcase size={18} />
+          <span>Portfolio</span>
+        </NavLink>
+        <a href={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api/v1', '') : 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer" className="nav-item">
+          <ExternalLink size={18} />
+          <span>API Docs</span>
+        </a>
+      </div>
 
-            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
-                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
+      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
+        {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+      </button>
 
-            <style>{`
+      <style>{`
         .navbar {
           height: 100vh;
           width: 240px;
@@ -104,8 +104,8 @@ const Navbar: React.FC = () => {
           background: rgba(255, 255, 255, 0.1);
         }
       `}</style>
-        </nav>
-    );
+    </nav>
+  );
 };
 
 export default Navbar;

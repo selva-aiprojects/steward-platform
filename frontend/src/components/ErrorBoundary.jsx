@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component {
         // Attempt to log to backend
         // self-contained fetch to avoid import dependencies in error state
         try {
-            const url = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+            const url = process.env.REACT_APP_API_URL || '';
             fetch(`${url}/logs/error`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

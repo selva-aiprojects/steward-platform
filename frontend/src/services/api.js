@@ -1,6 +1,6 @@
 // Dynamic API URL for production support
 // Fallback to localhost for development
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const BASE_URL = process.env.REACT_APP_API_URL || '';
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
 

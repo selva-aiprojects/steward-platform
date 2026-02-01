@@ -116,20 +116,21 @@ export function Dashboard() {
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
             {/* Headers and Metrics... */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Minimalist Top Header */}
+            <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Executive Overview</h1>
-                    <div className="flex items-center gap-2 mt-1">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">Executive Overview</h1>
+                    <div className="flex items-center gap-2 mt-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                         <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">Live Agent Streaming Status: ACTIVE</p>
                     </div>
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start md:self-center">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start w-full md:w-auto overflow-x-auto">
                     {['Today', 'This Week', 'This Year'].map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`px-4 py-2 text-xs font-black rounded-lg transition-all ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
+                            className={`flex-1 md:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all whitespace-nowrap ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
                                 }`}
                         >
                             {p}
