@@ -66,7 +66,7 @@ const TIERS = [
     }
 ];
 
-export function Subscription() {
+export default function Subscription() {
     const { user } = useUser();
     const [billingCycle, setBillingCycle] = useState('monthly');
 

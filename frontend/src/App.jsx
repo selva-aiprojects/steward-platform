@@ -8,7 +8,7 @@ import { TradingHub } from "./pages/TradingHub"
 import { Reports } from "./pages/Reports"
 import { Users } from "./pages/Users"
 import { Login } from "./pages/Login"
-import { Subscription } from "./pages/Subscription"
+import Subscription from "./pages/Subscription"
 import { useUser } from "./context/UserContext"
 import { useNavigate, useLocation, Navigate } from "react-router-dom"
 
