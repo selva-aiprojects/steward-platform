@@ -1,20 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from "../components/ui/card";
-import { User, Wallet, Shield, PieChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { User, Wallet, Shield, PieChart, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { fetchUsers, fetchAllPortfolios } from "../services/api";
 
 export function Users() {
     const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const mockUsers = [
-            { id: 1, name: "Alexander Pierce", email: "alex@stocksteward.ai", status: "ACTIVE", used: 125000, unused: 45000, risk: "MODERATE", win_rate: "68%" },
-            { id: 2, name: "Sarah Connor", email: "sarah.c@sky.net", status: "ACTIVE", used: 250000, unused: 12000, risk: "HIGH", win_rate: "74%" },
-            { id: 3, name: "Tony Stark", email: "tony@starkintl.ai", status: "ACTIVE", used: 840000, unused: 50000, risk: "AGGRESSIVE", win_rate: "81%" },
-            { id: 4, name: "Bruce Wayne", email: "bruce@waynecorp.com", status: "IDLE", used: 0, unused: 1000000, risk: "LOW", win_rate: "0%" },
-            { id: 5, name: "Natasha Romanoff", email: "nat@shield.gov", status: "ACTIVE", used: 95000, unused: 5000, risk: "MODERATE", win_rate: "62%" },
-        ];
-        setUsers(mockUsers);
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                const [usersData, portfoliosData] = await Promise.all([
+                    fetchUsers(),
+                    fetchAllPortfolios()
+                ]);
+
+                // Map users to their portfolios
+                const combined = usersData.map(user => {
+                    const portfolio = portfoliosData.find(p => p.user_id === user.id) || {
+                        invested_amount: 0,
+                        cash_balance: 0,
+                        win_rate: 0
+                    };
+                    return {
+                        id: user.id,
+                        name: user.full_name,
+                        email: user.email,
+                        status: user.is_active ? "ACTIVE" : "INACTIVE",
+                        used: portfolio.invested_amount,
+                        unused: portfolio.cash_balance,
+                        risk: user.risk_tolerance,
+                        win_rate: `${portfolio.win_rate}%`
+                    };
+                });
+                setUsers(combined);
+            } catch (err) {
+                console.error("Failed to load user data from backend:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={32} />
+                <p className="font-bold uppercase text-[10px] tracking-widest">Bridging Secure DB Connection...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

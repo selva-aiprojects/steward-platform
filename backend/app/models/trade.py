@@ -18,3 +18,9 @@ class Trade(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     risk_score = Column(Float)
     rejection_reason = Column(String, nullable=True)
+    
+    # Intelligence Journal Fields
+    pnl = Column(String, nullable=True) # e.g. "+2.41%"
+    decision_logic = Column(String, nullable=True)
+    market_behavior = Column(String, nullable=True)
+

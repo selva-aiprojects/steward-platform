@@ -5,25 +5,21 @@ from app import schemas
 
 router = APIRouter()
 
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app import models
+
 @router.get("/", response_model=List[schemas.TradeResponse])
-def list_trades() -> Any:
+def list_trades(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
     """
     Retrieve trades.
     """
-    # Mock data
-    return [
-        {
-            "id": 1, 
-            "symbol": "AAPL", 
-            "action": "BUY", 
-            "quantity": 10, 
-            "price": 150.0, 
-            "status": "EXECUTED", 
-            "timestamp": "2024-01-01T12:00:00Z",
-            "execution_mode": "PAPER_TRADING",
-            "risk_score": 10
-        }
-    ]
+    trades = db.query(models.trade.Trade).offset(skip).limit(limit).all()
+    return trades
 
 @router.post("/paper/order", response_model=schemas.TradeResult)
 async def create_paper_order(proposal: schemas.TradeProposal) -> Any:

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
@@ -7,29 +7,51 @@ import {
 import {
     ArrowUpRight, ArrowDownRight, Activity,
     TrendingUp, Shield, BarChart3, Clock,
-    AlertCircle, Search, Settings
+    AlertCircle, Search, Settings, Loader2
 } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
-
-const performanceData = [
-    { name: '08:00', value: 2400 },
-    { name: '10:00', value: 3200 },
-    { name: '12:00', value: 2800 },
-    { name: '14:00', value: 4500 },
-    { name: '16:00', value: 4100 },
-    { name: '18:00', value: 5000 },
-];
-
-const marketMovers = [
-    { symbol: 'NVDA', change: '+12.4%', type: 'up' },
-    { symbol: 'TSLA', change: '-4.2%', type: 'down' },
-    { symbol: 'AMD', change: '+2.1%', type: 'up' },
-    { symbol: 'AAPL', change: '+0.8%', type: 'up' },
-    { symbol: 'MSFT', change: '-1.5%', type: 'down' },
-];
+import { fetchPortfolioSummary, fetchTrades } from "../services/api";
 
 export function Dashboard() {
     const [period, setPeriod] = useState('Today');
+    const [summary, setSummary] = useState(null);
+    const [recentTrades, setRecentTrades] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [sumData, tradeData] = await Promise.all([
+                    fetchPortfolioSummary(1),
+                    fetchTrades()
+                ]);
+                setSummary(sumData);
+                setRecentTrades(tradeData.slice(0, 3));
+            } catch (err) {
+                console.error("Dashboard Load Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={48} />
+                <p className="font-black uppercase text-xs tracking-[0.3em] text-[#0A2A4D]">Establishing Secure Data Tunnel...</p>
+            </div>
+        );
+    }
+
+    const metrics = [
+        { label: 'Total Equity', value: `$${(summary?.invested_amount + summary?.cash_balance).toLocaleString()}`, change: '+14.2%', icon: BarChart3, color: 'text-primary' },
+        { label: 'Open Exposure', value: `$${summary?.invested_amount.toLocaleString()}`, change: '8 positions', icon: Activity, color: 'text-indigo-600' },
+        { label: 'Daily Alpha', value: `+${summary?.win_rate}%`, change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
+        { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
+    ];
+
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
@@ -59,12 +81,7 @@ export function Dashboard() {
 
             {/* Core Metrics - Trimmed & Professional */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Total Equity', value: '$84,250.00', change: '+14.2%', icon: BarChart3, color: 'text-primary' },
-                    { label: 'Open Exposure', value: '$12,400.00', change: '8 positions', icon: Activity, color: 'text-indigo-600' },
-                    { label: 'Daily Alpha', value: '+4.52%', change: 'Beat SPY by 2%', icon: TrendingUp, color: 'text-primary' },
-                    { label: 'System Health', value: '100%', change: 'Latency 42ms', icon: Shield, color: 'text-green-600' },
-                ].map((stat, i) => (
+                {metrics.map((stat, i) => (
                     <Card key={i} className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white">
                         <div className="flex justify-between items-start mb-4">
                             <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${stat.color}`}>
@@ -183,21 +200,19 @@ export function Dashboard() {
                         <Settings size={14} className="text-slate-400" />
                     </div>
                     <div className="divide-y divide-slate-50">
-                        {[
-                            { time: '14:20', agent: 'Sentinel-V3', action: 'SELL Order', ticker: 'TSLA', reason: 'Hard stop hit at -2.0%', status: 'success' },
-                            { time: '13:05', agent: 'Llama-Scalp', action: 'Signal Detected', ticker: 'NVDA', reason: 'High-conviction RSI divergence', status: 'info' },
-                            { time: '10:15', agent: 'Sentinel-V3', action: 'BUY Order', ticker: 'AAPL', reason: 'Auto-balancing long portfolio', status: 'success' },
-                        ].map((log, i) => (
+                        {recentTrades.map((log, i) => (
                             <div key={i} className="p-5 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
                                 <div className="flex gap-4">
-                                    <span className="text-[10px] font-black text-slate-300 mt-1">{log.time}</span>
+                                    <span className="text-[10px] font-black text-slate-300 mt-1">
+                                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
                                     <div>
-                                        <h4 className="text-xs font-black text-slate-900">{log.action} <span className="text-primary">{log.ticker}</span></h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: {log.agent}</p>
-                                        <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic">{log.reason}</p>
+                                        <h4 className="text-xs font-black text-slate-900">{log.action} <span className="text-primary">{log.symbol}</span></h4>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Executor: AI-Steward</p>
+                                        <p className="text-[11px] text-slate-600 mt-2 bg-slate-50 px-2 py-1 rounded border border-slate-100 italic">{log.decision_logic}</p>
                                     </div>
                                 </div>
-                                <div className={`h-2 w-2 rounded-full mt-1 ${log.status === 'success' ? 'bg-green-500' : 'bg-primary'}`} />
+                                <div className="h-2 w-2 rounded-full mt-1 bg-green-500" />
                             </div>
                         ))}
                     </div>

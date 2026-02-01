@@ -1,13 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
-import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp } from 'lucide-react';
+import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2 } from 'lucide-react';
+import { fetchStrategies, fetchProjections } from "../services/api";
 
 export function TradingHub() {
-    const [strategies, setStrategies] = useState([
-        { id: 1, name: 'Llama-3 Trend Scalper', symbol: 'NVDA', status: 'RUNNING', pnl: '+4.2%' },
-        { id: 2, name: 'MACD Mean Reversion', symbol: 'TSLA', status: 'PAUSED', pnl: '-1.1%' },
-        { id: 3, name: 'Sentiment Arbitrage', symbol: 'BTC/USD', status: 'IDLE', pnl: '0.0%' },
-    ]);
+    const [strategies, setStrategies] = useState([]);
+    const [projections, setProjections] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [strats, projs] = await Promise.all([
+                    fetchStrategies(),
+                    fetchProjections()
+                ]);
+                setStrategies(strats);
+                setProjections(projs);
+            } catch (err) {
+                console.error("Trading Hub Fetch Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={32} />
+                <p className="font-bold uppercase text-[10px] tracking-widest text-[#0A2A4D]">Loading Trading intelligence...</p>
+            </div>
+        );
+    }
+
 
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -112,16 +139,12 @@ export function TradingHub() {
                         </div>
 
                         <div className="space-y-4">
-                            {[
-                                { ticker: 'NVDA', move: '+3.8%', action: 'ACCUMULATE', logic: 'Post-earnings momentum continuation' },
-                                { ticker: 'AAPL', move: '-1.2%', action: 'TRIM', logic: 'Resistance at $195 with volume decay' },
-                                { ticker: 'TSLA', move: '+5.4%', action: 'BUY', logic: 'FSD V12 rollout hype cycle' },
-                            ].map((proj, i) => (
+                            {projections.map((proj, i) => (
                                 <div key={i} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm group hover:border-primary/50 transition-all cursor-pointer">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-black text-slate-900">{proj.ticker}</span>
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${proj.move.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                            }`}>{proj.move}</span>
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${proj.move_prediction.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            }`}>{proj.move_prediction}</span>
                                     </div>
                                     <p className="text-[10px] text-slate-500 font-bold leading-relaxed">{proj.logic}</p>
                                     <div className="mt-3 flex items-center justify-between">

@@ -12,6 +12,8 @@ class PortfolioResponse(PortfolioBase):
     id: int
     user_id: int
     cash_balance: float
+    invested_amount: float
+    win_rate: float
     
     class Config:
         from_attributes = True

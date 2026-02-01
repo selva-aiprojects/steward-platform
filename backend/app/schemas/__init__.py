@@ -1,4 +1,5 @@
-# Schema exports
-from .user import UserCreate, UserResponse, UserUpdate
-from .portfolio import PortfolioCreate, PortfolioResponse, PortfolioHistoryPoint
+from .user import UserBase, UserCreate, UserUpdate, UserResponse
+from .portfolio import PortfolioBase, PortfolioCreate, PortfolioResponse, PortfolioHistoryPoint
 from .trade import TradeProposal, TradeResponse, TradeResult
+from . import strategy
+from . import projection

@@ -7,5 +7,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    full_name = Column(String, index=True)
+    risk_tolerance = Column(String, default="MODERATE") # LOW, MODERATE, HIGH, AGGRESSIVE
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)

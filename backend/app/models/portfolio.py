@@ -9,6 +9,8 @@ class Portfolio(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
     cash_balance = Column(Float, default=0.0)
+    invested_amount = Column(Float, default=0.0)
+    win_rate = Column(Float, default=0.0)
     
     # Relationships
     user = relationship("User")

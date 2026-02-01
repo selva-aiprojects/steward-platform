@@ -18,7 +18,10 @@ class TradeResponse(BaseModel):
     status: str
     timestamp: datetime
     execution_mode: str
-    risk_score: Optional[int] = None
+    risk_score: Optional[float] = None
+    pnl: Optional[str] = None
+    decision_logic: Optional[str] = None
+    market_behavior: Optional[str] = None
 
     class Config:
         from_attributes = True

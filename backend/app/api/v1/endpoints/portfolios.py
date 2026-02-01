@@ -1,22 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 from typing import Any, List
-from app import schemas
+from app import schemas, models
+from app.core.database import get_db
 
 router = APIRouter()
 
-@router.get("/", response_model=schemas.PortfolioResponse)
-def get_portfolio() -> Any:
+@router.get("/", response_model=List[schemas.PortfolioResponse])
+def get_portfolios(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
     """
-    Get current portfolio.
+    Get all portfolios.
     """
-    # Mock Return
-    return {
-        "id": 1,
-        "user_id": 1,
-        "name": "Main Portfolio",
-        "description": "Primary trading account",
-        "cash_balance": 100000.0
-    }
+    portfolios = db.query(models.portfolio.Portfolio).offset(skip).limit(limit).all()
+    return portfolios
 
 @router.get("/history", response_model=List[schemas.PortfolioHistoryPoint])
 def get_portfolio_history() -> Any:

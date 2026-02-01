@@ -1,56 +1,61 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import Any, List
-from app import schemas
+from app import schemas, models
+from app.core.database import get_db
 
 router = APIRouter()
 
 @router.post("/", response_model=schemas.UserResponse)
 def create_user(
+    *,
+    db: Session = Depends(get_db),
     user_in: schemas.UserCreate,
 ) -> Any:
     """
     Create new user.
     """
-    # Mock Database interaction
-    # user = crud.user.create(db, obj_in=user_in)
-    return {
-        "id": 1,
-        "email": user_in.email,
-        "full_name": user_in.full_name,
-        "is_active": True
-    }
+    user = db.query(models.user.User).filter(models.user.User.email == user_in.email).first()
+    if user:
+        raise HTTPException(status_code=400, detail="User already exists")
+    
+    user = models.user.User(
+        email=user_in.email,
+        full_name=user_in.full_name,
+        hashed_password="hashed_password_placeholder", # Mocking for now
+        risk_tolerance=user_in.risk_tolerance,
+        is_active=user_in.is_active
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
 @router.get("/", response_model=List[schemas.UserResponse])
 def read_users(
+    db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
     Retrieve users.
     """
-    # Mock Data
-    return [
-        {
-            "id": 1,
-            "email": "user@example.com",
-            "full_name": "Test User",
-            "is_active": True,
-            "risk_tolerance": "moderate" # Assume schema update needed if this field is new
-        }
-    ]
+    users = db.query(models.user.User).offset(skip).limit(limit).all()
+    return users
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
 def read_user(
+    *,
+    db: Session = Depends(get_db),
     user_id: int,
 ) -> Any:
     """
     Get a specific user by id.
     """
-    return {
-        "id": user_id,
-        "email": "user@example.com",
-        "full_name": "Test User",
-        "is_active": True
-    }
+    user = db.query(models.user.User).filter(models.user.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 @router.put("/{user_id}", response_model=schemas.UserResponse)
 def update_user(
