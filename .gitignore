@@ -48,3 +48,13 @@ Thumbs.db
 *.mov
 *.wmv
 
+
+# Frontend build
+frontend/build/
+build/
+
+# Python
+__pycache__/
+.env
+venv/
+env/
