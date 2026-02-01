@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 import { Card } from "../components/ui/card";
 import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
@@ -38,6 +39,45 @@ export function Dashboard() {
     const [summary, setSummary] = useState(null);
     const [recentTrades, setRecentTrades] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Real-time State
+    const [marketMoversState, setMarketMovers] = useState(marketMovers);
+    const [socketStatus, setSocketStatus] = useState('disconnected');
+
+    useEffect(() => {
+        // 1. Initialize Socket
+        const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:8000', {
+            transports: ['websocket'],
+            reconnectionAttempts: 5
+        });
+
+        socket.on('connect', () => {
+            setSocketStatus('connected');
+            console.log("Socket connected:", socket.id);
+        });
+
+        socket.on('disconnect', () => {
+            setSocketStatus('disconnected');
+        });
+
+        // 2. Listen for market updates
+        socket.on('market_update', (data) => {
+            setMarketMovers(prev => {
+                // Check if symbol exists
+                const exists = prev.find(m => m.symbol === data.symbol);
+                if (exists) {
+                    return prev.map(m => m.symbol === data.symbol ? { ...m, ...data, type: data.change.includes('+') ? 'up' : 'down' } : m);
+                } else {
+                    // Add new mover, keep list at 4 items
+                    return [{ ...data, type: data.change.includes('+') ? 'up' : 'down' }, ...prev].slice(0, 4);
+                }
+            });
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         const loadData = async () => {
@@ -217,19 +257,68 @@ export function Dashboard() {
                 {/* Market Movers - professional Sidebar */}
                 <Card className="xl:col-span-4 border-slate-100 shadow-sm bg-white overflow-hidden">
                     <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Top Movers</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Top Movers</h3>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${socketStatus === 'connected' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                                <div className={`h-1.5 w-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`} />
+                                <span className="text-[9px] font-black uppercase tracking-wider">Live</span>
+                            </div>
+                        </div>
                         <Search size={14} className="text-slate-400" />
                     </div>
                     <div className="p-2">
-                        {marketMovers.map((mover, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer">
+                        {marketMoversState.map((mover, i) => (
+                            <div key={mover.symbol} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
                                         {mover.symbol}
                                     </div>
                                     <div>
                                         <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">NASD</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                            {mover.price ? `$${mover.price}` : 'NASD'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
+                                    }`}>
+                                    {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                    {mover.change}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 mt-2">
+                        <button className="w-full py-3 text-xs font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors">View All Volatility Focus</button>
+                    </div>
+                </Card>
+
+                // ... render ...
+
+                {/* Market Movers - professional Sidebar */}
+                <Card className="xl:col-span-4 border-slate-100 shadow-sm bg-white overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">Top Movers</h3>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${socketStatus === 'connected' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                                <div className={`h-1.5 w-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`} />
+                                <span className="text-[9px] font-black uppercase tracking-wider">Live</span>
+                            </div>
+                        </div>
+                        <Search size={14} className="text-slate-400" />
+                    </div>
+                    <div className="p-2">
+                        {marketMoversState.map((mover, i) => (
+                            <div key={mover.symbol} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs">
+                                        {mover.symbol}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                            {mover.price ? `$${mover.price}` : 'NASD'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
