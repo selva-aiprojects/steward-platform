@@ -1,46 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Activity, PieChart as PieChartIcon, Target, Shield, Zap, RefreshCcw, Loader2, Plus, GripVertical } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { Briefcase, ArrowUpRight, ArrowDownRight, GripVertical, Lock, ShieldCheck, Database, Award, Plus, Trash2 } from 'lucide-react';
+import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections } from "../services/api";
 import { useUser } from '../context/UserContext';
 
-const mockHoldingsInit = [
-  { id: '1', symbol: 'AAPL', quantity: 10, avgPrice: 175.50, currentPrice: 182.30, pnl: 68.00, pnlPct: 3.87, type: 'active' },
-  { id: '2', symbol: 'TSLA', quantity: 5, avgPrice: 240.20, currentPrice: 235.10, pnl: -25.50, pnlPct: -2.12, type: 'active' },
-  { id: '3', symbol: 'MSFT', quantity: 15, avgPrice: 380.00, currentPrice: 405.20, pnl: 378.00, pnlPct: 6.63, type: 'active' },
-];
-
-const mockWatchlistInit = [
-  { id: '4', symbol: 'NVDA', currentPrice: 460.10, change: '+1.2%', type: 'watch' },
-  { id: '5', symbol: 'AMD', currentPrice: 105.25, change: '+0.8%', type: 'watch' },
-  { id: '6', symbol: 'AMZN', currentPrice: 135.00, change: '-0.5%', type: 'watch' },
-  { id: '7', symbol: 'GOOGL', currentPrice: 138.50, change: '+0.2%', type: 'watch' },
-];
-
-const wealthProjection = [
-  { year: '2024', conservative: 100000, aggressive: 100000 },
-  { year: '2025', conservative: 112000, aggressive: 125000 },
-  { year: '2026', conservative: 125440, aggressive: 156250 },
-  { year: '2027', conservative: 140490, aggressive: 195300 },
-  { year: '2028', conservative: 157350, aggressive: 244100 },
-];
-
-const allocationData = [
-  { name: 'Technology', value: 65 },
-  { name: 'Automotive', value: 15 },
-  { name: 'Index Funds', value: 20 },
-];
-
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const Portfolio = () => {
   const { user } = useUser();
-  const [activeHoldings, setActiveHoldings] = useState(mockHoldingsInit);
-  const [watchlist, setWatchlist] = useState(mockWatchlistInit);
+  const [activeHoldings, setActiveHoldings] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [projections, setProjections] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const isManual = user?.trading_mode === 'MANUAL';
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      try {
+        const [holdingsData, watchlistData, sumData, projData, historyData] = await Promise.all([
+          fetchHoldings(user.id),
+          fetchWatchlist(),
+          fetchPortfolioSummary(user.id),
+          fetchProjections(),
+          fetchPortfolioHistory(user.id)
+        ]);
+        setActiveHoldings(holdingsData);
+        setWatchlist(watchlistData);
+        setSummary(sumData);
+        setProjections(projData);
+        setHistory(historyData);
+      } catch (err) {
+        console.error("Portfolio Load Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [user]);
 
   const handleDragStart = (e, item) => {
     if (!isManual) return;
@@ -68,16 +71,41 @@ const Portfolio = () => {
     setDraggedItem(null);
   };
 
+  const allocationData = activeHoldings.length > 0 ? activeHoldings.map(h => ({
+    name: h.symbol,
+    value: h.quantity * h.currentPrice
+  })) : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
+
+  if (loading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
+        <Loader2 className="animate-spin mb-4" size={48} />
+        <p className="font-black uppercase text-[10px] tracking-[0.3em] text-[#0A2A4D]">Loading wealth vault...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="portfolio-container pb-20 space-y-8 animate-in fade-in duration-500">
       <header className="page-header flex justify-between items-end">
         <div>
-          <div className="header-eyebrow flex items-center gap-2">
-            <span className="badge-virtual">VIRTUAL HOLDINGS</span>
-            {!isManual && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-black flex items-center gap-1"><Lock size={10} /> AUTO-MANAGED</span>}
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Wealth Vault</h1>
+          <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+            Agent Status: {user?.trading_mode === 'AUTO' ? 'Autonomous Optimization ACTIVE' : 'Manual Control ENABLED'}
+          </p>
+        </div>
+        <div className="flex items-center gap-8">
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
+            <h2 className="text-3xl font-black text-slate-900 leading-none">
+              ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+            </h2>
           </div>
-          <h1 className="text-3xl font-black text-slate-900">Wealth Allocation</h1>
-          <p className="text-slate-500 font-medium text-sm">Interactive portfolio composition and wealth projection.</p>
+          <Link to="/trading" className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+            <Zap size={18} fill="currentColor" />
+            Quick Action
+          </Link>
         </div>
       </header>
 
@@ -93,13 +121,13 @@ const Portfolio = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm flex items-center gap-2">
-                <Briefcase size={16} /> Active Allocation
+                <Target size={16} /> Active Allocation
               </h3>
               <p className="text-[10px] text-slate-500 font-bold mt-1">
                 {isManual ? "Drag stocks here to allocate capital." : "Managed by Steward AI"}
               </p>
             </div>
-            {!isManual && <Lock className="text-slate-400" size={20} />}
+            {!isManual && <Shield className="text-slate-400" size={20} />}
           </div>
 
           <div className="space-y-3 min-h-[200px]">
@@ -142,7 +170,7 @@ const Portfolio = () => {
           onDrop={(e) => handleDrop(e, 'watch')}
         >
           <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm mb-6 flex items-center gap-2">
-            <Database size={16} /> Market Opportunities
+            <Activity size={16} /> Market Opportunities
           </h3>
           <div className="grid grid-cols-2 gap-3">
             {watchlist.map((stock) => (
@@ -191,23 +219,20 @@ const Portfolio = () => {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={wealthProjection}>
+              <AreaChart data={history.length > 0 ? history : projections}>
                 <defs>
-                  <linearGradient id="colorAgg" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickFormatter={(val) => `$${val / 1000}k`} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="aggressive" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAgg)" />
-                <Area type="monotone" dataKey="conservative" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorCons)" />
+                <XAxis dataKey={history.length > 0 ? "name" : "year"} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                />
+                <Area type="monotone" dataKey={history.length > 0 ? "value" : "aggressive"} stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorCons)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -246,7 +271,7 @@ const Portfolio = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/5 rounded-lg text-emerald-400">
-              <ShieldCheck size={24} />
+              <Shield size={24} />
             </div>
             <div>
               <h4 className="text-white font-black text-xs uppercase tracking-widest">SOC2 Type II</h4>
@@ -255,7 +280,7 @@ const Portfolio = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/5 rounded-lg text-blue-400">
-              <Lock size={24} />
+              <Shield size={24} />
             </div>
             <div>
               <h4 className="text-white font-black text-xs uppercase tracking-widest">AES-256</h4>
@@ -264,7 +289,7 @@ const Portfolio = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/5 rounded-lg text-amber-400">
-              <Database size={24} />
+              <PieChartIcon size={24} />
             </div>
             <div>
               <h4 className="text-white font-black text-xs uppercase tracking-widest">Redundant Data</h4>
@@ -273,7 +298,7 @@ const Portfolio = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/5 rounded-lg text-purple-400">
-              <Award size={24} />
+              <TrendingUp size={24} />
             </div>
             <div>
               <h4 className="text-white font-black text-xs uppercase tracking-widest">SEC Regulated</h4>

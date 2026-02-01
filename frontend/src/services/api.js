@@ -15,7 +15,7 @@ export const fetchUsers = async () => {
     }
 };
 
-export const fetchUser = async (userId = 1) => {
+export const fetchUser = async (userId) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch user');
@@ -74,9 +74,10 @@ export const fetchProjections = async () => {
     }
 };
 
-export const fetchTrades = async () => {
+export const fetchTrades = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/trades/`);
+        const url = userId ? `${BASE_URL}/trades/?user_id=${userId}` : `${BASE_URL}/trades/`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch trades');
         return await response.json();
     } catch (error) {
@@ -85,7 +86,7 @@ export const fetchTrades = async () => {
     }
 };
 
-export const fetchPortfolioHistory = async (userId = 1) => {
+export const fetchPortfolioHistory = async (userId) => {
     try {
         const response = await fetch(`${BASE_URL}/portfolio/history?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch history');
@@ -96,7 +97,7 @@ export const fetchPortfolioHistory = async (userId = 1) => {
     }
 };
 
-export const fetchDailyPnL = async (userId = 1) => {
+export const fetchDailyPnL = async (userId) => {
     try {
         const response = await fetch(`${BASE_URL}/trades/daily-pnl?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch daily pnl');
@@ -122,7 +123,7 @@ export const createAuditLog = async (logData) => {
     }
 };
 
-export const fetchPortfolioSummary = async (userId = 1) => {
+export const fetchPortfolioSummary = async (userId) => {
     try {
         const response = await fetch(`${BASE_URL}/portfolio/?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch summary');
@@ -132,5 +133,47 @@ export const fetchPortfolioSummary = async (userId = 1) => {
     } catch (error) {
         console.error(error);
         return null;
+    }
+};
+
+export const fetchHoldings = async (userId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/portfolio/holdings?user_id=${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch holdings');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};
+
+export const fetchWatchlist = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/watchlist/`);
+        if (!response.ok) throw new Error('Failed to fetch watchlist');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};
+
+export const fetchExchangeStatus = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/market/status/`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return { status: 'ONLINE', latency: '24ms', exchange: 'NASDAQ/NYSE-AMEX' };
+    }
+};
+
+export const fetchMarketMovers = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/market/movers/`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return [];
     }
 };

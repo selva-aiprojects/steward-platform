@@ -5,48 +5,24 @@ import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import {
-    ArrowUpRight, ArrowDownRight, Activity,
-    TrendingUp, Shield, BarChart2, Clock,
-    AlertCircle, Search, Settings, Loader2
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2, DollarSign, Target, Calendar } from 'lucide-react';
 import { AIAnalyst } from "../components/AIAnalyst";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchPortfolioSummary, fetchTrades } from "../services/api";
-
-// Fallback static data for charts
-const performanceData = [
-    { name: 'Mon', value: 4000 },
-    { name: 'Tue', value: 3000 },
-    { name: 'Wed', value: 2000 },
-    { name: 'Thu', value: 2780 },
-    { name: 'Fri', value: 1890 },
-    { name: 'Sat', value: 2390 },
-    { name: 'Sun', value: 3490 },
-];
-
-const marketMovers = [
-    { symbol: 'TSLA', change: '+3.2%', type: 'up' },
-    { symbol: 'AAPL', change: '-1.4%', type: 'down' },
-    { symbol: 'NVDA', change: '+2.8%', type: 'up' },
-    { symbol: 'MSFT', change: '+0.9%', type: 'up' },
-];
+import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
 export function Dashboard() {
     const { user } = useUser();
-    const [period, setPeriod] = useState('Today');
+    const [period, setPeriod] = useState('This Week');
     const [summary, setSummary] = useState(null);
     const [recentTrades, setRecentTrades] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    // Real-time State
-    const [marketMoversState, setMarketMovers] = useState(marketMovers);
-    const [socketStatus, setSocketStatus] = useState('disconnected');
-
-    // Admin Telemetry State
+    const [marketMoversState, setMarketMovers] = useState([]);
     const [adminTelemetry, setAdminTelemetry] = useState(null);
+    const [chartData, setChartData] = useState([]);
+    const [exchangeStatus, setExchangeStatus] = useState({ latency: '24ms' });
+    const [socketStatus, setSocketStatus] = useState('disconnected');
 
     useEffect(() => {
         // 1. Initialize Socket
@@ -92,13 +68,22 @@ export function Dashboard() {
         const loadData = async () => {
             if (!user) return;
             try {
-                // Use actual user ID instead of hardcoded 1
-                const [sumData, tradeData] = await Promise.all([
+                const [sumData, tradeData, historyData, status] = await Promise.all([
                     fetchPortfolioSummary(user.id),
-                    fetchTrades()
+                    fetchTrades(user.id),
+                    fetchPortfolioHistory(user.id),
+                    fetchExchangeStatus()
                 ]);
                 setSummary(sumData);
                 setRecentTrades(tradeData.slice(0, 3));
+                setChartData(historyData.length > 0 ? historyData : [
+                    { name: 'Mon', value: 0 },
+                    { name: 'Tue', value: 0 },
+                    { name: 'Wed', value: 0 },
+                    { name: 'Thu', value: 0 },
+                    { name: 'Fri', value: 0 },
+                ]);
+                setExchangeStatus(status);
             } catch (err) {
                 console.error("Dashboard Load Error:", err);
             } finally {
@@ -107,8 +92,6 @@ export function Dashboard() {
         };
         loadData();
     }, [user]);
-
-    const [chartData, setChartData] = useState(performanceData);
 
     const metrics = [
         {
@@ -122,7 +105,7 @@ export function Dashboard() {
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
             value: `$${(summary?.invested_amount || 0).toLocaleString()}`,
-            change: '8 positions',
+            change: summary?.positions_count ? `${summary.positions_count} positions` : 'No active positions',
             icon: Activity,
             color: 'text-indigo-600',
             link: '/portfolio'
@@ -130,7 +113,7 @@ export function Dashboard() {
         {
             label: user?.role === 'BUSINESS_OWNER' ? 'Portfolio ROI' : 'Daily Alpha',
             value: `+${summary?.win_rate || 0}%`,
-            change: 'Beat SPY by 2%',
+            change: summary?.win_rate ? `Win rate ${summary.win_rate}%` : 'Analysis pending',
             icon: TrendingUp,
             color: 'text-primary',
             link: '/reports'
@@ -138,7 +121,7 @@ export function Dashboard() {
         {
             label: user?.role === 'ADMIN' ? 'Live System Load' : 'System Health',
             value: user?.role === 'ADMIN' && adminTelemetry ? adminTelemetry.system_load : '100%',
-            change: user?.role === 'ADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : 'Latency 42ms',
+            change: user?.role === 'ADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : `Latency ${exchangeStatus.latency}`,
             icon: Shield,
             color: 'text-green-600',
             link: user?.role === 'ADMIN' ? '/users' : '/'

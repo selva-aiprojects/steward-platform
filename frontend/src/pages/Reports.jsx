@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2 } from 'lucide-react';
-import { fetchTrades } from "../services/api";
+import { fetchTrades, fetchStrategies, fetchDailyPnL } from "../services/api";
 import { useUser } from "../context/UserContext";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -19,14 +19,27 @@ export function Reports() {
     const { user } = useUser();
     const [timeframe, setTimeframe] = useState('Daily');
     const [trades, setTrades] = useState([]);
+    const [performance, setPerformance] = useState([]);
+    const [strategies, setStrategies] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const data = await fetchTrades();
-                // Filter only those with journal data
-                setTrades(data.filter(t => t.decision_logic));
+                const [tradeData, summaryData, dailyPnL] = await Promise.all([
+                    fetchTrades(),
+                    fetchStrategies(),
+                    fetchDailyPnL(user?.id)
+                ]);
+                setTrades(tradeData.filter(t => t.decision_logic));
+                setStrategies(summaryData);
+                setPerformance(dailyPnL.length > 0 ? dailyPnL : [
+                    { name: 'Mon', user: 0, agent: 0 },
+                    { name: 'Tue', user: 0, agent: 0 },
+                    { name: 'Wed', user: 0, agent: 0 },
+                    { name: 'Thu', user: 0, agent: 0 },
+                    { name: 'Fri', user: 0, agent: 0 },
+                ]);
             } catch (err) {
                 console.error("Reports Fetch Error:", err);
             } finally {
@@ -51,11 +64,13 @@ export function Reports() {
         doc.setFontSize(14);
         doc.text("Algorithmic Trading Ledger", 14, 50);
 
-        const algoData = [
-            ['Alpha Mean Reversion v4', '$2.4M', '68.4%', '+$12,450', 'STABLE'],
-            ['Groq Llama-3 Scalper', '$840K', '92.1%', '+$5,800', 'OPTIMIZING'],
-            ['Sentiment Arbitrage v1.2', '$120K', '44.8%', '-$420', 'RE-CALIBRATING'],
-        ];
+        const algoData = strategies.map(s => [
+            s.name,
+            `$${(s.volume || 0).toLocaleString()}`,
+            `${s.win_rate || 0}%`,
+            `${(s.pnl || 0) >= 0 ? '+' : ''}${(s.pnl || 0).toLocaleString()}`,
+            s.status || 'OFFLINE'
+        ]);
 
         doc.autoTable({
             startY: 55,
@@ -156,7 +171,7 @@ export function Reports() {
                     </div>
                     <div className="h-64 mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={mockPerformance}>
+                            <BarChart data={performance}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
@@ -189,7 +204,7 @@ export function Reports() {
                     </div>
                     <div className="h-64 mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockPerformance}>
+                            <LineChart data={performance}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
@@ -226,25 +241,21 @@ export function Reports() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {[
-                                { name: 'Alpha Mean Reversion v4', trades: '$2.4M', win: '68.4%', pnl: '+$12,450', status: 'STABLE' },
-                                { name: 'Groq Llama-3 Scalper', trades: '$840K', win: '92.1%', pnl: '+$5,800', status: 'OPTIMIZING' },
-                                { name: 'Sentiment Arbitrage v1.2', trades: '$120K', win: '44.8%', pnl: '-$420', status: 'RE-CALIBRATING' },
-                            ].map((row, i) => (
+                            {strategies.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors group cursor-pointer">
                                     <td className="px-8 py-6">
                                         <p className="font-black text-slate-900">{row.name}</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Execution Frequency: HIGH</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Execution Frequency: {row.frequency || 'HIGH'}</p>
                                     </td>
-                                    <td className="px-8 py-6 font-bold text-slate-600 text-xs">{row.trades}</td>
-                                    <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win}</td>
-                                    <td className={`px-8 py-6 font-black text-sm ${row.pnl.startsWith('+') ? 'text-primary' : 'text-red-500'}`}>
-                                        {row.pnl}
+                                    <td className="px-8 py-6 font-bold text-slate-600 text-xs">${(row.volume || 0).toLocaleString()}</td>
+                                    <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win_rate || 0}%</td>
+                                    <td className={`px-8 py-6 font-black text-sm ${(row.pnl || 0) >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                                        {(row.pnl || 0) >= 0 ? '+' : ''}${(row.pnl || 0).toLocaleString()}
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-tighter ${row.status === 'STABLE' ? 'bg-green-50 text-green-700' :
                                             row.status === 'OPTIMIZING' ? 'bg-primary/10 text-primary' : 'bg-orange-50 text-orange-600'
-                                            }`}>{row.status}</span>
+                                            }`}>{row.status || 'OFFLINE'}</span>
                                     </td>
                                 </tr>
                             ))}

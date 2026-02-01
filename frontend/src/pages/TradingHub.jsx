@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2 } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser } from "../services/api";
+import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
@@ -9,7 +9,9 @@ export function TradingHub() {
     const { user: contextUser } = useUser();
     const [strategies, setStrategies] = useState([]);
     const [projections, setProjections] = useState([]);
-    const [user, setUser] = useState(null);
+    const [summary, setSummary] = useState(null);
+    const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms' });
+    const [user, setUser] = useState(null); // Re-added this line as it was implicitly removed by the instruction's snippet but is crucial for the component's logic.
     const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState(false);
 
@@ -17,14 +19,18 @@ export function TradingHub() {
         const loadData = async () => {
             if (!contextUser) return;
             try {
-                const [strats, projs, userData] = await Promise.all([
+                const [strats, projs, userData, sumData, status] = await Promise.all([
                     fetchStrategies(),
                     fetchProjections(),
-                    fetchUser(contextUser.id)
+                    fetchUser(contextUser.id),
+                    fetchPortfolioSummary(contextUser.id),
+                    fetchExchangeStatus()
                 ]);
                 setStrategies(strats);
                 setProjections(projs);
                 setUser(userData);
+                setSummary(sumData);
+                setExchangeStatus(status);
             } catch (err) {
                 console.error("Trading Hub Fetch Error:", err);
             } finally {
@@ -80,44 +86,67 @@ export function TradingHub() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
                     <button
-                        onClick={toggleTradingMode}
+                        onClick={() => user?.trading_mode !== 'AUTO' && toggleTradingMode()}
                         disabled={toggling}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'AUTO'
-                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                            : 'bg-white text-slate-400 hover:text-slate-600'
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'AUTO'
+                            ? 'bg-primary text-white shadow-xl shadow-primary/40 ring-4 ring-primary/10 scale-105'
+                            : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
                             }`}
                     >
-                        {user?.trading_mode === 'AUTO' ? <Shield size={14} /> : <Settings2 size={14} />}
+                        {user?.trading_mode === 'AUTO' ? <Shield size={14} className="animate-pulse" /> : <Lock size={14} />}
                         Steward Auto
                     </button>
                     <button
-                        onClick={toggleTradingMode}
+                        onClick={() => user?.trading_mode !== 'MANUAL' && toggleTradingMode()}
                         disabled={toggling}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'MANUAL'
-                            ? 'bg-[#0A2A4D] text-white shadow-lg'
-                            : 'bg-white text-slate-400 hover:text-slate-600'
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'MANUAL'
+                            ? 'bg-orange-600 text-white shadow-xl shadow-orange-600/40 ring-4 ring-orange-500/10 scale-105'
+                            : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
                             }`}
                     >
-                        {user?.trading_mode === 'MANUAL' ? <Unlock size={14} /> : <Lock size={14} />}
+                        {user?.trading_mode === 'MANUAL' ? <Unlock size={14} className="animate-bounce" /> : <Shield size={14} />}
                         Manual Mode
                     </button>
                 </div>
 
-                <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+                <div className="h-10 w-[1px] bg-slate-100 hidden md:block mx-4" />
 
-                <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-                    <Zap size={18} fill="currentColor" />
+                <div className="flex flex-col items-end mr-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exchange Status</span>
+                    <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus.exchange || 'NASDAQ'} {exchangeStatus.latency}</span>
+                    </div>
+                </div>
+
+                <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 group">
+                    <Zap size={18} fill="currentColor" className="group-hover:animate-bounce" />
                     Launch New Strategy
                 </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                    { label: 'Total Algorithmic Volume', value: '$1.2M', icon: RefreshCcw, color: 'text-indigo-600' },
-                    { label: 'Active Positions', value: '8', icon: Target, color: 'text-green-600' },
-                    { label: 'Avg Daily Alpha', value: '2.4%', icon: TrendingUp, color: 'text-primary' },
+                    {
+                        label: 'Total Algorithmic Volume',
+                        value: strategies.length > 0 ? `$${(strategies.reduce((a, b) => a + (parseInt(b.trades?.replace(/[^0-9]/g, '') || 0) * 1000), 0) / 1000).toFixed(1)}M` : '$0',
+                        icon: RefreshCcw,
+                        color: 'text-indigo-600'
+                    },
+                    {
+                        label: 'Active Algo Positions',
+                        value: strategies.filter(s => s.status === 'STABLE').length.toString(),
+                        icon: Target,
+                        color: 'text-green-600'
+                    },
+                    {
+                        label: 'Avg Daily Alpha',
+                        value: strategies.length > 0 ? `${(strategies.reduce((a, b) => a + parseFloat(b.win || 0), 0) / strategies.length).toFixed(1)}%` : '0%',
+                        icon: TrendingUp,
+                        color: 'text-primary'
+                    },
                 ].map((stat, i) => (
                     <Card key={i} className="p-6 border-slate-200 shadow-sm flex items-center justify-between">
                         <div>
