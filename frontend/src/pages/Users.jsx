@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" // Assuming shadcn-like components exist or I'll stub basic HTML table
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table" // Assuming shadcn-like components exist or I'll stub basic HTML table
+import { Button } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
 
 export function Users() {
     const [users, setUsers] = useState([]);
@@ -52,7 +52,7 @@ export function Users() {
                                     </td>
                                     <td className="p-4">
                                         <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium ring-1 ring-inset ${user.risk_tolerance === 'HIGH' ? 'bg-red-50 text-red-700 ring-red-600/10 dark:bg-red-900/20 dark:text-red-400' :
-                                                'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/20 dark:text-green-400'
+                                            'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/20 dark:text-green-400'
                                             }`}>
                                             {user.risk_tolerance}
                                         </span>
