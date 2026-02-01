@@ -1,4 +1,4 @@
-import { ModeToggle } from "../components/mode-toggle"
+import { ModeToggle } from "../mode-toggle"
 import { Link } from "react-router-dom"
 import { LayoutDashboard, Wallet, BookOpen, Users as UsersIcon } from "lucide-react"
 
