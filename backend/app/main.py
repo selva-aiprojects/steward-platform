@@ -188,8 +188,23 @@ async def market_feed():
                     'symbol': symbol,
                     'price': round(random.uniform(100, 1000), 2),
                     'change': f"{random.choice(['+', '-'])}{round(random.uniform(0, 5), 2)}%",
-                    'projection': "AI Projection pending: System in MOCK mode.",
-                    'type': 'up' # Mock change logic
+                projection = "AI Projection pending: System in MOCK mode."
+                
+                # Enable Groq Analysis even for Mock Data if available
+                if groq_client:
+                    try:
+                        prompt = f"Provide a concise 1-sentence market projection for Indian stock {symbol} (NSE) trading at {update['price']}."
+                        completion = groq_client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt}],
+                            model="llama-3.1-8b-instant",
+                            max_tokens=60
+                        )
+                        projection = completion.choices[0].message.content.strip()
+                    except Exception:
+                        pass
+
+                update['projection'] = projection
+                update['type'] = 'up' # Mock change logic
                 }
                 await sio.emit('market_update', update, room='market_data')
                 
