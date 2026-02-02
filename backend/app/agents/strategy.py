@@ -16,11 +16,9 @@ class StrategyAgent(BaseAgent):
         super().__init__(name="StrategyAgent")
 
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        from groq import Groq
         import os
         import json
         
-        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
         market_data = context.get("market_data", {})
         user_profile = context.get("user_profile", {})
         
@@ -39,9 +37,11 @@ class StrategyAgent(BaseAgent):
         """
         
         try:
+            from groq import Groq
+            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
             chat_completion = client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama3-70b-8192",
+                model="llama-3.3-70b-versatile",
                 response_format={"type": "json_object"}
             )
             analysis = json.loads(chat_completion.choices[0].message.content)

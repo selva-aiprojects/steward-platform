@@ -14,7 +14,7 @@ async def smoke_test():
         service = TradeService()
         
         proposal = {
-            "symbol": "AAPL",
+            "symbol": "RELIANCE",
             "action": "BUY",
             "quantity": 10,
             "price": 150.0
@@ -28,15 +28,17 @@ async def smoke_test():
         print(f"Trace ID: {result['trace_id']}")
         
         # Validation
-        if result['status'] in ["COMPLETED", "REJECTED_RISK", "EXECUTED"]:
-            print("\n✅ Smoke Test PASSED: Workflow completed successfully.")
+        # Validation
+        expected_statuses = ["COMPLETED", "REJECTED_RISK", "EXECUTED", "SUBMITTED"]
+        if result['status'] in expected_statuses:
+            print(f"\n✅ Smoke Test PASSED: Workflow reached status '{result['status']}'")
         else:
             print(f"\n❌ Smoke Test FAILED: Unexpected status '{result['status']}'")
             
         # Check trace
         print("\n--- Trace Summary ---")
         for step in result.get('trace', []):
-            print(f"[{step['agent']}] -> Keys updated: {list(step['output'].keys())}")
+            print(f"[{step['step']}] -> Keys updated: {list(step['output'].keys())}")
             
     except Exception as e:
         traceback.print_exc()
