@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Activity, PieChart as PieChartIcon, Target, Shield, Zap, RefreshCcw, Loader2, Plus, GripVertical } from 'lucide-react';
+import {
+  ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown,
+  DollarSign, Activity, PieChart as PieChartIcon, Target,
+  Shield, Zap, RefreshCcw, Loader2, Plus, GripVertical, X
+} from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";

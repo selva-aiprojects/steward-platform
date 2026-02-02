@@ -8,6 +8,7 @@ class TradeProposal(BaseModel):
     quantity: int
     price: Optional[float] = None # Optional for Market orders
     request_id: Optional[str] = None
+    user_id: Optional[int] = None
 
 class TradeResponse(BaseModel):
     id: int

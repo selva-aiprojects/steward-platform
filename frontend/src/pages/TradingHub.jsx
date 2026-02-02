@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
-import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2 } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings } from "../services/api";
+import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2, X, ArrowRight } from 'lucide-react';
+import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 

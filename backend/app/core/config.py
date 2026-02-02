@@ -1,5 +1,6 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from typing import Optional
 import os
 
 class Settings(BaseSettings):
@@ -31,6 +32,11 @@ class Settings(BaseSettings):
 
     # Security & API Keys
     API_V1_STR: str = "/api/v1"
+    
+    # Zerodha KiteConnect
+    ZERODHA_API_KEY: Optional[str] = None
+    ZERODHA_API_SECRET: Optional[str] = None
+    ZERODHA_ACCESS_TOKEN: Optional[str] = None
     
     class Config:
         env_file = ".env"

@@ -15,15 +15,34 @@ class MarketDataAgent(BaseAgent):
         super().__init__(name="MarketDataAgent")
 
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        symbol = context.get("symbol")
+        from app.services.kite_service import kite_service
         
-        # Placeholder: Mock data
-        # In real impl, would call Yahoo Finance / AlphaVantage / Bloomberg
+        symbol = context.get("symbol")
+        exchange = context.get("exchange", "NSE")
+        
+        # 1. Attempt to fetch real data from Zerodha Kite
+        quote = kite_service.get_quote(symbol, exchange)
+        
+        if quote:
+            return {
+                "market_data": {
+                    "symbol": symbol,
+                    "exchange": exchange,
+                    "current_price": quote.get("last_price"),
+                    "volume": quote.get("volume"),
+                    "ohlc": quote.get("ohlc"),
+                    "trend": "NEUTRAL", # TODO: Derive from price action
+                    "source": "Zerodha KiteConnect"
+                }
+            }
+        
+        # 2. Fallback: Simulated/Mock data
         return {
             "market_data": {
                 "symbol": symbol,
                 "current_price": 150.00,
                 "volume": 1000000,
-                "trend": "NEUTRAL"
+                "trend": "NEUTRAL",
+                "source": "MOCK_BACKUP"
             }
         }

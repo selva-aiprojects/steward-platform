@@ -1,5 +1,5 @@
 from .user import UserBase, UserCreate, UserUpdate, UserResponse
-from .portfolio import PortfolioBase, PortfolioCreate, PortfolioResponse, PortfolioHistoryPoint
+from .portfolio import PortfolioBase, PortfolioCreate, PortfolioResponse, PortfolioHistoryPoint, HoldingResponse, DepositRequest
 from .trade import TradeProposal, TradeResponse, TradeResult
 from . import strategy
 from . import projection

@@ -32,6 +32,26 @@ class TradeDecisionAgent(BaseAgent):
         
         base_quantity = risk_multipliers.get(risk_tolerance, 50)
         
+        # 1. Manual Override Priority
+        manual_override = context.get("manual_override")
+        if manual_override:
+            action = manual_override.get("action")
+            symbol = manual_override.get("symbol")
+            quantity = manual_override.get("quantity")
+            price = manual_override.get("price") or current_price
+            
+            return {
+                "trade_proposal": {
+                    "action": action,
+                    "symbol": symbol,
+                    "quantity": quantity,
+                    "price": price,
+                    "estimated_total": quantity * price,
+                    "logic": "MANUAL_OVERRIDE: User-directed execution."
+                }
+            }
+
+        # 2. Automated Strategy Logic
         if signal.get("signal") in ["BUY", "SELL"]:
             action = signal.get("signal")
             quantity = base_quantity

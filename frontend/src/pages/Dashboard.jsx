@@ -5,7 +5,19 @@ import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2, DollarSign, Target, Calendar, Search, Clock, Settings } from 'lucide-react';
+import {
+    TrendingUp, TrendingDown, Activity, BarChart2, Shield,
+    ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2,
+    DollarSign, Target, Calendar, Search, Clock, Settings, Plus
+} from 'lucide-react';
+
+const performanceData = [
+    { name: 'Mon', value: 4000 },
+    { name: 'Tue', value: 4200 },
+    { name: 'Wed', value: 4100 },
+    { name: 'Thu', value: 4400 },
+    { name: 'Fri', value: 4800 },
+];
 import { AIAnalyst } from "../components/AIAnalyst";
 import { useNavigate, Link } from "react-router-dom";
 import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds } from "../services/api";
@@ -25,6 +37,7 @@ export function Dashboard() {
     const [chartData, setChartData] = useState([]);
     const [exchangeStatus, setExchangeStatus] = useState({ latency: '24ms' });
     const [socketStatus, setSocketStatus] = useState('disconnected');
+    const [stewardPrediction, setStewardPrediction] = useState("Initializing market intelligence...");
 
     useEffect(() => {
         // 1. Initialize Socket
@@ -59,6 +72,11 @@ export function Dashboard() {
         // 3. Listen for Admin Metrics (Private)
         socket.on('admin_metrics', (data) => {
             setAdminTelemetry(data);
+        });
+
+        // 4. Listen for Steward Global Prediction
+        socket.on('steward_prediction', (data) => {
+            setStewardPrediction(data.prediction);
         });
 
         return () => {
@@ -308,6 +326,28 @@ export function Dashboard() {
                 </div>
             </header>
 
+            {/* Steward Intelligence Banner */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Shield size={120} className="text-primary rotate-12" />
+                </div>
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                    <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+                        <Zap className="text-primary animate-pulse" size={28} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Guardian Intelligence</span>
+                            <span className="h-1 w-1 rounded-full bg-slate-700" />
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Real-time Analysis</span>
+                        </div>
+                        <h2 className="text-white text-lg font-black tracking-tight leading-tight">
+                            {stewardPrediction}
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {metrics.map((stat, i) => (
                     <Link to={stat.link} key={i}>
@@ -403,23 +443,35 @@ export function Dashboard() {
                     </div>
                     <div className="p-2">
                         {marketMoversState.map((mover) => (
-                            <Link to="/trading" key={mover.symbol}>
-                                <div className="flex items-center justify-between p-4 hover:bg-indigo-50/50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300 group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs group-hover:bg-white group-hover:border-primary/20 group-hover:text-primary transition-all shadow-sm">
-                                            {mover.symbol}
+                            <Link to="/trading" key={mover.symbol} className="block group">
+                                <div className="p-4 hover:bg-indigo-50/50 transition-colors rounded-xl cursor-pointer animate-in fade-in slide-in-from-right-2 duration-300">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-900 text-xs group-hover:bg-white group-hover:border-primary/20 group-hover:text-primary transition-all shadow-sm">
+                                                {mover.symbol}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                    {mover.price ? `$${mover.price}` : 'NASD'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-xs font-black text-slate-900">{mover.symbol} Inc.</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                                {mover.price ? `$${mover.price}` : 'NASD'}
-                                            </p>
+                                        <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'}`}>
+                                            {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                            {mover.change}
                                         </div>
                                     </div>
-                                    <div className={`flex items-center gap-1 font-black text-xs ${mover.type === 'up' ? 'text-green-600' : 'text-red-500'
-                                        }`}>
-                                        {mover.type === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                        {mover.change}
+
+                                    {/* AI Projection Box */}
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100/50 group-hover:bg-white group-hover:border-primary/10 transition-all">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <Zap size={10} className="text-primary" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Antigravity Projection</span>
+                                        </div>
+                                        <p className="text-[11px] leading-relaxed text-slate-600 font-medium italic">
+                                            "{mover.projection || 'Market-wide stability check in progress...'}"
+                                        </p>
                                     </div>
                                 </div>
                             </Link>
@@ -429,7 +481,7 @@ export function Dashboard() {
                         <Link to="/trading" className="block w-full text-center py-3 text-xs font-black bg-slate-50 text-slate-500 hover:bg-slate-900 hover:text-white rounded-xl uppercase tracking-widest transition-all">View All Volatility Focus</Link>
                     </div>
                 </Card>
-            </div>
+            </div >
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {user?.role !== 'AUDITOR' && <AIAnalyst />}
@@ -474,6 +526,6 @@ export function Dashboard() {
                     )}
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }

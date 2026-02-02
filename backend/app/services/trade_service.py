@@ -20,9 +20,8 @@ class TradeService:
         # In a real app, we'd fetch the user_id from the authenticated session
         context = {
             "request_id": trade_proposal.get("request_id"),
-            "user_id": 1,  # Hardcoded for single-user dev
-            "symbol": trade_proposal.get("symbol"), # passed to MarketDataAgent
-            # Initial proposal data if provided manually, though Strategy usually generates it
+            "user_id": trade_proposal.get("user_id", 1), # Use provided user_id
+            "symbol": trade_proposal.get("symbol"),
             "manual_override": trade_proposal 
         }
         

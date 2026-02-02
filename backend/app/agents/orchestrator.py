@@ -85,6 +85,20 @@ class OrchestratorAgent(BaseAgent):
                 }
 
             # 5. Risk Management (Risk)
+            # Inject real portfolio state for Risk Check
+            from app.core.database import SessionLocal
+            from app.models.portfolio import Portfolio
+            db = SessionLocal()
+            try:
+                portfolio = db.query(Portfolio).filter(Portfolio.user_id == context.get("user_id")).first()
+                if portfolio:
+                    context["portfolio"] = {
+                        "cash_balance": portfolio.cash_balance,
+                        "daily_loss": 0.0 # Placeholder for now
+                    }
+            finally:
+                db.close()
+
             risk_out = await self.risk_management.run(context)
             context.update(risk_out)
             log_step("RiskManagementAgent", risk_out)
