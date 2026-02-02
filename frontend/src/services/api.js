@@ -1,8 +1,16 @@
+import io from 'socket.io-client';
+
 // Dynamic API URL for production support
 // Fallback to localhost for development
-const BASE_URL = process.env.REACT_APP_API_URL || '';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
+
+export const socket = io(BASE_URL, {
+    transports: ['websocket'],
+    autoConnect: true,
+    reconnectionAttempts: 5
+});
 
 export const fetchUsers = async () => {
     try {
