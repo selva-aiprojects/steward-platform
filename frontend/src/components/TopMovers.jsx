@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { MoveUp, MoveDown, Loader2 } from "lucide-react";
-import { socket } from "../services/api";
+import { MoveUp, MoveDown, Loader2, Activity } from "lucide-react";
+import { socket, fetchMarketMovers } from "../services/api";
 
 export function TopMovers() {
     const [movers, setMovers] = useState({ gainers: [], losers: [] });
@@ -8,20 +8,27 @@ export function TopMovers() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Initial setup listener
+        const loadInitial = async () => {
+            const data = await fetchMarketMovers();
+            if (data) {
+                if (data.gainers) setMovers(data);
+                else if (Array.isArray(data)) {
+                    // Handle array format if returned
+                    setMovers({ gainers: data.slice(0, 5), losers: [] });
+                }
+            }
+            setLoading(false);
+        };
+
+        loadInitial();
+
+        // Socket listener for real-time updates
         socket.on('market_movers', (data) => {
             setMovers(data);
-            setLoading(false);
         });
-
-        // Use mock data if still loading after a timeout (fallback for demo)
-        const timer = setTimeout(() => {
-            if (loading) setLoading(false);
-        }, 3000);
 
         return () => {
             socket.off('market_movers');
-            clearTimeout(timer);
         };
     }, []);
 
@@ -53,7 +60,13 @@ export function TopMovers() {
     return (
         <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm h-full">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="font-heading font-black text-slate-900 text-base">Market Movers</h3>
+                <div>
+                    <h3 className="font-heading font-black text-slate-900 text-base">Market Movers</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-ping" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Live NSE Feed</span>
+                    </div>
+                </div>
                 <div className="flex bg-slate-100 p-1 rounded-lg">
                     <button
                         onClick={() => setActiveTab("GAINERS")}

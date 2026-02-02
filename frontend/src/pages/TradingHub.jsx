@@ -26,6 +26,8 @@ export function TradingHub() {
     const [orderTicker, setOrderTicker] = useState('RELIANCE');
     const [orderQty, setOrderQty] = useState(10);
     const [activeHoldings, setActiveHoldings] = useState([]);
+    const [tradeStatus, setTradeStatus] = useState(null);
+    const [stewardPrediction, setStewardPrediction] = useState("Steward AI is currently monitoring market signals for optimal entry...");
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -72,7 +74,20 @@ export function TradingHub() {
                 setLoading(false);
             }
         };
+
+        const onMarketPrediction = (data) => {
+            if (data.prediction) setStewardPrediction(data.prediction);
+        };
+
+        if (socket) {
+            socket.on('steward_prediction', onMarketPrediction);
+        }
+
         loadData();
+
+        return () => {
+            if (socket) socket.off('steward_prediction', onMarketPrediction);
+        };
     }, [contextUser]);
 
     const toggleTradingMode = async () => {
@@ -116,10 +131,13 @@ export function TradingHub() {
                 // Refresh holdings
                 const updatedHoldings = await fetchHoldings(user.id);
                 setActiveHoldings(updatedHoldings);
-                alert(`${action} successful: ${orderQty} units of ${orderTicker}`);
+                setTradeStatus({ type: 'success', msg: `${action} successful: ${orderQty} units of ${orderTicker}` });
+                setTimeout(() => setTradeStatus(null), 5000);
             }
         } catch (err) {
             console.error("Manual trade failed:", err);
+            setTradeStatus({ type: 'error', msg: `Trade Failed: ${err.message}` });
+            setTimeout(() => setTradeStatus(null), 5000);
         } finally {
             setExecuting(false);
         }
@@ -293,9 +311,9 @@ export function TradingHub() {
                             </div>
                         </div>
                         {user?.trading_mode === 'AUTO' && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-100 rounded-lg">
-                                <Lock size={12} className="text-amber-600" />
-                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">AI Managed</span>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-lg animate-pulse">
+                                <Activity size={12} className="text-primary" />
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">AI observing order book...</span>
                             </div>
                         )}
                     </div>
@@ -338,6 +356,12 @@ export function TradingHub() {
                                 Sell
                             </button>
                         </div>
+                        {tradeStatus && (
+                            <div className={`w-full mt-4 p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2 ${tradeStatus.type === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'
+                                }`}>
+                                {tradeStatus.msg}
+                            </div>
+                        )}
                     </div>
                 </Card>
 
@@ -357,14 +381,21 @@ export function TradingHub() {
                         <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
 
                         {user?.trading_mode === 'AUTO' && (
-                            <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/40 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-slate-200 animate-in fade-in duration-300">
-                                <div className="bg-white p-4 rounded-full shadow-xl mb-4 text-[#0A2A4D]">
-                                    <Lock size={32} />
+                            <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/20 backdrop-blur-[1px] rounded-3xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300 pointer-events-none">
+                                <div className="bg-white/90 p-6 rounded-3xl shadow-2xl border border-slate-100 flex flex-col items-center gap-3">
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-primary text-white rounded-full">
+                                        <Shield size={12} className="animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Steward AI Autopilot</span>
+                                    </div>
+                                    <p className="max-w-xs text-xs font-bold text-slate-800 leading-relaxed uppercase tracking-widest">
+                                        Optimization Mandate Active. Manual Interaction Restricted.
+                                    </p>
+                                    <div className="flex items-center gap-4 mt-2">
+                                        <div className="h-1.5 w-8 bg-primary rounded-full animate-pulse" />
+                                        <div className="h-1.5 w-8 bg-primary/40 rounded-full animate-pulse delay-75" />
+                                        <div className="h-1.5 w-8 bg-primary/20 rounded-full animate-pulse delay-150" />
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-wide">Manual Controls Locked</h3>
-                                <p className="max-w-xs text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
-                                    Steward AI is currently managing all active strategies. Switch to <span className="text-[#0A2A4D]">Manual Mode</span> to override.
-                                </p>
                             </div>
                         )}
 
@@ -492,11 +523,12 @@ export function TradingHub() {
                     <div className="max-w-xl">
                         <div className="flex items-center gap-2 mb-6">
                             <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest">Global Watcher Alpha</span>
-                            <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: US-EAST-1</span>
+                            <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: AP-SOUTH-1 (Mumbai)</span>
                         </div>
-                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight">Steward AI is currently monitoring 842 market triggers.</h3>
-                        <p className="text-slate-300 text-sm leading-relaxed mb-8 font-medium">
-                            The engine has detected a Bullish Divergence across the Mag-7 complex. Asset allocation is being shifted from **Fixed Income** to **High-Growth Equity** automatically. Emergency stop-loss threshold is fixed at **-2.5%** net portfolio value.
+                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{stewardPrediction}"</h3>
+                        <p className="text-slate-300 text-[10px] font-black leading-relaxed mb-8 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <span className="h-2 w-2 bg-green-500 rounded-full animate-ping" />
+                            Live Steward Forecast Stream
                         </p>
                         <div className="flex flex-wrap gap-4">
                             <button className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black text-xs hover:scale-105 transition-transform uppercase tracking-widest shadow-lg">Emergency Stop All</button>

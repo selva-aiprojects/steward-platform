@@ -7,7 +7,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds, addToWatchlist, removeFromWatchlist } from "../services/api";
+import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds, addToWatchlist, removeFromWatchlist, socket } from "../services/api";
 import { useUser } from '../context/UserContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -24,6 +24,7 @@ const Portfolio = () => {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(5000);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [stewardPrediction, setStewardPrediction] = useState("Sector rotation suggests moving allocation to high-growth NSE scripts based on recent volume surges.");
 
   const viewId = selectedUser?.id || user?.id;
   const isManual = user?.trading_mode === 'MANUAL';
@@ -51,7 +52,19 @@ const Portfolio = () => {
         setLoading(false);
       }
     };
+    const onMarketPrediction = (data) => {
+      if (data.prediction) setStewardPrediction(data.prediction);
+    };
+
+    if (socket) {
+      socket.on('steward_prediction', onMarketPrediction);
+    }
+
     loadData();
+
+    return () => {
+      if (socket) socket.off('steward_prediction', onMarketPrediction);
+    };
   }, [viewId]);
 
   const handleDeposit = async () => {
@@ -274,8 +287,14 @@ const Portfolio = () => {
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, 'watch')}
         >
-          <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm mb-6 flex items-center gap-2">
-            <Activity size={16} /> Market Opportunities
+          <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm mb-6 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Activity size={16} /> Market Opportunities
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-1 w-1 bg-green-500 rounded-full animate-ping" />
+              <span className="text-[8px] font-black text-slate-400">LIVE FEED</span>
+            </div>
           </h3>
           <div className="grid grid-cols-2 gap-3">
             {watchlist.map((stock) => (
@@ -294,10 +313,16 @@ const Portfolio = () => {
               </Link>
             ))}
           </div>
-          <div className="mt-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-            <h4 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-2">AI Insight</h4>
-            <p className="text-[11px] text-indigo-700 leading-relaxed font-medium">
-              Sector rotation suggests moving 15% allocation from <strong>Automotive</strong> to <strong>Semiconductors</strong> based on recent supply chain analysis.
+          <div className="mt-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <h4 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center justify-between">
+              <span>Steward Insight</span>
+              <span className="flex items-center gap-1">
+                <span className="h-1 w-1 bg-indigo-400 rounded-full animate-ping" />
+                <span className="text-[8px] opacity-60">LIVE</span>
+              </span>
+            </h4>
+            <p className="text-[11px] text-indigo-700 leading-relaxed font-medium italic">
+              "{stewardPrediction}"
             </p>
           </div>
         </Card>
@@ -406,7 +431,7 @@ const Portfolio = () => {
               <TrendingUp size={24} />
             </div>
             <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest">SEC Regulated</h4>
+              <h4 className="text-white font-black text-xs uppercase tracking-widest">SEBI Regulated</h4>
               <p className="text-[10px] opacity-70">Registered Advisor</p>
             </div>
           </div>

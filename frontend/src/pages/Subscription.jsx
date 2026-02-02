@@ -29,7 +29,7 @@ const TIERS = [
     {
         id: 'pro',
         name: 'Pro Steward',
-        price: '$49/mo',
+        price: '₹3,999/mo',
         description: 'For serious investors requiring automation.',
         popular: true,
         features: [
