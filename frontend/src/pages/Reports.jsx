@@ -5,7 +5,7 @@ import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown,
 import { fetchTrades, fetchStrategies, fetchDailyPnL } from "../services/api";
 import { useUser } from "../context/UserContext";
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const mockPerformance = [
     { name: 'Mon', user: 4000, agent: 2400 },
@@ -75,7 +75,7 @@ export function Reports() {
             s.status || 'OFFLINE'
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: 55,
             head: [['Strategy Engine', 'Volume', 'Avg Win Rate', 'Period PnL', 'Status']],
             body: algoData,
@@ -84,7 +84,10 @@ export function Reports() {
         });
 
         // Section 2: Execution Journal
-        let finalY = doc.lastAutoTable.finalY + 20;
+        // Retrieve finalY from the doc object which autoTable updates
+        let finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 60;
+        finalY += 20;
+
         doc.setFontSize(14);
         doc.text("Execution Intelligence Journal", 14, finalY);
 
@@ -96,7 +99,7 @@ export function Reports() {
             t.decision_logic.substring(0, 50) + '...'
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: finalY + 5,
             head: [['Time', 'Symbol', 'Action', 'Price', 'Logic Snapshot']],
             body: journalData,
