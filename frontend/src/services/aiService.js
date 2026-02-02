@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1/ai';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = `${BASE_URL}/ai`;
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
