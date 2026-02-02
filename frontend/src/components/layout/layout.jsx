@@ -9,6 +9,7 @@ import { useUser } from "../../context/UserContext"
 import { useTheme } from "../theme-provider"
 import logo from "../../assets/logo.png"
 import { Ticker } from "../Ticker"
+import ChatWidget from "../ChatWidget";
 
 export function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -187,6 +188,7 @@ export function Layout({ children }) {
                     {children}
                 </div>
             </main>
+            <ChatWidget />
         </div>
     )
 }
