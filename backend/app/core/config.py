@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     ZERODHA_API_SECRET: Optional[str] = None
     ZERODHA_ACCESS_TOKEN: Optional[str] = None
     
+    # AI Keys
+    GROQ_API_KEY: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

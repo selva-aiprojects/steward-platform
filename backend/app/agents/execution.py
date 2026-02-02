@@ -44,7 +44,21 @@ class ExecutionAgent(BaseAgent):
             broker = LiveBrokerAdapter()
         else:
             # Fetch default portfolio_id from context or DB
-            portfolio_id = context.get("user_profile", {}).get("portfolio_id", 1)
+            user_profile = context.get("user_profile", {})
+            portfolio_id = user_profile.get("portfolio_id")
+            
+            if not portfolio_id:
+                # Last resort: Try to find any portfolio for user_id
+                user_id = context.get("user_id")
+                from app.core.database import SessionLocal
+                from app.models.portfolio import Portfolio
+                db = SessionLocal()
+                try:
+                    p = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
+                    portfolio_id = p.id if p else 1
+                finally:
+                    db.close()
+
             broker = PaperTradingEngine(portfolio_id=portfolio_id)
             
         try:

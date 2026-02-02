@@ -28,12 +28,9 @@ app.add_middleware(
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 socket_app = socketio.ASGIApp(sio, app)
 
-# Role-Based Room Management
-@sio.event
-async def connect(sid, environ):
-    print(f"Client connected: {sid}")
-    # Default: All users get public market data
-    await sio.save_session(sid, {'role': 'GUEST'})
+# Global state for immediate feed on join
+last_market_movers = {'gainers': [], 'losers': []}
+last_steward_prediction = {"prediction": "Initializing...", "history": []}
 
 @sio.event
 async def join_stream(sid, data):
@@ -48,13 +45,19 @@ async def join_stream(sid, data):
     if role in ['USER', 'ADMIN', 'BUSINESS_OWNER']:
         await sio.enter_room(sid, 'market_data')
         await sio.emit('stream_status', {'msg': 'Connected to Live Market Feed'}, to=sid)
+        
+        # Immediate state send
+        if last_market_movers['gainers']:
+            await sio.emit('market_movers', last_market_movers, to=sid)
+        if last_steward_prediction['prediction'] != "Initializing...":
+            await sio.emit('steward_prediction', last_steward_prediction, to=sid)
 
     # 2. Superadmin & Business Owner Stream (System Telemetry)
     if role in ['ADMIN', 'BUSINESS_OWNER']:
-        await sio.enter_room(sid, 'admin_telemetry')
+        await sio.enter_room(sid, 'admin_data')
         await sio.emit('stream_status', {'msg': 'Connected to Command Center Telemetry'}, to=sid)
         
-    # 3. Auditor Stream (Future Scope Placeholder)
+    # 3. Auditor Stream
     if role == 'AUDITOR':
         await sio.enter_room(sid, 'compliance_log')
 
@@ -111,8 +114,12 @@ async def market_feed():
                 gainers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_gainers]
                 losers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_losers]
                 
+                # Update global state
+                global last_market_movers
+                last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
+                
                 # Emit consolidated movers event
-                await sio.emit('market_movers', {'gainers': gainers_data, 'losers': losers_data}, room='market_data')
+                await sio.emit('market_movers', last_market_movers, room='market_data')
 
                 # 3. Setup Groq for projections (if key exists)
                 groq_key = os.getenv("GROQ_API_KEY")
@@ -131,7 +138,7 @@ async def market_feed():
                     if groq_client:
                         try:
                             # Contextual prompt for Groq
-                            prompt = f"Provide a concise 1-sentence market projection/advice for {symbol} trading at {quote['last_price']} ({quote['change']}% change today)."
+                            prompt = f"Provide a concise 1-sentence market projection/advice for Indian stock {symbol} (NSE) trading at {quote['last_price']} ({quote['change']}% change today)."
                             completion = groq_client.chat.completions.create(
                                 messages=[{"role": "user", "content": prompt}],
                                 model="llama-3.1-8b-instant",
@@ -162,13 +169,11 @@ async def market_feed():
                         )
                         prediction = completion.choices[0].message.content.strip()
                         
-                        # Update history
-                        timestamp = datetime.now().strftime("%H:%M:%S")
-                        prediction_history.insert(0, {'time': timestamp, 'text': prediction})
-                        if len(prediction_history) > 10:
-                            prediction_history.pop()
+                        # Update global state
+                        global last_steward_prediction
+                        last_steward_prediction = {'prediction': prediction, 'history': prediction_history}
                             
-                        await sio.emit('steward_prediction', {'prediction': prediction, 'history': prediction_history}, room='market_data')
+                        await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
                     except Exception:
                         pass
             else:

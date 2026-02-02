@@ -6,7 +6,7 @@ import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfoli
 import { useUser } from "../context/UserContext";
 
 export function TradingHub() {
-    const { user: contextUser } = useUser();
+    const { user: contextUser, setUser: contextSetUser } = useUser();
     const [strategies, setStrategies] = useState([]);
     const [projections, setProjections] = useState([]);
     const [summary, setSummary] = useState(null);
@@ -21,7 +21,7 @@ export function TradingHub() {
     const [newStratName, setNewStratName] = useState('TCS Momentum');
     const [logs, setLogs] = useState([
         { id: 1, time: new Date().toLocaleTimeString(), msg: "Initializing Global Watcher node...", type: 'system' },
-        { id: 2, time: new Date().toLocaleTimeString(), msg: "Analyzing RSI divergence on Mag-7 complex...", type: 'logic' }
+        { id: 2, time: new Date().toLocaleTimeString(), msg: "Analyzing RSI divergence on Nifty 50 complex...", type: 'logic' }
     ]);
     const [orderTicker, setOrderTicker] = useState('RELIANCE');
     const [orderQty, setOrderQty] = useState(10);
@@ -83,7 +83,13 @@ export function TradingHub() {
         setToggling(true);
         try {
             const updated = await updateUser(user.id, { trading_mode: newMode });
-            if (updated) setUser(updated);
+            if (updated) {
+                setUser(updated);
+                // Also update global context so other pages (Dashboard) reflect the mode change
+                if (contextUser?.id === updated.id) {
+                    contextSetUser(updated);
+                }
+            }
         } catch (err) {
             console.error("Failed to toggle mode:", err);
         } finally {
@@ -127,7 +133,7 @@ export function TradingHub() {
                 name: newStratName,
                 symbol: newStratSymbol,
                 status: 'RUNNING',
-                pnl: '+$0.00',
+                pnl: '+₹0.00',
                 trades: '0'
             };
             const result = await launchStrategy(contextUser.id, stratData);

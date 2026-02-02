@@ -58,11 +58,11 @@ def perform_qa():
         else:
             log(f"Deposit failed: {resp.text}")
 
-    # 3. Buy 2 Scripts for User 1 (AAPL, NVDA)
+    # 3. Buy 2 Scripts for User 1 (RELIANCE, TCS)
     user1 = users[0]
     trades = [
-        {"symbol": "AAPL", "quantity": 50, "price": 185.0, "action": "BUY"},
-        {"symbol": "NVDA", "quantity": 20, "price": 900.0, "action": "BUY"}
+        {"symbol": "RELIANCE", "quantity": 50, "price": 2850.0, "action": "BUY"},
+        {"symbol": "TCS", "quantity": 20, "price": 3900.0, "action": "BUY"}
     ]
 
     for trade_data in trades:
@@ -83,14 +83,14 @@ def perform_qa():
         else:
             log(f"Trade failed: {resp.text}")
 
-    # 4. Sell 1 Script for User 1 (AAPL)
-    log(f"User 1 ({user1.get('full_name', 'Unknown')}) selling 20 AAPL @ $190.0")
+    # 4. Sell 1 Script for User 1 (RELIANCE)
+    log(f"User 1 ({user1.get('full_name', 'Unknown')}) selling 20 RELIANCE @ $2900.0")
     resp = requests.post(f"{BASE_URL}/trades/paper/order", json={
         "user_id": user1['id'],
-        "symbol": "AAPL",
+        "symbol": "RELIANCE",
         "action": "SELL",
         "quantity": 20,
-        "price": 190.0
+        "price": 2900.0
     })
     if resp.status_code == 200:
         res = resp.json()

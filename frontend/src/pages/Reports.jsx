@@ -69,7 +69,7 @@ export function Reports() {
 
         const algoData = strategies.map(s => [
             s.name,
-            `$${(s.volume || 0).toLocaleString()}`,
+            `₹${(s.volume || 0).toLocaleString()}`,
             `${s.win_rate || 0}%`,
             `${(s.pnl || 0) >= 0 ? '+' : ''}${(s.pnl || 0).toLocaleString()}`,
             s.status || 'OFFLINE'
@@ -95,7 +95,7 @@ export function Reports() {
             new Date(t.timestamp).toLocaleTimeString(),
             t.symbol,
             t.action,
-            `$${t.price}`,
+            `₹${t.price}`,
             t.decision_logic.substring(0, 50) + '...'
         ]);
 
@@ -171,7 +171,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">$18.4K</p>
+                            <p className="text-2xl font-black text-slate-900">₹18.4K</p>
                             <p className="text-[10px] text-green-600 font-black uppercase tracking-tighter">+12.4% THIS PERIOD</p>
                         </div>
                     </div>
@@ -204,7 +204,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">$64.2K</p>
+                            <p className="text-2xl font-black text-slate-900">₹64.2K</p>
                             <p className="text-[10px] text-primary font-black uppercase tracking-tighter">+24.8% THIS PERIOD</p>
                         </div>
                     </div>
@@ -253,7 +253,7 @@ export function Reports() {
                                         <p className="font-black text-slate-900">{row.name}</p>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Execution Frequency: {row.frequency || 'HIGH'}</p>
                                     </td>
-                                    <td className="px-8 py-6 font-bold text-slate-600 text-xs">${(row.volume || 0).toLocaleString()}</td>
+                                    <td className="px-8 py-6 font-bold text-slate-600 text-xs">₹{(row.volume || 0).toLocaleString()}</td>
                                     <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win_rate || 0}%</td>
                                     <td className={`px-8 py-6 font-black text-sm ${(row.pnl || 0) >= 0 ? 'text-primary' : 'text-red-500'}`}>
                                         {(row.pnl || 0) >= 0 ? '+' : ''}${(row.pnl || 0).toLocaleString()}
@@ -297,7 +297,7 @@ export function Reports() {
                                         </p>
                                         <div className="mt-4">
                                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Entry/Snapshot Price</p>
-                                            <p className="text-sm font-black text-slate-900">${entry.price}</p>
+                                            <p className="text-sm font-black text-slate-900">₹{entry.price}</p>
                                         </div>
                                     </div>
                                     <div>

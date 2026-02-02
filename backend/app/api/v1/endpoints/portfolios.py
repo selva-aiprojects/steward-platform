@@ -43,8 +43,8 @@ def get_portfolio_history(
         daily_pnl = random.uniform(-1000, 1500)
         equity += daily_pnl
         history.append({
-            "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
-            "equity": round(equity, 2),
+            "name": (base_date + timedelta(days=i)).strftime("%d %b"),
+            "value": round(equity, 2),
             "daily_pnl": round(daily_pnl, 2)
         })
         

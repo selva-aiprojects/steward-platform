@@ -7,7 +7,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds } from "../services/api";
+import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds, addToWatchlist, removeFromWatchlist } from "../services/api";
 import { useUser } from '../context/UserContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -64,7 +64,7 @@ const Portfolio = () => {
         const updatedSummary = await fetchPortfolioSummary(viewId);
         setSummary(updatedSummary);
         setShowDepositModal(false);
-        alert(`Successfully deposited $${depositAmount.toLocaleString()} into your vault.`);
+        alert(`Successfully deposited ₹${depositAmount.toLocaleString()} into your vault.`);
       }
     } catch (err) {
       console.error("Deposit failed:", err);
@@ -85,16 +85,28 @@ const Portfolio = () => {
     e.preventDefault();
   };
 
-  const handleDrop = (e, targetSection) => {
+  const handleDrop = async (e, targetSection) => {
     if (!isManual || !draggedItem) return;
     e.preventDefault();
 
-    if (targetSection === 'active' && draggedItem.type === 'watch') {
-      setWatchlist(watchlist.filter(i => i.id !== draggedItem.id));
-      setActiveHoldings([...activeHoldings, { ...draggedItem, type: 'active', quantity: 1, avgPrice: draggedItem.currentPrice, pnl: 0, pnlPct: 0 }]); // Add default quantity logic
-    } else if (targetSection === 'watch' && draggedItem.type === 'active') {
-      setActiveHoldings(activeHoldings.filter(i => i.id !== draggedItem.id));
-      setWatchlist([...watchlist, { ...draggedItem, type: 'watch', change: '0.0%' }]);
+    try {
+      if (targetSection === 'active' && draggedItem.type === 'watch') {
+        // For demo: Moving to 'active' just adds it to holdings (buy 1 unit)
+        // In real app, this would open a Buy modal.
+        setWatchlist(watchlist.filter(i => i.id !== draggedItem.id));
+        setActiveHoldings([...activeHoldings, { ...draggedItem, type: 'active', quantity: 1, avgPrice: draggedItem.currentPrice, pnl: 0, pnlPct: 0 }]);
+
+        // Remove from DB watchlist
+        await removeFromWatchlist(viewId, draggedItem.symbol);
+      } else if (targetSection === 'watch' && draggedItem.type === 'active') {
+        setActiveHoldings(activeHoldings.filter(i => i.id !== draggedItem.id));
+        setWatchlist([...watchlist, { ...draggedItem, type: 'watch', change: '0.0%' }]);
+
+        // Add to DB watchlist
+        await addToWatchlist(viewId, draggedItem.symbol);
+      }
+    } catch (err) {
+      console.error("Drop persistence failed:", err);
     }
     setDraggedItem(null);
   };
@@ -127,7 +139,7 @@ const Portfolio = () => {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
             <h2 className="text-3xl font-black text-slate-900 leading-none">
-              ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+              ₹{((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
           <button
@@ -166,9 +178,9 @@ const Portfolio = () => {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (USD)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (INR)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
                   <input
                     type="number"
                     value={depositAmount}
@@ -236,7 +248,7 @@ const Portfolio = () => {
                     <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
                     <div>
                       <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">${stock.currentPrice.toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">₹{stock.currentPrice.toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -277,7 +289,7 @@ const Portfolio = () => {
                     <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
                     {isManual && <GripVertical className="text-slate-300" size={12} />}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-mono">${stock.currentPrice.toFixed(2)}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">₹{stock.currentPrice.toFixed(2)}</p>
                 </div>
               </Link>
             ))}

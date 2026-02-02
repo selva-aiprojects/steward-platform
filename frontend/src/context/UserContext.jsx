@@ -42,10 +42,19 @@ export const UserProvider = ({ children }) => {
         localStorage.removeItem('stocksteward_user');
     };
 
+    const refreshUser = (updatedData) => {
+        const newUser = { ...user, ...updatedData };
+        setUser(newUser);
+        localStorage.setItem('stocksteward_user', JSON.stringify(newUser));
+        if (selectedUser?.id === user?.id) {
+            setSelectedUser(newUser);
+        }
+    };
+
     const isAdmin = user?.role === 'ADMIN';
 
     return (
-        <UserContext.Provider value={{ user, login, logout, isAdmin, loading, selectedUser, setSelectedUser }}>
+        <UserContext.Provider value={{ user, setUser: refreshUser, login, logout, isAdmin, loading, selectedUser, setSelectedUser }}>
             {children}
         </UserContext.Provider>
     );

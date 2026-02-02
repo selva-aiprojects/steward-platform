@@ -40,7 +40,7 @@ class MarketDataAgent(BaseAgent):
         return {
             "market_data": {
                 "symbol": symbol,
-                "current_price": 150.00,
+                "current_price": 2450.00,
                 "volume": 1000000,
                 "trend": "NEUTRAL",
                 "source": "MOCK_BACKUP"

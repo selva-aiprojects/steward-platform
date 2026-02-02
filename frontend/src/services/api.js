@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 // Dynamic API URL for production support
 // Fallback to localhost for development
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_PREFIX = '/api/v1';
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
 
@@ -14,7 +15,7 @@ export const socket = io(BASE_URL, {
 
 export const fetchUsers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/users/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`);
         if (!response.ok) throw new Error('Failed to fetch users');
         return await response.json();
     } catch (error) {
@@ -25,7 +26,7 @@ export const fetchUsers = async () => {
 
 export const fetchUser = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/users/${userId}`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch user');
         return await response.json();
     } catch (error) {
@@ -36,7 +37,7 @@ export const fetchUser = async (userId) => {
 
 export const updateUser = async (userId, data) => {
     try {
-        const response = await fetch(`${BASE_URL}/users/${userId}`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -51,7 +52,7 @@ export const updateUser = async (userId, data) => {
 
 export const fetchAllPortfolios = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/portfolio/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/`);
         if (!response.ok) throw new Error('Failed to fetch portfolios');
         return await response.json();
     } catch (error) {
@@ -62,7 +63,7 @@ export const fetchAllPortfolios = async () => {
 
 export const fetchStrategies = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/strategies/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/strategies/`);
         if (!response.ok) throw new Error('Failed to fetch strategies');
         return await response.json();
     } catch (error) {
@@ -73,7 +74,7 @@ export const fetchStrategies = async () => {
 
 export const fetchProjections = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/projections/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/projections/`);
         if (!response.ok) throw new Error('Failed to fetch projections');
         return await response.json();
     } catch (error) {
@@ -84,7 +85,7 @@ export const fetchProjections = async () => {
 
 export const fetchTrades = async (userId) => {
     try {
-        const url = userId ? `${BASE_URL}/trades/?user_id=${userId}` : `${BASE_URL}/trades/`;
+        const url = userId ? `${BASE_URL}${API_PREFIX}/trades/?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/trades/`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch trades');
         return await response.json();
@@ -96,7 +97,7 @@ export const fetchTrades = async (userId) => {
 
 export const fetchPortfolioHistory = async (userId) => {
     try {
-        const url = userId ? `${BASE_URL}/portfolio/history?user_id=${userId}` : `${BASE_URL}/portfolio/history`;
+        const url = userId ? `${BASE_URL}${API_PREFIX}/portfolio/history?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/portfolio/history`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch history');
         return await response.json();
@@ -108,7 +109,7 @@ export const fetchPortfolioHistory = async (userId) => {
 
 export const fetchDailyPnL = async (userId) => {
     try {
-        const url = userId ? `${BASE_URL}/trades/daily-pnl?user_id=${userId}` : `${BASE_URL}/trades/daily-pnl`;
+        const url = userId ? `${BASE_URL}${API_PREFIX}/trades/daily-pnl?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/trades/daily-pnl`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch daily pnl');
         return await response.json();
@@ -120,7 +121,7 @@ export const fetchDailyPnL = async (userId) => {
 
 export const createAuditLog = async (logData) => {
     try {
-        const response = await fetch(`${BASE_URL}/audit/`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/audit/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(logData)
@@ -135,7 +136,7 @@ export const createAuditLog = async (logData) => {
 
 export const fetchPortfolioSummary = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/portfolio/?user_id=${userId}`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch summary');
         const data = await response.json();
         // Return first portfolio if multiple returned
@@ -148,7 +149,7 @@ export const fetchPortfolioSummary = async (userId) => {
 
 export const fetchHoldings = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}/portfolio/holdings?user_id=${userId}`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/holdings?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch holdings');
         return await response.json();
     } catch (error) {
@@ -159,7 +160,7 @@ export const fetchHoldings = async (userId) => {
 
 export const fetchWatchlist = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/watchlist/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/`);
         if (!response.ok) throw new Error('Failed to fetch watchlist');
         return await response.json();
     } catch (error) {
@@ -170,7 +171,7 @@ export const fetchWatchlist = async () => {
 
 export const depositFunds = async (userId, amount) => {
     try {
-        const response = await fetch(`${BASE_URL}/portfolio/deposit`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/deposit`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, amount })
@@ -185,7 +186,7 @@ export const depositFunds = async (userId, amount) => {
 
 export const launchStrategy = async (userId, strategyData) => {
     try {
-        const response = await fetch(`${BASE_URL}/strategies/`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/strategies/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, ...strategyData })
@@ -200,17 +201,17 @@ export const launchStrategy = async (userId, strategyData) => {
 
 export const fetchExchangeStatus = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/market/status/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/status/`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return { status: 'ONLINE', latency: '24ms', exchange: 'NASDAQ/NYSE-AMEX' };
+        return { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' };
     }
 };
 
 export const executeTrade = async (userId, tradeData) => {
     try {
-        const response = await fetch(`${BASE_URL}/trades/`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/trades/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -227,12 +228,41 @@ export const executeTrade = async (userId, tradeData) => {
     }
 };
 
+export const addToWatchlist = async (userId, symbol) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, symbol, current_price: 0, change: '0.0%' })
+        });
+        if (!response.ok) throw new Error('Failed to add to watchlist');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const removeFromWatchlist = async (userId, symbol) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/${symbol}?user_id=${userId}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to remove from watchlist');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchMarketMovers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/market/movers/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/movers/`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
         return [];
     }
 };
+
