@@ -16,7 +16,6 @@ const performanceData = [
 ];
 import { AIAnalyst } from "../components/AIAnalyst";
 import { TopMovers } from "../components/TopMovers";
-import { Ticker } from "../components/Ticker";
 import { useNavigate, Link } from "react-router-dom";
 import { fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds } from "../services/api";
 
@@ -262,10 +261,6 @@ export function Dashboard() {
 
     return <div className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
 
-        {/* Market Ticker */}
-        <div className="sticky top-0 z-50 w-full">
-            <Ticker />
-        </div>
 
         <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
             <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">

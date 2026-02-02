@@ -3,11 +3,12 @@ import { Link, useLocation, NavLink } from "react-router-dom"
 import {
     LayoutDashboard, Wallet, Users as UsersIcon, Menu, X,
     LogOut, Sun, Moon, Zap, BarChart2, ShieldCheck, FileText,
-    Briefcase, Activity, HelpCircle
+    Briefcase, Activity, HelpCircle, MessageSquare
 } from "lucide-react"
 import { useUser } from "../../context/UserContext"
 import { useTheme } from "../theme-provider"
 import logo from "../../assets/logo.png"
+import { Ticker } from "../Ticker"
 
 export function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -74,6 +75,11 @@ export function Layout({ children }) {
                         <span>Reports</span>
                     </NavLink>
 
+                    <NavLink to="/support" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                        <MessageSquare size={18} className={`${location.pathname === '/support' ? 'text-pink-400' : 'text-slate-400 group-hover:text-pink-400'} transition-colors`} />
+                        <span>Support</span>
+                    </NavLink>
+
                     {(user?.role === 'USER' || user?.role === 'BUSINESS_OWNER') && (
                         <>
                             <div className="my-2 border-t border-white/10 mx-4" />
@@ -133,8 +139,11 @@ export function Layout({ children }) {
             )}
 
             {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-                <div className="max-w-[1600px] mx-auto">
+            <main className="flex-1 w-full overflow-y-auto">
+                <div className="sticky top-0 z-40 w-full animate-in fade-in duration-700">
+                    <Ticker />
+                </div>
+                <div className="max-w-[1600px] mx-auto p-4 md:p-8">
                     {user && (
                         <div className="mb-8 p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
                             <div className="flex items-center gap-4">

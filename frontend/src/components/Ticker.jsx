@@ -20,10 +20,22 @@ export function Ticker() {
         };
     }, []);
 
+    // Initial Mock Data to ensure immediate visibility
+    useEffect(() => {
+        if (tickers.length === 0) {
+            setTickers([
+                { symbol: 'RELIANCE', price: 2987.50, change: '+1.2%', type: 'up' },
+                { symbol: 'TCS', price: 3450.00, change: '-0.5%', type: 'down' },
+                { symbol: 'HDFCBANK', price: 1450.00, change: '+0.8%', type: 'up' },
+                { symbol: 'INFY', price: 1670.00, change: '-0.2%', type: 'down' },
+                { symbol: 'ICICIBANK', price: 1045.00, change: '+1.5%', type: 'up' }
+            ]);
+        }
+    }, []);
+
     // Convert updates map to array for display
     useEffect(() => {
         const items = Object.values(updates);
-        // Ensure we have enough items for a smooth loop by duplicating if needed
         if (items.length > 0) {
             setTickers(items);
         }

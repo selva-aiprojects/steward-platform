@@ -10,6 +10,7 @@ import { Users } from "./pages/Users"
 import { Login } from "./pages/Login"
 import Subscription from "./pages/Subscription"
 import { Help } from "./pages/Help";
+import Support from "./pages/Support";
 import { useUser } from "./context/UserContext"
 import { useNavigate, useLocation, Navigate } from "react-router-dom"
 
@@ -59,6 +60,7 @@ function App() {
             <Route path="/help" element={<RequireAuth><Layout><Help /></Layout></RequireAuth>} />
             <Route path="/reports" element={<RequireAuth><Layout><Reports /></Layout></RequireAuth>} />
             <Route path="/users" element={<RequireAuth><Layout><Users /></Layout></RequireAuth>} />
+            <Route path="/support" element={<RequireAuth><Layout><Support /></Layout></RequireAuth>} />
           </Routes>
         </AuthWrapper>
       </Router>
