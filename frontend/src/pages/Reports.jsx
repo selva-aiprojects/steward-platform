@@ -120,7 +120,7 @@ export function Reports() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div data-testid="reports-container" className="space-y-8 animate-in fade-in duration-500">
             <header className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">
@@ -136,6 +136,7 @@ export function Reports() {
                 </div>
                 <div className="flex gap-4">
                     <button
+                        data-testid="export-pdf-button"
                         onClick={downloadReport}
                         className="flex items-center gap-2 bg-[#0A2A4D] text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-indigo-900/20"
                     >
@@ -224,7 +225,7 @@ export function Reports() {
                 </Card>
             </div>
 
-            <Card className="p-0 border-slate-100 shadow-sm overflow-hidden bg-white">
+            <Card data-testid="algo-trading-ledger" className="p-0 border-slate-100 shadow-sm overflow-hidden bg-white">
                 <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                     <div className="flex items-center gap-2">
                         <Activity size={16} className="text-primary" />

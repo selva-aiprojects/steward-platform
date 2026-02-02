@@ -58,7 +58,7 @@ export function TopMovers() {
     );
 
     return (
-        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm h-full">
+        <div data-testid="top-movers-container" className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm h-full">
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h3 className="font-heading font-black text-slate-900 text-base">Market Movers</h3>
@@ -69,12 +69,14 @@ export function TopMovers() {
                 </div>
                 <div className="flex bg-slate-100 p-1 rounded-lg">
                     <button
+                        data-testid="gainers-tab"
                         onClick={() => setActiveTab("GAINERS")}
                         className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'GAINERS' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                         Gainers
                     </button>
                     <button
+                        data-testid="losers-tab"
                         onClick={() => setActiveTab("LOSERS")}
                         className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'LOSERS' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >

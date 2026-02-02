@@ -232,7 +232,7 @@ export function Dashboard() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
+        <div data-testid="dashboard-container" className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
             <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
                 <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                     <div>
@@ -297,7 +297,7 @@ export function Dashboard() {
                     </div>
                 </header>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
+                <div data-testid="guardian-intelligence-card" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Shield size={120} className="text-primary rotate-12" />
                     </div>
@@ -318,7 +318,7 @@ export function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div data-testid="metrics-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {metrics.map((stat, i) => (
                         <Link to={stat.link} key={i}>
                             <Card className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white h-full cursor-pointer">
@@ -409,7 +409,7 @@ export function Dashboard() {
                     {user?.role !== 'AUDITOR' && <AIAnalyst />}
 
                     <Card className={`border-slate-100 shadow-sm bg-white ${user?.role === 'AUDITOR' ? 'lg:col-span-2' : ''}`}>
-                        <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <div data-testid="intelligence-log" className={`p-6 border-b border-slate-50 flex justify-between items-center`}>
                             <div className="flex items-center gap-2">
                                 <Clock size={16} className="text-primary" />
                                 <h3 className="font-black text-slate-900 text-sm uppercase tracking-wider">

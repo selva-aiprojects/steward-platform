@@ -112,6 +112,7 @@ export function Users() {
 
             setIsModalOpen(false);
             setAdminComment('');
+            alert("Policy updated successfully and logged in audit trail.");
         } catch (error) {
             console.error("Failed to save configuration:", error);
             alert("Failed to update user policy. Please checks logs.");
@@ -121,7 +122,7 @@ export function Users() {
     const SECTORS = ['Technology', 'Healthcare', 'Manufacturing', 'Finance', 'Energy', 'Consumer'];
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 relative">
+        <div data-testid="users-container" className="space-y-8 animate-in fade-in duration-500 relative">
             <header>
                 <h1 className="text-3xl font-black text-slate-900 font-heading">User Equity Management</h1>
                 <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] mt-1">Allocation Audit & Risk Tracking</p>
@@ -151,6 +152,7 @@ export function Users() {
                                     </span>
                                 </div>
                                 <button
+                                    data-testid="manage-config-button"
                                     onClick={() => openManageModal(user)}
                                     className="mt-4 w-full py-2 bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-50 hover:text-primary transition-colors hover:border-primary/30"
                                 >
@@ -211,7 +213,7 @@ export function Users() {
 
             {/* Admin Configuration Modal */}
             {isModalOpen && selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div data-testid="policy-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <Card className="w-full max-w-lg bg-white border-0 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-0">
                         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                             <div>
@@ -282,6 +284,7 @@ export function Users() {
                             </div>
 
                             <button
+                                data-testid="confirm-policy-button"
                                 onClick={handleSaveConfig}
                                 disabled={!adminComment}
                                 className="w-full py-4 bg-[#0A2A4D] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0A2A4D]/90 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20"

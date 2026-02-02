@@ -179,18 +179,19 @@ export function TradingHub() {
 
 
     return (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+        <div data-testid="trading-hub-container" className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Trading Hub</h1>
                     <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+                        <span data-testid="algo-status" className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
                         Algo Engine: {user?.trading_mode === 'AUTO' ? 'Autonomous Mode Active' : 'Manual Override Active'}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
                     <button
+                        data-testid="mode-toggle-auto"
                         onClick={() => user?.trading_mode !== 'AUTO' && toggleTradingMode()}
                         disabled={toggling}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'AUTO'
@@ -202,6 +203,7 @@ export function TradingHub() {
                         Steward Auto
                     </button>
                     <button
+                        data-testid="mode-toggle-manual"
                         onClick={() => user?.trading_mode !== 'MANUAL' && toggleTradingMode()}
                         disabled={toggling}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'MANUAL'
@@ -318,7 +320,7 @@ export function TradingHub() {
                         )}
                     </div>
 
-                    <div className={`flex flex-col md:flex-row gap-6 items-end ${user?.trading_mode === 'AUTO' ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
+                    <div data-testid="manual-order-ticket" className={`flex flex-col md:flex-row gap-6 items-end ${user?.trading_mode === 'AUTO' ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
                         <div className="flex-1 w-full space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
                             <input
@@ -340,6 +342,7 @@ export function TradingHub() {
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
                             <button
+                                data-testid="manual-buy-button"
                                 onClick={() => handleManualTrade('BUY')}
                                 disabled={executing}
                                 className="flex-1 md:flex-none bg-green-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2"
@@ -348,6 +351,7 @@ export function TradingHub() {
                                 Buy
                             </button>
                             <button
+                                data-testid="manual-sell-button"
                                 onClick={() => handleManualTrade('SELL')}
                                 disabled={executing}
                                 className="flex-1 md:flex-none bg-red-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2"
@@ -378,7 +382,7 @@ export function TradingHub() {
                 {/* Active Automated Strategies */}
                 <div className="lg:col-span-8 flex flex-col gap-8">
                     <div className="space-y-6 relative group">
-                        <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
+                        <h2 data-testid="strategies-heading" className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
 
                         {user?.trading_mode === 'AUTO' && (
                             <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/20 backdrop-blur-[1px] rounded-3xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300 pointer-events-none">
@@ -399,7 +403,7 @@ export function TradingHub() {
                             </div>
                         )}
 
-                        <div className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
+                        <div data-testid="automated-strategies-list" className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
                             {strategies.map((strat) => (
                                 <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
                                     <div className="flex flex-wrap items-center justify-between gap-6">

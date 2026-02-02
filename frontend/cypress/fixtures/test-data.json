@@ -1,0 +1,51 @@
+{
+    "users": [
+        {
+            "id": 1,
+            "name": "Active Trader",
+            "role": "USER",
+            "trading_mode": "AUTO"
+        },
+        {
+            "id": 888,
+            "name": "Compliance Auditor",
+            "role": "AUDITOR"
+        },
+        {
+            "id": 777,
+            "name": "Business Owner",
+            "role": "BUSINESS_OWNER"
+        },
+        {
+            "id": 999,
+            "name": "Super Admin",
+            "role": "ADMIN"
+        }
+    ],
+    "market_data": {
+        "gainers": [
+            {
+                "symbol": "RELIANCE",
+                "price": 2450.50,
+                "change": 2.5
+            },
+            {
+                "symbol": "TCS",
+                "price": 3200.00,
+                "change": 1.8
+            }
+        ],
+        "losers": [
+            {
+                "symbol": "INFY",
+                "price": 1500.25,
+                "change": -1.2
+            },
+            {
+                "symbol": "HDFCBANK",
+                "price": 1650.00,
+                "change": -0.8
+            }
+        ]
+    }
+}

@@ -20,7 +20,7 @@ export function AIAnalyst() {
     }, []);
 
     return (
-        <Card className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-none shadow-xl overflow-hidden relative flex flex-col h-full">
+        <Card data-testid="ai-analyst-container" className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-none shadow-xl overflow-hidden relative flex flex-col h-full">
             <div className="p-6 relative z-10 flex-1 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -28,6 +28,7 @@ export function AIAnalyst() {
                         <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                     </div>
                     <button
+                        data-testid="toggle-ai-history"
                         onClick={() => setView(view === 'CURRENT' ? 'HISTORY' : 'CURRENT')}
                         className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-indigo-200 hover:text-white"
                         title="Toggle History"
