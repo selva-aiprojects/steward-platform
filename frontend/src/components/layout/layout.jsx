@@ -164,6 +164,13 @@ export function Layout({ children }) {
                                     >
                                         <HelpCircle size={20} className="group-hover:rotate-12 transition-transform" />
                                     </Link>
+                                    <button
+                                        onClick={logout}
+                                        className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 group"
+                                        title="Logout"
+                                    >
+                                        <LogOut size={20} className="group-hover:translate-x-0.5 transition-transform" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
