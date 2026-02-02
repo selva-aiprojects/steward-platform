@@ -5,11 +5,7 @@ import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import {
-    TrendingUp, TrendingDown, Activity, BarChart2, Shield,
-    ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2,
-    DollarSign, Target, Calendar, Search, Clock, Settings, Plus
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, ArrowDownRight, Zap, RefreshCcw, Loader2, DollarSign, Target, Calendar, Search, Clock, Settings, Plus } from 'lucide-react';
 
 const performanceData = [
     { name: 'Mon', value: 4000 },
