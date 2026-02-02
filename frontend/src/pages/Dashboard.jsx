@@ -9,7 +9,7 @@ import { TrendingUp, TrendingDown, Activity, BarChart2, Shield, ArrowUpRight, Ar
 import { AIAnalyst } from "../components/AIAnalyst";
 import { TopMovers } from "../components/TopMovers";
 import { useNavigate, Link } from "react-router-dom";
-import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds } from "../services/api";
+import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 
@@ -130,6 +130,14 @@ export function Dashboard() {
                         { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
                     ]);
                     setExchangeStatus(status);
+
+                    // Initial Market Snapshot (Gainers/Losers) - Fix for "Blank Cards"
+                    const movers = await fetchMarketMovers();
+                    if (movers && movers.length > 0) { // Check if movers is an array
+                        setMarketMovers(movers);
+                    } else if (movers && movers.gainers) { // Handle object format {gainers: [], losers: []}
+                        setMarketMovers([...movers.gainers, ...movers.losers]);
+                    }
                 }
             } catch (err) {
                 console.error("Dashboard Load Error:", err);
