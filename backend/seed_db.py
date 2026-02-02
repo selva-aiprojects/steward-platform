@@ -58,9 +58,9 @@ def seed_db():
             # 2. Strategies (for the Trading Hub)
             if u["name"] == "Alexander Pierce":
                 strats = [
-                    {"name": 'Llama-3 Trend Scalper', "symbol": 'NVDA', "status": 'RUNNING', "pnl": '+4.2%'},
-                    {"name": 'MACD Mean Reversion', "symbol": 'TSLA', "status": 'PAUSED', "pnl": '-1.1%'},
-                    {"name": 'Sentiment Arbitrage', "symbol": 'BTC/USD', "status": 'IDLE', "pnl": '0.0%'},
+                    {"name": 'Llama-3 Trend Scalper', "symbol": 'RELIANCE', "status": 'RUNNING', "pnl": '+4.2%'},
+                    {"name": 'MACD Mean Reversion', "symbol": 'TCS', "status": 'PAUSED', "pnl": '-1.1%'},
+                    {"name": 'Sentiment Arbitrage', "symbol": 'HDFCBANK', "status": 'IDLE', "pnl": '0.0%'},
                 ]
                 for s in strats:
                     strategy = Strategy(
@@ -77,27 +77,27 @@ def seed_db():
                 # 3. Intelligence Journal (Trades)
                 journal_entries = [
                     { 
-                        "ticker": 'NVDA', 
+                        "ticker": 'RELIANCE', 
                         "action": 'BUY', 
-                        "price": 782.10, 
+                        "price": 2987.10, 
                         "behavior": 'Breakout above V-WAP with high relative volume on 5-min candle.',
                         "decision": 'Algo detected institutional accumulation. Leveraged 1.2x on high-confidence breakout signal.',
                         "pnl": '+2.41%',
                         "time": datetime.utcnow() - timedelta(hours=4)
                     },
                     { 
-                        "ticker": 'TSLA', 
+                        "ticker": 'TCS', 
                         "action": 'SELL', 
-                        "price": 194.50, 
+                        "price": 3450.50, 
                         "behavior": 'Double top formation at resistance. RSI showing bearish divergence.',
                         "decision": 'Risk engine triggered hard exit to preserve alpha. Sentiment index dropped to 32/100.',
                         "pnl": '+1.10%',
                         "time": datetime.utcnow() - timedelta(hours=2)
                     },
                     { 
-                        "ticker": 'AAPL', 
+                        "ticker": 'INFY', 
                         "action": 'HOLD', 
-                        "price": 188.90, 
+                        "price": 1670.90, 
                         "behavior": 'Sideways consolidation. No clear direction in order flow.',
                         "decision": 'Strategy "Trend Follower" stayed neutral to avoid wash-trades during low volatility.',
                         "pnl": '0.00%',
@@ -123,9 +123,9 @@ def seed_db():
 
         # 4. Projections
         projections_data = [
-            { "ticker": 'NVDA', "move": '+3.8%', "action": 'ACCUMULATE', "logic": 'Post-earnings momentum continuation' },
-            { "ticker": 'AAPL', "move": '-1.2%', "action": 'TRIM', "logic": 'Resistance at $195 with volume decay' },
-            { "ticker": 'TSLA', "move": '+5.4%', "action": 'BUY', "logic": 'FSD V12 rollout hype cycle' },
+            { "ticker": 'RELIANCE', "move": '+3.8%', "action": 'ACCUMULATE', "logic": 'Post-earnings momentum continuation' },
+            { "ticker": 'INFY', "move": '-1.2%', "action": 'TRIM', "logic": 'Resistance at 1700 with volume decay' },
+            { "ticker": 'TCS', "move": '+5.4%', "action": 'BUY', "logic": 'Cloud Deal rollout hype cycle' },
         ]
         for p in projections_data:
             proj = Projection(

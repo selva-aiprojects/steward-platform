@@ -173,7 +173,7 @@ async def market_feed():
                         pass
             else:
                 # Mock Mode Fallback
-                symbol = random.choice(['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMZN'])
+                symbol = random.choice(['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK'])
                 mock_gainers = [{'symbol': 'MOCK_UP', 'price': 120.5, 'change': 2.5}, {'symbol': 'MOCK_UP2', 'price': 300, 'change': 1.2}]
                 mock_losers = [{'symbol': 'MOCK_DN', 'price': 90.5, 'change': -1.5}, {'symbol': 'MOCK_DN2', 'price': 50, 'change': -0.8}]
                 

@@ -17,13 +17,13 @@ export function TradingHub() {
     const [executing, setExecuting] = useState(false);
     const [provisioning, setProvisioning] = useState(false);
     const [showLaunchModal, setShowLaunchModal] = useState(false);
-    const [newStratSymbol, setNewStratSymbol] = useState('TSLA');
-    const [newStratName, setNewStratName] = useState('Tesla Momentum');
+    const [newStratSymbol, setNewStratSymbol] = useState('TCS');
+    const [newStratName, setNewStratName] = useState('TCS Momentum');
     const [logs, setLogs] = useState([
         { id: 1, time: new Date().toLocaleTimeString(), msg: "Initializing Global Watcher node...", type: 'system' },
         { id: 2, time: new Date().toLocaleTimeString(), msg: "Analyzing RSI divergence on Mag-7 complex...", type: 'logic' }
     ]);
-    const [orderTicker, setOrderTicker] = useState('AAPL');
+    const [orderTicker, setOrderTicker] = useState('RELIANCE');
     const [orderQty, setOrderQty] = useState(10);
     const [activeHoldings, setActiveHoldings] = useState([]);
 
@@ -31,10 +31,10 @@ export function TradingHub() {
         const interval = setInterval(() => {
             const types = ['logic', 'system', 'trade'];
             const msgs = [
-                "Evaluating order book depth on NVDA...",
+                "Evaluating order book depth on HDFCBANK...",
                 "Sentiment analysis shift detected on social nodes.",
                 "Adjusting stop-loss threshold for active mandates.",
-                "Handshake pulse successful with NASDAQ execution node.",
+                "Handshake pulse successful with NSE execution node.",
                 "Optimization loop 842 completed."
             ];
             const newLog = {
@@ -99,7 +99,7 @@ export function TradingHub() {
             const tradeData = {
                 symbol: orderTicker,
                 action: action, // BUY or SELL
-                price: 180.25, // Mock live price for now
+                price: 2450.00, // Mock live price for now
                 quantity: orderQty,
                 type: 'MANUAL',
                 decision_logic: `User manual override: Explicit ${action} command executed via Trading Hub.`
@@ -196,7 +196,7 @@ export function TradingHub() {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exchange Status</span>
                     <div className="flex items-center gap-2">
                         <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus.exchange || 'NASDAQ'} {exchangeStatus.latency}</span>
+                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus.exchange || 'NSE'} {exchangeStatus.latency}</span>
                     </div>
                 </div>
 
@@ -302,7 +302,7 @@ export function TradingHub() {
                                 value={orderTicker}
                                 onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                placeholder="AAPL, TSLA, BTC..."
+                                placeholder="RELIANCE, TCS, INFY..."
                             />
                         </div>
                         <div className="w-full md:w-32 space-y-2">
