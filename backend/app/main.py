@@ -74,11 +74,15 @@ async def market_feed():
     import random
     
     # Nifty 50 watchlist for dashboard movers
-    watchlist = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK']
+    watchlist = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK', 'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'TITAN', 'BAJFINANCE', 'WIPRO', 'ULTRACEMCO', 'SUNPHARMA', 'NESTLEIND']
+    
+    # Store history in memory (simple deque-like structure)
+    prediction_history = []
     
     while True:
         # 30-60 second cycle for comprehensive analysis to avoid rate limits
-        await asyncio.sleep(60 if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
+        # Using 10s for demo responsiveness
+        await asyncio.sleep(10 if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
         
         try:
             if settings.EXECUTION_MODE == "LIVE_TRADING":
@@ -95,11 +99,16 @@ async def market_feed():
 
                 # 2. Identify Gainers and Losers
                 sorted_movers = sorted(quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
-                top_gainers = sorted_movers[:2]
-                top_losers = sorted_movers[-2:]
+                top_gainers = sorted_movers[:5] # Top 5
+                top_losers = sorted_movers[-5:] # Bottom 5
                 
-                movers = top_gainers + top_losers
+                # Format movers for frontend
+                gainers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_gainers]
+                losers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_losers]
                 
+                # Emit consolidated movers event
+                await sio.emit('market_movers', {'gainers': gainers_data, 'losers': losers_data}, room='market_data')
+
                 # 3. Setup Groq for projections (if key exists)
                 groq_key = os.getenv("GROQ_API_KEY")
                 groq_client = None
@@ -110,6 +119,8 @@ async def market_feed():
                     except ImportError:
                         print("Groq library not installed")
 
+                # Emit individual updates for ticker tape effects
+                movers = top_gainers[:2] + top_losers[-2:]
                 for symbol, quote in movers:
                     projection = "Strategic analysis pending..."
                     if groq_client:
@@ -145,12 +156,24 @@ async def market_feed():
                             max_tokens=100
                         )
                         prediction = completion.choices[0].message.content.strip()
-                        await sio.emit('steward_prediction', {'prediction': prediction}, room='market_data')
+                        
+                        # Update history
+                        timestamp = datetime.now().strftime("%H:%M:%S")
+                        prediction_history.insert(0, {'time': timestamp, 'text': prediction})
+                        if len(prediction_history) > 10:
+                            prediction_history.pop()
+                            
+                        await sio.emit('steward_prediction', {'prediction': prediction, 'history': prediction_history}, room='market_data')
                     except Exception:
                         pass
             else:
                 # Mock Mode Fallback
                 symbol = random.choice(['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMZN'])
+                mock_gainers = [{'symbol': 'MOCK_UP', 'price': 120.5, 'change': 2.5}, {'symbol': 'MOCK_UP2', 'price': 300, 'change': 1.2}]
+                mock_losers = [{'symbol': 'MOCK_DN', 'price': 90.5, 'change': -1.5}, {'symbol': 'MOCK_DN2', 'price': 50, 'change': -0.8}]
+                
+                await sio.emit('market_movers', {'gainers': mock_gainers, 'losers': mock_losers}, room='market_data')
+
                 update = {
                     'symbol': symbol,
                     'price': round(random.uniform(100, 1000), 2),
