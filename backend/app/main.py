@@ -73,8 +73,13 @@ async def market_feed():
     import os
     import random
     
-    # Nifty 50 watchlist for dashboard movers
-    watchlist = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK', 'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'TITAN', 'BAJFINANCE', 'WIPRO', 'ULTRACEMCO', 'SUNPHARMA', 'NESTLEIND']
+    # Nifty 50 & Bank Nifty Extended Watchlist
+    watchlist = [
+        'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK',
+        'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'TITAN', 'BAJFINANCE', 'WIPRO', 'ULTRACEMCO', 'SUNPHARMA', 'NESTLEIND',
+        'M&M', 'ADANIENT', 'POWERGRID', 'TATASTEEL', 'NTPC', 'JSWSTEEL', 'GRASIM', 'COALINDIA', 'HCLTECH', 'ADANIPORTS',
+        'INDUSINDBK', 'BAJAJFINSV', 'ONGC', 'TATAMOTORS', 'HDFCLIFE', 'SBILIFE', 'DRREDDY', 'CIPLA', 'APOLLOHOSP', 'DIVISLAB'
+    ]
     
     # Store history in memory (simple deque-like structure)
     prediction_history = []
