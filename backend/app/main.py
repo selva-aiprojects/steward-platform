@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 import asyncio
 import random
+import os
 
 # Initialize FastAPI
 app = FastAPI(
@@ -278,6 +279,8 @@ async def admin_feed():
 
 @app.on_event("startup")
 async def startup_event():
+    if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
+        return
     asyncio.create_task(market_feed())
     asyncio.create_task(admin_feed())
 

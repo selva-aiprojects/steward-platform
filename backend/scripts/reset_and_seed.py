@@ -125,7 +125,7 @@ def reset_and_seed():
                     quantity=qty,
                     price=price,
                     status="EXECUTED",
-                    execution_mode="PAPER",
+                    execution_mode="PAPER_TRADING",
                     timestamp=datetime.utcnow() - timedelta(days=random.randint(1, 30), hours=random.randint(1, 23)),
                     risk_score=round(random.uniform(0.1, 0.9), 2),
                     pnl=f"{random.choice(['+', '-'])}{round(random.uniform(0, 5), 2)}%",

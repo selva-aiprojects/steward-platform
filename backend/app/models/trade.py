@@ -12,7 +12,7 @@ class Trade(Base):
     quantity = Column(Integer)
     price = Column(Float)
     status = Column(String) # PENDING, EXECUTED, REJECTED, FAILED
-    execution_mode = Column(String) # PAPER, LIVE
+    execution_mode = Column(String) # PAPER_TRADING, LIVE_TRADING
     
     # Auditing
     timestamp = Column(DateTime(timezone=True), server_default=func.now())

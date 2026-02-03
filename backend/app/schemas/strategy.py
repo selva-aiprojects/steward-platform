@@ -7,7 +7,7 @@ class StrategyBase(BaseModel):
     status: str
     pnl: str
     drawdown: float = 0.0
-    execution_mode: str = "PAPER"
+    execution_mode: str = "PAPER_TRADING"
 
 class StrategyCreate(StrategyBase):
     portfolio_id: int
@@ -19,7 +19,7 @@ class StrategyLaunchRequest(BaseModel):
     status: str = "RUNNING"
     pnl: str = "+₹0.00"
     drawdown: float = 0.0
-    execution_mode: str = "PAPER"
+    execution_mode: str = "PAPER_TRADING"
 
 class StrategyResponse(StrategyBase):
     id: int

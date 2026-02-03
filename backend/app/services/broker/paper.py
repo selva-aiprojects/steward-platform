@@ -77,7 +77,7 @@ class PaperTradingEngine(BrokerInterface):
                 quantity=quantity,
                 price=price,
                 status="EXECUTED",
-                execution_mode="PAPER"
+                execution_mode="PAPER_TRADING"
             )
             db.add(trade)
             db.add(portfolio)

@@ -42,7 +42,16 @@ class OrchestratorAgent(BaseAgent):
 
         trace_id = str(uuid.uuid4())
         context["trace_id"] = trace_id
-        context["execution_mode"] = settings.EXECUTION_MODE
+        context["execution_mode"] = context.get("execution_mode") or settings.EXECUTION_MODE
+        
+        # Ensure user_id is valid
+        if not context.get("user_id"):
+            # Try to get from trade_proposal if present
+            proposal = context.get("manual_override") # TradeService puts it here
+            if proposal and proposal.get("user_id"):
+                context["user_id"] = proposal.get("user_id")
+            else:
+                context["user_id"] = 1 # Absolute fallback
         
         # decision trace log
         trace = []

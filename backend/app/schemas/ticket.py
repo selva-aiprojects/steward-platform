@@ -19,7 +19,7 @@ class TicketMessageResponse(TicketMessageBase):
     user_name: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Ticket Schemas
 class TicketBase(BaseModel):
@@ -43,4 +43,4 @@ class TicketResponse(TicketBase):
     messages: List[TicketMessageResponse] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

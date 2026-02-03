@@ -85,7 +85,7 @@ def seed_db():
                         status=s["status"],
                         pnl=s["pnl"],
                         drawdown=1.2,
-                        execution_mode="PAPER"
+                        execution_mode="PAPER_TRADING"
                     )
                     db.add(strategy)
 
@@ -127,7 +127,7 @@ def seed_db():
                         quantity=100,
                         price=entry["price"],
                         status="EXECUTED",
-                        execution_mode="PAPER",
+                        execution_mode="PAPER_TRADING",
                         timestamp=entry["time"],
                         risk_score=0.8,
                         pnl=entry["pnl"],

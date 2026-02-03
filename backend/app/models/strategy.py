@@ -11,4 +11,4 @@ class Strategy(Base):
     status = Column(String) # RUNNING, PAUSED, IDLE
     pnl = Column(String) # e.g. "+4.2%"
     drawdown = Column(Float, default=0.0)
-    execution_mode = Column(String, default="PAPER")
+    execution_mode = Column(String, default="PAPER_TRADING")

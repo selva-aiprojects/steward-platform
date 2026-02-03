@@ -9,6 +9,8 @@ from httpx import AsyncClient, ASGITransport
 # Ensure backend matches the python path
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
+os.environ.setdefault("DISABLE_BACKGROUND_TASKS", "1")
+
 from app.main import app
 
 print(f"DEBUG: httpx version: {httpx.__version__}")
@@ -32,13 +34,17 @@ class TestStockStewardRegression:
         Verify User & Account Management (Feature 1).
         """
         print("\n[TEST] User & Account Management...")
-        response = await self.client.get("/api/v1/portfolio/")
+        response = await self.client.get("/api/v1/portfolio/?user_id=1")
         assert response.status_code == 200
         data = response.json()
-        
+
+        if isinstance(data, list):
+            assert len(data) > 0, "No portfolios returned for user_id=1"
+            data = data[0]
+
         assert "cash_balance" in data
         assert "user_id" in data
-        assert data["user_id"] == 1 
+        assert data["user_id"] == 1
         print(f" [PASS] User Verified: ID {data['user_id']} | Balance: ${data['cash_balance']}")
 
     async def test_portfolio_reporting(self):
@@ -102,7 +108,10 @@ class TestStockStewardRegression:
         print(" [PASS] Autonomous Trading Verified: Full Agentic Chain completed.")
 
     async def close(self):
-        await self.client.aclose()
+        try:
+            await asyncio.wait_for(self.client.aclose(), timeout=5)
+        except Exception:
+            pass
 
 async def run_suite():
     print("="*60)
@@ -110,6 +119,7 @@ async def run_suite():
     print("="*60)
     
     suite = TestStockStewardRegression()
+    exit_code = 0
     
     try:
         await suite.test_system_health()
@@ -125,17 +135,16 @@ async def run_suite():
         print("\n" + "="*60)
         print(f" TEST FAILED: {e}")
         print("="*60)
-        # sys.exit(1) # Don't exit here, let finally run? No, exit is fine.
-        sys.exit(1)
+        exit_code = 1
     except Exception as e:
         print("\n" + "="*60)
         print(f" SYSTEM ERROR: {e}")
         import traceback
         traceback.print_exc()
         print("="*60)
-        sys.exit(1)
+        exit_code = 1
     finally:
-        await suite.close()
+        os._exit(exit_code)
 
 if __name__ == "__main__":
     asyncio.run(run_suite())

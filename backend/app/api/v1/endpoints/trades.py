@@ -50,6 +50,7 @@ async def create_paper_order(proposal: schemas.TradeProposal) -> Any:
     
     # Convert Pydantic model to dict for internal flow
     trade_dict = proposal.model_dump()
+    trade_dict["execution_mode"] = "PAPER_TRADING"
     
     # Default to Market Order if price is missing
     if not trade_dict.get("price"):

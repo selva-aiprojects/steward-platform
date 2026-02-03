@@ -1,6 +1,6 @@
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional, Literal
 import os
 
 class Settings(BaseSettings):
@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     
     # Execution Mode: CRITICAL for architecture compliance
     # Start in PAPER_TRADING by default for safety
-    EXECUTION_MODE: str = "PAPER_TRADING"
+    EXECUTION_MODE: Literal["PAPER_TRADING", "LIVE_TRADING"] = "PAPER_TRADING"
     
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/stocksteward"
@@ -41,9 +41,24 @@ class Settings(BaseSettings):
     # AI Keys
     GROQ_API_KEY: Optional[str] = None
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    @field_validator("EXECUTION_MODE", mode="before")
+    @classmethod
+    def normalize_execution_mode(cls, v: str) -> str:
+        if v is None:
+            return "PAPER_TRADING"
+        if not isinstance(v, str):
+            raise ValueError("EXECUTION_MODE must be a string")
+        normalized = v.strip().upper()
+        if normalized in {"PAPER", "PAPER_TRADING"}:
+            return "PAPER_TRADING"
+        if normalized in {"LIVE", "LIVE_TRADING"}:
+            return "LIVE_TRADING"
+        raise ValueError("EXECUTION_MODE must be PAPER_TRADING or LIVE_TRADING")
 
 settings = Settings()

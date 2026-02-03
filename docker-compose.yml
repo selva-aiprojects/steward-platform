@@ -9,7 +9,7 @@ services:
       - ./backend:/app
     environment:
       - APP_ENV=dev
-      - EXECUTION_MODE=PAPER
+      - EXECUTION_MODE=PAPER_TRADING
     env_file:
       - ./infra/env.sample
 

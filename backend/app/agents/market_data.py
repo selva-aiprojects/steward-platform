@@ -16,12 +16,16 @@ class MarketDataAgent(BaseAgent):
 
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
         from app.services.kite_service import kite_service
+        from app.core.config import settings
         
         symbol = context.get("symbol")
         exchange = context.get("exchange", "NSE")
+        mode = context.get("execution_mode") or settings.EXECUTION_MODE
         
-        # 1. Attempt to fetch real data from Zerodha Kite (NSE)
-        quote = kite_service.get_quote(symbol, exchange)
+        # 1. Attempt to fetch real data from Zerodha Kite (NSE) only in LIVE_TRADING
+        quote = None
+        if mode == "LIVE_TRADING":
+            quote = kite_service.get_quote(symbol, exchange)
         
         if quote:
             return {

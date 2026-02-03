@@ -19,8 +19,8 @@ class PortfolioResponse(PortfolioBase):
         from_attributes = True
 
 class PortfolioHistoryPoint(BaseModel):
-    date: str
-    equity: float
+    name: str
+    value: float
     daily_pnl: float
 
 class HoldingResponse(BaseModel):
