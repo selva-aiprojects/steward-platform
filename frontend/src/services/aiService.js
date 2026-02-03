@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const RAW_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const BASE_URL = RAW_API_URL.replace(/\/api\/v1\/?$/, '');
 const API_URL = `${BASE_URL}/api/v1/ai`;
 
 const getUserHeaders = () => {
