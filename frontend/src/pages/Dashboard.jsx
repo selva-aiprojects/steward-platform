@@ -12,6 +12,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 import { useUser } from "../context/UserContext";
+import { useAppData } from "../context/AppDataContext";
 import { MarketTicker } from "../components/MarketTicker";
 
 export function Dashboard() {
