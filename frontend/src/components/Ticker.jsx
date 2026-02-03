@@ -24,11 +24,11 @@ export function Ticker() {
     useEffect(() => {
         if (tickers.length === 0) {
             setTickers([
-                { symbol: 'RELIANCE', price: 2987.50, change: '+1.2%', type: 'up' },
-                { symbol: 'TCS', price: 3450.00, change: '-0.5%', type: 'down' },
-                { symbol: 'HDFCBANK', price: 1450.00, change: '+0.8%', type: 'up' },
-                { symbol: 'INFY', price: 1670.00, change: '-0.2%', type: 'down' },
-                { symbol: 'ICICIBANK', price: 1045.00, change: '+1.5%', type: 'up' }
+                { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.50, change: 1.2, type: 'up' },
+                { symbol: 'TCS', exchange: 'NSE', price: 3450.00, change: -0.5, type: 'down' },
+                { symbol: 'HDFCBANK', exchange: 'NSE', price: 1450.00, change: 0.8, type: 'up' },
+                { symbol: 'SENSEX', exchange: 'BSE', price: 72150.00, change: 0.6, type: 'up' },
+                { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985.00, change: -0.4, type: 'down' }
             ]);
         }
     }, []);
@@ -47,7 +47,7 @@ export function Ticker() {
         <div className="w-full bg-slate-900 border-b border-slate-800 overflow-hidden h-10 flex items-center relative z-20">
             <div className="flex items-center gap-2 px-4 bg-slate-900 z-10 h-full border-r border-slate-800 shadow-xl">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">NSE Live</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">Market Live</span>
             </div>
 
             {/* Ticker Animation Container */}
@@ -71,14 +71,26 @@ export function Ticker() {
 }
 
 function TickerItem({ item }) {
-    const isUp = item.type === 'up';
+    const changeValue = typeof item.change === 'string' ? parseFloat(item.change) : (item.change ?? 0);
+    const isUp = item.type ? item.type === 'up' : changeValue >= 0;
+    const changeLabel = typeof item.change === 'string' && item.change.includes('%')
+        ? item.change
+        : `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
+    const priceLabel = typeof item.price === 'number'
+        ? item.price.toLocaleString()
+        : item.price;
     return (
         <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity cursor-default">
-            <span className="text-[11px] font-bold text-slate-300">{item.symbol}</span>
+            <div className="flex items-center gap-2">
+                {item.exchange && (
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.exchange}</span>
+                )}
+                <span className="text-[11px] font-bold text-slate-300">{item.symbol}</span>
+            </div>
             <div className={`flex items-center gap-1 text-[11px] font-black ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                <span>{item.price}</span>
+                <span>INR {priceLabel}</span>
                 {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                <span>{item.change}</span>
+                <span>{changeLabel}</span>
             </div>
         </div>
     );

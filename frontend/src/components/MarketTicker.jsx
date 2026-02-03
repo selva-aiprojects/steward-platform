@@ -46,7 +46,7 @@ export function MarketTicker() {
                             <span className="text-[10px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
                         </div>
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-white">₹{stock.price?.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-white">INR {stock.price?.toLocaleString()}</span>
                             <div className={`flex items-center gap-0.5 text-[8px] font-bold ${parseFloat(stock.change) >= 0 ? 'text-green-400' : 'text-red-400'
                                 }`}>
                                 {parseFloat(stock.change) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
@@ -67,3 +67,5 @@ export function MarketTicker() {
         </div>
     );
 }
+
+

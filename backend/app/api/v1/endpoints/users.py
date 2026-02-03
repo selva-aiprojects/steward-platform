@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import get_password_hash
 
 router = APIRouter()
+ALLOWED_ROLES = {"SUPERADMIN", "BUSINESS_OWNER", "TRADER", "AUDITOR"}
 
 @router.post("/", response_model=schemas.UserResponse)
 def create_user(
@@ -19,13 +20,23 @@ def create_user(
     user = db.query(models.user.User).filter(models.user.User.email == user_in.email).first()
     if user:
         raise HTTPException(status_code=400, detail="User already exists")
+
+    if user_in.role and user_in.role not in ALLOWED_ROLES:
+        raise HTTPException(status_code=400, detail="Invalid role")
     
     user = models.user.User(
         email=user_in.email,
         full_name=user_in.full_name,
         hashed_password=get_password_hash(user_in.password if hasattr(user_in, "password") else "default_stock_steward_123"), 
         risk_tolerance=user_in.risk_tolerance,
-        is_active=user_in.is_active
+        trading_mode=user_in.trading_mode,
+        role=user_in.role or "TRADER",
+        allowed_sectors=user_in.allowed_sectors,
+        is_active=user_in.is_active,
+        trading_suspended=user_in.trading_suspended,
+        approval_threshold=user_in.approval_threshold,
+        confidence_threshold=user_in.confidence_threshold,
+        is_superuser=True if user_in.role == "SUPERADMIN" else False,
     )
     db.add(user)
     db.commit()
@@ -82,6 +93,10 @@ def update_user(
         db.add(activity)
 
     update_data = user_in.model_dump(exclude_unset=True)
+    if "role" in update_data:
+        if update_data["role"] not in ALLOWED_ROLES:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        update_data["is_superuser"] = update_data["role"] == "SUPERADMIN"
     for field in update_data:
         setattr(user, field, update_data[field])
 
