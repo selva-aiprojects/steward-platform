@@ -64,8 +64,8 @@ const Portfolio = () => {
       if (result) {
         await refreshAllData();
         setShowDepositModal(false);
-        setFundStatus({ type: 'success', msg: `Deposit completed: INR ${depositAmount.toLocaleString()}` });
-        alert(`Successfully deposited INR ${depositAmount.toLocaleString()} into your vault.`);
+        setFundStatus({ type: 'success', msg: `Deposit completed: ? ${depositAmount.toLocaleString()}` });
+        alert(`Successfully deposited ? ${depositAmount.toLocaleString()} into your vault.`);
       }
     } catch (err) {
       console.error("Deposit failed:", err);
@@ -83,8 +83,8 @@ const Portfolio = () => {
       if (result) {
         await refreshAllData();
         setShowWithdrawModal(false);
-        setFundStatus({ type: 'success', msg: `Withdraw completed: INR ${withdrawAmount.toLocaleString()}` });
-        alert(`Successfully withdrew INR ${withdrawAmount.toLocaleString()} from your vault.`);
+        setFundStatus({ type: 'success', msg: `Withdraw completed: ? ${withdrawAmount.toLocaleString()}` });
+        alert(`Successfully withdrew ? ${withdrawAmount.toLocaleString()} from your vault.`);
       }
     } catch (err) {
       console.error("Withdraw failed:", err);
@@ -157,7 +157,7 @@ const Portfolio = () => {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
             <h2 className="text-3xl font-black text-slate-900 leading-none">
-              INR {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+              ? {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
           <button
@@ -208,9 +208,9 @@ const Portfolio = () => {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (INR)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (₹)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">INR </span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">? </span>
                   <input
                     type="number"
                     value={depositAmount}
@@ -266,9 +266,9 @@ const Portfolio = () => {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Withdraw Amount (INR)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Withdraw Amount (₹)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">INR</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
                   <input
                     type="number"
                     value={withdrawAmount}
@@ -336,7 +336,7 @@ const Portfolio = () => {
                     <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
                     <div>
                       <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">INR {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">? {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -392,7 +392,7 @@ const Portfolio = () => {
                     <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
                     {isManual && <GripVertical className="text-slate-300" size={12} />}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-mono">INR {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">? {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
                 </div>
               </Link>
             ))}

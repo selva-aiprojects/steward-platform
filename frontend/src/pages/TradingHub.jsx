@@ -215,7 +215,7 @@ export function TradingHub() {
                 name: newStratName,
                 symbol: newStratSymbol,
                 status: 'RUNNING',
-                pnl: '+INR 0.00',
+                pnl: '+? 0.00',
                 trades: '0'
             };
             const result = await launchStrategy(contextUser.id, stratData);
@@ -518,7 +518,7 @@ export function TradingHub() {
                                 onClick={() => setShowBasketModal(true)}
                                 className="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
                             >
-                                Basket ({basket.length}) - INR {basketTotal.toLocaleString()}
+                                Basket ({basket.length}) - ? {basketTotal.toLocaleString()}
                             </button>
                         </div>
                     )}
@@ -563,7 +563,7 @@ export function TradingHub() {
                                     <div className="grid grid-cols-3 gap-4 mt-4">
                                         <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PnL</p>
-                                            <p className="text-sm font-black text-slate-900">{strat.pnl || 'INR 0.00'}</p>
+                                            <p className="text-sm font-black text-slate-900">{strat.pnl || '? 0.00'}</p>
                                         </div>
                                         <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Drawdown</p>
@@ -722,7 +722,7 @@ export function TradingHub() {
                                 {basket.map(item => (
                                     <div key={item.id} className="flex items-center justify-between text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
                                         <span>{item.symbol}</span>
-                                        <span>{item.quantity} @ INR {item.price}</span>
+                                        <span>{item.quantity} @ ? {item.price}</span>
                                         <span className="text-primary">{item.side}</span>
                                         <button
                                             onClick={() => removeFromBasket(item.id)}
@@ -736,7 +736,7 @@ export function TradingHub() {
                         )}
                         <div className="mt-4 flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total</span>
-                            <span className="text-sm font-black text-slate-900">INR {basketTotal.toLocaleString()}</span>
+                            <span className="text-sm font-black text-slate-900">? {basketTotal.toLocaleString()}</span>
                         </div>
                         <div className="mt-4 flex justify-end gap-2">
                             <button
@@ -766,9 +766,9 @@ export function TradingHub() {
                             <X size={18} />
                         </button>
                         <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Insufficient Funds</h3>
-                        <p className="text-xs text-slate-600">You need additional INR {topupAmount.toLocaleString()} to execute this basket.</p>
+                        <p className="text-xs text-slate-600">You need additional ? {topupAmount.toLocaleString()} to execute this basket.</p>
                         <div className="mt-4">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top-up Amount (INR)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top-up Amount (₹)</label>
                             <input
                                 type="number"
                                 value={topupAmount}

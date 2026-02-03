@@ -81,7 +81,7 @@ export function Dashboard() {
             const result = await depositFunds(viewId, 1000); // Quick $1000
             if (result) {
                 await refreshAllData();
-                alert("Quick Deposit of INR 1,000 successful.");
+                alert("Quick Deposit of ? 1,000 successful.");
             }
         } catch (err) {
             console.error("Quick deposit failed:", err);
@@ -93,7 +93,7 @@ export function Dashboard() {
     const metrics = [
         {
             label: user?.role === 'BUSINESS_OWNER' ? 'Total Managed Assets' : 'Total Equity',
-            value: `INR ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
+            value: `? ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
             change: summary?.win_rate ? `+${(summary.win_rate * 0.15).toFixed(1)}%` : '+0.0%',
             icon: BarChart2,
             color: 'text-primary',
@@ -101,7 +101,7 @@ export function Dashboard() {
         },
         {
             label: 'Ready Capital',
-            value: summary ? `INR ${(summary.cash_balance || 0).toLocaleString()}` : 'INR 0',
+            value: summary ? `? ${(summary.cash_balance || 0).toLocaleString()}` : '? 0',
             change: socketStatus === 'connected' ? 'SECURE' : 'OFFLINE',
             icon: DollarSign,
             color: 'text-indigo-600',
@@ -118,7 +118,7 @@ export function Dashboard() {
         },
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
-            value: `INR ${(summary?.invested_amount || 0).toLocaleString()}`,
+            value: `? ${(summary?.invested_amount || 0).toLocaleString()}`,
             change: summary?.positions_count ? `${summary.positions_count} positions` : 'No active positions',
             icon: Activity,
             color: 'text-indigo-600',
@@ -383,7 +383,7 @@ export function Dashboard() {
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
-                                        tickFormatter={(val) => `INR ${val}`}
+                                        tickFormatter={(val) => `? ${val}`}
                                     />
                                     <Tooltip
                                         contentStyle={{
@@ -543,8 +543,8 @@ export function Dashboard() {
                     <Card className="p-6 border-slate-100 shadow-sm bg-white">
                         <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Macro Indicators</h3>
                         <div className="space-y-2 text-xs font-bold text-slate-700">
-                            <div className="flex justify-between"><span>USD/INR</span><span>{macroIndicators?.usd_inr ?? '--'}</span></div>
-                            <div className="flex justify-between"><span>Gold (INR/10g)</span><span>{macroIndicators?.gold ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>USD/?</span><span>{macroIndicators?.usd_inr ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>Gold (?/10g)</span><span>{macroIndicators?.gold ?? '--'}</span></div>
                             <div className="flex justify-between"><span>Crude (USD)</span><span>{macroIndicators?.crude ?? '--'}</span></div>
                             <div className="flex justify-between"><span>10Y Yield</span><span>{macroIndicators?.["10y_yield"] ?? '--'}%</span></div>
                         </div>
