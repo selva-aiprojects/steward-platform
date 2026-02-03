@@ -12,7 +12,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 import { useUser } from "../context/UserContext";
-import { useAppData } from "../context/AppDataContext";
+import { MarketTicker } from "../components/MarketTicker";
 
 export function Dashboard() {
     const { user, selectedUser, setSelectedUser } = useUser();
@@ -145,7 +145,8 @@ export function Dashboard() {
     }
 
     return (
-        <div data-testid="dashboard-container" className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-12">
+        <div data-testid="dashboard-container" className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-4">
+            <MarketTicker />
             <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
                 <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                     <div>
@@ -210,23 +211,103 @@ export function Dashboard() {
                     </div>
                 </header>
 
-                <div data-testid="guardian-intelligence-card" className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Shield size={120} className="text-primary rotate-12" />
+                <div data-testid="guardian-intelligence-card" className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Shield size={160} className="text-primary rotate-12" />
                     </div>
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
-                            <Zap className="text-primary animate-pulse" size={28} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Guardian Intelligence</span>
-                                <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Real-time Analysis</span>
+
+                    <div className="relative z-10 space-y-8">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+                                    <Zap className="text-primary animate-pulse" size={28} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Guardian Intelligence</span>
+                                        <span className="h-1 w-1 rounded-full bg-slate-700" />
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Real-time Analysis</span>
+                                    </div>
+                                    <h2 className="text-white text-xl font-black tracking-tight leading-tight max-w-2xl">
+                                        {stewardPrediction?.prediction || "Synchronizing with market sentiment..."}
+                                    </h2>
+                                </div>
                             </div>
-                            <h2 className="text-white text-lg font-black tracking-tight leading-tight">
-                                {stewardPrediction}
-                            </h2>
+
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <Link to="/trading-hub" className="flex-1 md:flex-none">
+                                    <button className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                                        <Activity size={14} />
+                                        Launch Strategy
+                                    </button>
+                                </Link>
+                                <button className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-slate-700">
+                                    View Logic
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-slate-800/50">
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Decision</p>
+                                <div className="flex items-center gap-2">
+                                    <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${stewardPrediction?.decision?.includes('BUY') ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                        stewardPrediction?.decision?.includes('SELL') ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                            'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+                                        }`}>
+                                        {stewardPrediction?.decision || "HOLD"}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-500">Medium Term</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Model Confidence</p>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xl font-black text-white">{stewardPrediction?.confidence || 0}%</span>
+                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-primary transition-all duration-1000"
+                                            style={{ width: `${stewardPrediction?.confidence || 0}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Signal Mix</p>
+                                <div className="flex flex-wrap gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">Tech: {stewardPrediction?.signal_mix?.technical || 0}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">Fund: {stewardPrediction?.signal_mix?.fundamental || 0}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">News: {stewardPrediction?.signal_mix?.news || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 border-l border-slate-800/50 pl-6">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Risk Radar</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative h-10 w-10 flex items-center justify-center">
+                                        <svg className="h-10 w-10 -rotate-90">
+                                            <circle cx="20" cy="20" r="18" fill="transparent" stroke="currentColor" strokeWidth="3" className="text-slate-800" />
+                                            <circle cx="20" cy="20" r="18" fill="transparent" stroke="currentColor" strokeWidth="3" strokeDasharray={113} strokeDashoffset={113 - (113 * (stewardPrediction?.risk_radar || 0)) / 100} className="text-red-500 transition-all duration-1000" />
+                                        </svg>
+                                        <span className="absolute text-[8px] font-black text-white">{stewardPrediction?.risk_radar || 0}</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-white leading-none">High Volatility</p>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Nifty Exposure</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

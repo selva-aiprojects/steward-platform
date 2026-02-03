@@ -15,7 +15,13 @@ export const AppDataProvider = ({ children }) => {
     const [projections, setProjections] = useState([]);
     const [marketMovers, setMarketMovers] = useState([]);
     const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
-    const [stewardPrediction, setStewardPrediction] = useState("Initializing market intelligence...");
+    const [stewardPrediction, setStewardPrediction] = useState({
+        prediction: "Initializing market intelligence...",
+        decision: "NEUTRAL",
+        confidence: 0,
+        signal_mix: { technical: 0, fundamental: 0, news: 0 },
+        risk_radar: 0
+    });
     const [allUsers, setAllUsers] = useState([]);
     const [adminTelemetry, setAdminTelemetry] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -97,8 +103,8 @@ export const AppDataProvider = ({ children }) => {
         };
 
         const onStewardPrediction = (data) => {
-            if (data.prediction) {
-                setStewardPrediction(data.prediction);
+            if (data && typeof data === 'object') {
+                setStewardPrediction(data);
             }
         };
 

@@ -4,14 +4,20 @@ import { socket } from "../services/api";
 import { History, Brain } from "lucide-react";
 
 export function AIAnalyst() {
-    const [prediction, setPrediction] = useState("Analyzing real-time market microstructure...");
+    const [prediction, setPrediction] = useState({
+        prediction: "Analyzing real-time market microstructure...",
+        confidence: 0,
+        signal_mix: { technical: 0, fundamental: 0, news: 0 }
+    });
     const [history, setHistory] = useState([]);
     const [view, setView] = useState("CURRENT"); // CURRENT | HISTORY
 
     useEffect(() => {
         socket.on('steward_prediction', (data) => {
-            if (data.prediction) setPrediction(data.prediction);
-            if (data.history) setHistory(data.history);
+            if (data) {
+                setPrediction(data);
+                if (data.history) setHistory(data.history);
+            }
         });
 
         return () => {
@@ -42,17 +48,21 @@ export function AIAnalyst() {
                 {view === 'CURRENT' ? (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                         <p className="text-sm text-slate-300 mb-6 leading-relaxed min-h-[80px]">
-                            {prediction}
+                            {prediction.prediction}
                         </p>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm border border-white/10">
                                 <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Steward Conviction</div>
-                                <div className="text-lg font-bold text-green-400">92%</div>
+                                <div className={`text-lg font-bold ${prediction.confidence > 70 ? 'text-green-400' : 'text-amber-400'}`}>
+                                    {prediction.confidence || 0}%
+                                </div>
                             </div>
                             <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm border border-white/10">
-                                <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Expected Alpha</div>
-                                <div className="text-lg font-bold">+4.5%</div>
+                                <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Avg Signal Mix</div>
+                                <div className="text-lg font-bold text-indigo-300">
+                                    {Math.round(((prediction.signal_mix?.technical || 0) + (prediction.signal_mix?.fundamental || 0) + (prediction.signal_mix?.news || 0)) / 3)}%
+                                </div>
                             </div>
                         </div>
                     </div>

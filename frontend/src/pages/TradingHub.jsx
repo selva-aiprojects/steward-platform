@@ -152,7 +152,7 @@ export function TradingHub() {
 
 
     return (
-        <div data-testid="trading-hub-container" className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+        <div data-testid="trading-hub-container" className="pb-4 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Trading Hub</h1>

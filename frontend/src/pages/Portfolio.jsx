@@ -123,7 +123,7 @@ const Portfolio = () => {
   }
 
   return (
-    <div className="portfolio-container pb-20 space-y-8 animate-in fade-in duration-500">
+    <div className="portfolio-container pb-4 space-y-8 animate-in fade-in duration-500">
       <header className="page-header flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Wealth Vault</h1>

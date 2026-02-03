@@ -133,7 +133,7 @@ export function Reports() {
     }
 
     return (
-        <div data-testid="reports-container" className="space-y-8 animate-in fade-in duration-500">
+        <div data-testid="reports-container" className="pb-4 space-y-8 animate-in fade-in duration-500">
             <header className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">
