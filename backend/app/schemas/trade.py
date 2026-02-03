@@ -36,5 +36,6 @@ class TradeResult(BaseModel):
     reason: Optional[str] = None
     trace_id: str
     risk_score: Optional[int] = None
+    approval_id: Optional[int] = None
     execution_result: Optional[Dict[str, Any]] = None
     trace: List[Dict[str, Any]]
