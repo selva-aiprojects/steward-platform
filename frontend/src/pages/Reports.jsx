@@ -21,6 +21,10 @@ export function Reports() {
     const {
         trades: appTrades,
         strategies: appStrategies,
+        projections,
+        watchlist,
+        marketMovers,
+        stewardPrediction,
         loading: appLoading
     } = useAppData();
 
@@ -270,7 +274,7 @@ export function Reports() {
                                     <td className="px-8 py-6 font-bold text-slate-600 text-xs">INR {(row.volume || 0).toLocaleString()}</td>
                                     <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win_rate || 0}%</td>
                                     <td className={`px-8 py-6 font-black text-sm ${(row.pnl || 0) >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                        {(row.pnl || 0) >= 0 ? '+' : ''}${(row.pnl || 0).toLocaleString()}
+                                        {(row.pnl || 0) >= 0 ? '+' : ''}INR {(row.pnl || 0).toLocaleString()}
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-tighter ${row.status === 'STABLE' ? 'bg-green-50 text-green-700' :
@@ -284,7 +288,83 @@ export function Reports() {
                 </div>
             </Card>
 
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Gainers</h3>
+                    <div className="space-y-3">
+                        {(marketMovers || []).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) >= 0).slice(0, 5).map((m, i) => {
+                            const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
+                            const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
+                                ? m.change
+                                : `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
+                            return (
+                            <div key={`g-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                <span>{m.symbol}</span>
+                                <span className="text-green-600">{changeLabel}</span>
+                            </div>
+                            );
+                        })}
+                    </div>
+                </Card>
+
+                <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Losers</h3>
+                    <div className="space-y-3">
+                        {(marketMovers || []).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) < 0).slice(0, 5).map((m, i) => {
+                            const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
+                            const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
+                                ? m.change
+                                : `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
+                            return (
+                            <div key={`l-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                <span>{m.symbol}</span>
+                                <span className="text-red-600">{changeLabel}</span>
+                            </div>
+                            );
+                        })}
+                    </div>
+                </Card>
+
+                <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Tomorrow Outlook</h3>
+                    <div className="space-y-3">
+                        {(projections || []).slice(0, 5).map((p, i) => (
+                            <div key={`p-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                <span>{p.ticker}</span>
+                                <span className="text-primary">{p.move_prediction}</span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
+
             <div className="space-y-6">
+                <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Steward Prediction</h3>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Next Session</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                        {stewardPrediction?.prediction || 'Market intelligence syncing...'}
+                    </p>
+                    <div className="mt-3 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <span>Decision: {stewardPrediction?.decision || 'HOLD'}</span>
+                        <span>Confidence: {stewardPrediction?.confidence || 0}%</span>
+                    </div>
+                </Card>
+
+                <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Watchlist Snapshot</h3>
+                    <div className="space-y-3">
+                        {(watchlist || []).slice(0, 6).map((w, i) => (
+                            <div key={`w-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                <span>{w.symbol}</span>
+                                <span className="text-slate-500">{w.change || '0.0%'}</span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
                 <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Execution Intelligence Journal</h2>
                 <div className="grid grid-cols-1 gap-6">
                     {trades.map((entry) => (

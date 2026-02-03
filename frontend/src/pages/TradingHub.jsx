@@ -440,28 +440,64 @@ export function TradingHub() {
                         <h2 data-testid="strategies-heading" className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
 
                         {user?.trading_mode === 'AUTO' && (
-                            <div className="absolute inset-x-0 bottom-0 top-[40px] z-20 bg-slate-50/20 backdrop-blur-[1px] rounded-3xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300 pointer-events-none">
-                                <div className="bg-white/90 p-6 rounded-3xl shadow-2xl border border-slate-100 flex flex-col items-center gap-3">
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-primary text-white rounded-full">
-                                        <Shield size={12} className="animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Steward AI Autopilot</span>
-                                    </div>
-                                    <p className="max-w-xs text-xs font-bold text-slate-800 leading-relaxed uppercase tracking-widest">
-                                        Optimization Mandate Active. Manual Interaction Restricted.
-                                    </p>
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="h-1.5 w-8 bg-primary rounded-full animate-pulse" />
-                                        <div className="h-1.5 w-8 bg-primary/40 rounded-full animate-pulse delay-75" />
-                                        <div className="h-1.5 w-8 bg-primary/20 rounded-full animate-pulse delay-150" />
-                                    </div>
-                                </div>
+                            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <Shield size={12} className="animate-pulse" />
+                                Steward AI autopilot active. Strategy controls are read-only.
                             </div>
                         )}
 
-                        <div data-testid="automated-strategies-list" className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
+                        <div data-testid="automated-strategies-list" className="grid grid-cols-1 gap-4">
                             {Array.isArray(strategies) && strategies.length > 0 ? strategies.map((strat) => (
                                 <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
-                                    ...
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h3 className="text-sm font-black text-slate-900">{strat.name}</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                                {strat.symbol || 'NSE'} - {strat.execution_mode || 'PAPER_TRADING'}
+                                            </p>
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${strat.status === 'RUNNING' ? 'bg-green-100 text-green-700' : strat.status === 'PAUSED' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            {strat.status || 'IDLE'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PnL</p>
+                                            <p className="text-sm font-black text-slate-900">{strat.pnl || 'INR 0.00'}</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Drawdown</p>
+                                            <p className="text-sm font-black text-slate-900">{strat.drawdown ?? 0}%</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mode</p>
+                                            <p className="text-sm font-black text-slate-900">{strat.execution_mode || 'PAPER'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-4">
+                                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                            <Activity size={12} className="text-primary" />
+                                            Live status feed
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={user?.trading_mode === 'AUTO'}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${user?.trading_mode === 'AUTO' ? 'bg-slate-100 text-slate-400' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                                            >
+                                                <Play size={12} className="inline mr-1" />
+                                                Run
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={user?.trading_mode === 'AUTO'}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${user?.trading_mode === 'AUTO' ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                                            >
+                                                <Pause size={12} className="inline mr-1" />
+                                                Pause
+                                            </button>
+                                        </div>
+                                    </div>
                                 </Card>
                             )) : (
                                 <div className="p-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">

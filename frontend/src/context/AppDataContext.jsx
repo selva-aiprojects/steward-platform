@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators } from '../services/api';
+import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators, fetchStrategies } from '../services/api';
 import { useUser } from './UserContext';
 
 const AppDataContext = createContext();
@@ -13,6 +13,7 @@ export const AppDataProvider = ({ children }) => {
     const [watchlist, setWatchlist] = useState([]);
     const [trades, setTrades] = useState([]);
     const [projections, setProjections] = useState([]);
+    const [strategies, setStrategies] = useState([]);
     const [marketMovers, setMarketMovers] = useState([]);
     const [marketResearch, setMarketResearch] = useState(null);
     const [sectorHeatmap, setSectorHeatmap] = useState([]);
@@ -41,12 +42,13 @@ export const AppDataProvider = ({ children }) => {
             setLoading(true);
         }
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData] = await Promise.all([
+            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
                 fetchTrades(viewId),
                 fetchProjections(),
+                fetchStrategies(),
                 fetchMarketMovers(),
                 fetchExchangeStatus(),
                 fetchUser(viewId),
@@ -70,6 +72,9 @@ export const AppDataProvider = ({ children }) => {
             }
             if (!hasLoaded || (Array.isArray(projData) && projData.length > 0)) {
                 setProjections(Array.isArray(projData) ? projData : []);
+            }
+            if (!hasLoaded || (Array.isArray(strategiesData) && strategiesData.length > 0)) {
+                setStrategies(Array.isArray(strategiesData) ? strategiesData : []);
             }
 
             // Update User Context with fresh data from backend
@@ -226,6 +231,7 @@ export const AppDataProvider = ({ children }) => {
             optionsSnapshot,
             orderBook,
             macroIndicators,
+            strategies,
             loading,
             refreshAllData,
             toggleTradingMode
