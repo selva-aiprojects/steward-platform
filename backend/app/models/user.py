@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, Float
 from app.core.database import Base
 
 class User(Base):
@@ -13,3 +13,6 @@ class User(Base):
     allowed_sectors = Column(String, default="ALL") # Comma-separated list or "ALL"
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    trading_suspended = Column(Boolean, default=False)
+    approval_threshold = Column(Float, nullable=True)
+    confidence_threshold = Column(Float, nullable=True)

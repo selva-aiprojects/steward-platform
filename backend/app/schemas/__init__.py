@@ -5,3 +5,4 @@ from . import strategy
 from . import projection
 from . import watchlist
 from .audit_log import AuditLogCreate, AuditLogResponse
+from .approval import ApprovalCreate, ApprovalResponse

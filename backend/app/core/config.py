@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     # Execution Mode: CRITICAL for architecture compliance
     # Start in PAPER_TRADING by default for safety
     EXECUTION_MODE: Literal["PAPER_TRADING", "LIVE_TRADING"] = "PAPER_TRADING"
+    APP_ENV: Literal["DEV", "QA", "UAT", "PROD"] = "DEV"
+    ENABLE_LIVE_TRADING: bool = False
+    GLOBAL_KILL_SWITCH: bool = False
+    HIGH_VALUE_TRADE_THRESHOLD: float = 100000.0
+    DEFAULT_CONFIDENCE_THRESHOLD: float = 0.6
     
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/stocksteward"
@@ -60,5 +65,17 @@ class Settings(BaseSettings):
         if normalized in {"LIVE", "LIVE_TRADING"}:
             return "LIVE_TRADING"
         raise ValueError("EXECUTION_MODE must be PAPER_TRADING or LIVE_TRADING")
+
+    @field_validator("APP_ENV", mode="before")
+    @classmethod
+    def normalize_app_env(cls, v: str) -> str:
+        if v is None:
+            return "DEV"
+        if not isinstance(v, str):
+            raise ValueError("APP_ENV must be a string")
+        normalized = v.strip().upper()
+        if normalized in {"DEV", "QA", "UAT", "PROD"}:
+            return normalized
+        raise ValueError("APP_ENV must be DEV, QA, UAT, or PROD")
 
 settings = Settings()

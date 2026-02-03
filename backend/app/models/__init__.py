@@ -6,4 +6,5 @@ from .projection import Projection
 from .watchlist import WatchlistItem
 from .activity import Activity
 from .audit_log import AuditLog
+from .trade_approval import TradeApproval
 

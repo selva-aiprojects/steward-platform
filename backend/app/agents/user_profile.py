@@ -31,7 +31,11 @@ class UserProfileAgent(BaseAgent):
                         "id": user_id,
                         "risk_tolerance": "MODERATE",
                         "trading_mode": "AUTO",
-                        "max_drawdown_limit": 0.10
+                        "max_drawdown_limit": 0.10,
+                        "allowed_sectors": "ALL",
+                        "trading_suspended": False,
+                        "approval_threshold": None,
+                        "confidence_threshold": None
                     }
                 }
             
@@ -45,7 +49,11 @@ class UserProfileAgent(BaseAgent):
                     "risk_tolerance": user.risk_tolerance,
                     "trading_mode": user.trading_mode,
                     "portfolio_id": portfolio_id,
-                    "max_drawdown_limit": 0.05 if user.risk_tolerance == "LOW" else 0.15
+                    "max_drawdown_limit": 0.05 if user.risk_tolerance == "LOW" else 0.15,
+                    "allowed_sectors": user.allowed_sectors,
+                    "trading_suspended": user.trading_suspended,
+                    "approval_threshold": user.approval_threshold,
+                    "confidence_threshold": user.confidence_threshold
                 }
             }
         finally:

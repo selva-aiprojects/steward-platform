@@ -8,8 +8,12 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - APP_ENV=dev
+      - APP_ENV=DEV
       - EXECUTION_MODE=PAPER_TRADING
+      - ENABLE_LIVE_TRADING=false
+      - GLOBAL_KILL_SWITCH=false
+      - HIGH_VALUE_TRADE_THRESHOLD=100000
+      - DEFAULT_CONFIDENCE_THRESHOLD=0.6
     env_file:
       - ./infra/env.sample
 

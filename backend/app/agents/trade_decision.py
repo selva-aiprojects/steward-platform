@@ -21,6 +21,7 @@ class TradeDecisionAgent(BaseAgent):
         
         current_price = market_data.get("current_price", 0)
         risk_tolerance = user_profile.get("risk_tolerance", "MODERATE")
+        confidence_threshold = context.get("confidence_threshold") or user_profile.get("confidence_threshold")
         
         # Smart Sizing Logic
         risk_multipliers = {
@@ -53,6 +54,13 @@ class TradeDecisionAgent(BaseAgent):
 
         # 2. Automated Strategy Logic
         if signal.get("signal") in ["BUY", "SELL"]:
+            signal_confidence = signal.get("confidence")
+            if confidence_threshold is not None and signal_confidence is not None:
+                if signal_confidence < confidence_threshold:
+                    return {
+                        "trade_proposal": None,
+                        "decision_note": f"Confidence {signal_confidence} below threshold {confidence_threshold}"
+                    }
             action = signal.get("signal")
             quantity = base_quantity
             

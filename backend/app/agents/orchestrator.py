@@ -43,6 +43,8 @@ class OrchestratorAgent(BaseAgent):
         trace_id = str(uuid.uuid4())
         context["trace_id"] = trace_id
         context["execution_mode"] = context.get("execution_mode") or settings.EXECUTION_MODE
+        context["confidence_threshold"] = context.get("confidence_threshold") or settings.DEFAULT_CONFIDENCE_THRESHOLD
+        context["approval_threshold"] = context.get("approval_threshold") or settings.HIGH_VALUE_TRADE_THRESHOLD
         
         # Ensure user_id is valid
         if not context.get("user_id"):
@@ -68,6 +70,27 @@ class OrchestratorAgent(BaseAgent):
             user_out = await self.user_profile.run(context)
             context.update(user_out)
             log_step("UserProfileAgent", user_out)
+
+            user_profile = context.get("user_profile", {})
+            if user_profile.get("approval_threshold"):
+                context["approval_threshold"] = user_profile.get("approval_threshold")
+            if user_profile.get("confidence_threshold"):
+                context["confidence_threshold"] = user_profile.get("confidence_threshold")
+
+            # Global/User Kill Switch Gate
+            if settings.GLOBAL_KILL_SWITCH or user_profile.get("trading_suspended"):
+                return {
+                    "status": "SUSPENDED",
+                    "reason": "Trading suspended by policy",
+                    "trace_id": trace_id,
+                    "trace": trace
+                }
+
+            # Environment guardrail for live trading
+            if context.get("execution_mode") == "LIVE_TRADING":
+                if settings.APP_ENV != "PROD" or not settings.ENABLE_LIVE_TRADING:
+                    context["execution_mode"] = "PAPER_TRADING"
+                    context["live_guardrail"] = "blocked"
 
             # 2. Market Data (Market)
             market_out = await self.market_data.run(context)
@@ -122,6 +145,52 @@ class OrchestratorAgent(BaseAgent):
                     "risk_score": risk_assessment.get("risk_score"),
                     "trace": trace
                 }
+
+            # 5.1 Manual Approval Gate for High-Value Trades
+            proposal = context.get("trade_proposal", {})
+            approval_id = context.get("approval_id") or proposal.get("approval_id")
+            if approval_id:
+                from app.core.database import SessionLocal
+                from app.models.trade_approval import TradeApproval
+                db = SessionLocal()
+                try:
+                    approval = db.query(TradeApproval).filter(TradeApproval.id == approval_id).first()
+                    if not approval or approval.status != "APPROVED":
+                        return {
+                            "status": "PENDING_APPROVAL",
+                            "reason": "Awaiting manual approval",
+                            "trace_id": trace_id,
+                            "trace": trace
+                        }
+                finally:
+                    db.close()
+            else:
+                approval_threshold = context.get("approval_threshold", settings.HIGH_VALUE_TRADE_THRESHOLD)
+                estimated_total = proposal.get("estimated_total", 0)
+                if estimated_total >= approval_threshold:
+                    from app.core.database import SessionLocal
+                    from app.models.trade_approval import TradeApproval
+                    import json
+                    db = SessionLocal()
+                    try:
+                        approval = TradeApproval(
+                            user_id=context.get("user_id"),
+                            status="PENDING",
+                            trade_payload=json.dumps(proposal),
+                            reason="High-value trade requires manual approval"
+                        )
+                        db.add(approval)
+                        db.commit()
+                        db.refresh(approval)
+                    finally:
+                        db.close()
+                    return {
+                        "status": "PENDING_APPROVAL",
+                        "reason": "Manual approval required for high-value trade",
+                        "trace_id": trace_id,
+                        "approval_id": approval.id,
+                        "trace": trace
+                    }
 
             # 6. Execution (Execution)
             # Enforce mode inside ExecutionAgent, but we pass it effectively via context
