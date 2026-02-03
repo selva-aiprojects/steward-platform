@@ -21,33 +21,29 @@ def read_strategies(
 
 @router.post("/", response_model=schemas.strategy.StrategyResponse)
 def create_strategy(
-    strategy: Dict[Any, Any],
+    strategy: schemas.strategy.StrategyLaunchRequest,
     db: Session = Depends(get_db),
 ) -> Any:
     """
-    Launch a new strategy.
+    Launch a new strategy using user_id.
     Maps user_id to portfolio_id for frontend compatibility.
     """
-    user_id = strategy.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
-        
-    portfolio = db.query(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == user_id).first()
+    portfolio = db.query(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == strategy.user_id).first()
     if not portfolio:
-        # Auto-create if not exists for demo/dev robustness
-        portfolio = models.portfolio.Portfolio(user_id=user_id, name="Auto-Created Portfolio")
+        # Auto-create portfolio if not exists for demo robustness
+        portfolio = models.portfolio.Portfolio(user_id=strategy.user_id, name="Auto-Created Portfolio")
         db.add(portfolio)
         db.commit()
         db.refresh(portfolio)
 
     strat_data = {
         "portfolio_id": portfolio.id,
-        "name": strategy.get("name", "Unnamed Strategy"),
-        "symbol": strategy.get("symbol", "TCS"),
-        "status": strategy.get("status", "RUNNING"),
-        "pnl": strategy.get("pnl", "+$0.00"),
-        "drawdown": strategy.get("drawdown", 0.0),
-        "execution_mode": strategy.get("execution_mode", "PAPER")
+        "name": strategy.name,
+        "symbol": strategy.symbol,
+        "status": strategy.status,
+        "pnl": strategy.pnl,
+        "drawdown": strategy.drawdown,
+        "execution_mode": strategy.execution_mode
     }
     
     db_strategy = models.strategy.Strategy(**strat_data)

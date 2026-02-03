@@ -20,7 +20,7 @@ class MarketDataAgent(BaseAgent):
         symbol = context.get("symbol")
         exchange = context.get("exchange", "NSE")
         
-        # 1. Attempt to fetch real data from Zerodha Kite
+        # 1. Attempt to fetch real data from Zerodha Kite (NSE)
         quote = kite_service.get_quote(symbol, exchange)
         
         if quote:
@@ -30,9 +30,10 @@ class MarketDataAgent(BaseAgent):
                     "exchange": exchange,
                     "current_price": quote.get("last_price"),
                     "volume": quote.get("volume"),
+                    "change_pct": (quote.get("last_price") - quote.get("ohlc", {}).get("close", 0)) / quote.get("ohlc", {}).get("close", 1) * 100 if quote.get("ohlc") else 0,
                     "ohlc": quote.get("ohlc"),
-                    "trend": "NEUTRAL", # TODO: Derive from price action
-                    "source": "Zerodha KiteConnect"
+                    "trend": "BULLISH" if quote.get("last_price") > quote.get("ohlc", {}).get("open", 0) else "BEARISH" if quote.get("ohlc") else "NEUTRAL",
+                    "source": "Zerodha KiteConnect Live"
                 }
             }
         

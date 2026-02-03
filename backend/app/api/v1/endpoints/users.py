@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Any, List
 from app import schemas, models
 from app.core.database import get_db
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ def create_user(
     user = models.user.User(
         email=user_in.email,
         full_name=user_in.full_name,
-        hashed_password="hashed_password_placeholder", # Mocking for now
+        hashed_password=get_password_hash(user_in.password if hasattr(user_in, "password") else "default_stock_steward_123"), 
         risk_tolerance=user_in.risk_tolerance,
         is_active=user_in.is_active
     )

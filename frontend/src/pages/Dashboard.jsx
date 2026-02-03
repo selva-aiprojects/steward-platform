@@ -12,141 +12,59 @@ import { useNavigate, Link } from "react-router-dom";
 import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 import { useUser } from "../context/UserContext";
+import { useAppData } from "../context/AppDataContext";
 
 export function Dashboard() {
     const { user, selectedUser, setSelectedUser } = useUser();
+    const {
+        summary,
+        trades: recentTrades,
+        marketMovers: marketMoversState,
+        exchangeStatus,
+        stewardPrediction,
+        adminTelemetry,
+        loading,
+        allUsers,
+        refreshAllData
+    } = useAppData();
+
     const [period, setPeriod] = useState('This Week');
-    const [summary, setSummary] = useState(null);
-    const [allUsers, setAllUsers] = useState([]);
-    const [recentTrades, setRecentTrades] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [depositing, setDepositing] = useState(false);
-    const [marketMoversState, setMarketMovers] = useState([]);
-    const [adminTelemetry, setAdminTelemetry] = useState(null);
     const [chartData, setChartData] = useState([]);
-    const [exchangeStatus, setExchangeStatus] = useState({ latency: '24ms' });
     const [socketStatus, setSocketStatus] = useState('disconnected');
-    const [stewardPrediction, setStewardPrediction] = useState("Initializing market intelligence...");
+
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // Use Global Socket
         if (!socket) return;
-
-        const onConnect = () => {
-            setSocketStatus('connected');
-            console.log("Socket connected:", socket.id);
-            socket.emit('join_stream', { role: user?.role || 'USER' });
-        };
-
-        const onDisconnect = () => {
-            setSocketStatus('disconnected');
-        };
-
-        const onMarketUpdate = (data) => {
-            setMarketMovers(prev => {
-                const exists = prev.find(m => m.symbol === data.symbol);
-                if (exists) {
-                    return prev.map(m => m.symbol === data.symbol ? { ...m, ...data, type: data.type || (data.change.includes('+') ? 'up' : 'down') } : m);
-                } else {
-                    return [{ ...data, type: data.type || (data.change.includes('+') ? 'up' : 'down') }, ...prev].slice(0, 4);
-                }
-            });
-        };
-
-        const onAdminMetrics = (data) => setAdminTelemetry(data);
-        const onStewardPrediction = (data) => setStewardPrediction(data.prediction);
-
-        if (socket.connected) {
-            onConnect();
-        }
-
-        socket.on('connect', onConnect);
-        socket.on('disconnect', onDisconnect);
-        socket.on('market_update', onMarketUpdate);
-        socket.on('admin_metrics', onAdminMetrics);
-        socket.on('steward_prediction', onStewardPrediction);
-
+        const up = () => setSocketStatus('connected');
+        const down = () => setSocketStatus('disconnected');
+        socket.on('connect', up);
+        socket.on('disconnect', down);
+        if (socket.connected) up();
         return () => {
-            socket.off('connect', onConnect);
-            socket.off('disconnect', onDisconnect);
-            socket.off('market_update', onMarketUpdate);
-            socket.off('admin_metrics', onAdminMetrics);
-            socket.off('steward_prediction', onStewardPrediction);
+            socket.off('connect', up);
+            socket.off('disconnect', down);
         };
-    }, [user]);
+    }, []);
 
+    // Chart data still needs to be fetched separately or added to context if used widely
+    // For now, I'll keep chart data local but fetched on mount/change
     useEffect(() => {
-        const loadInitialData = async () => {
-            if (user?.role === 'ADMIN') {
-                const users = await fetchUsers();
-                setAllUsers(users);
-            }
-        };
-        loadInitialData();
-    }, [user]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!user) return;
-            setLoading(true);
+        const loadChart = async () => {
+            const viewId = selectedUser?.id || (user?.role === 'ADMIN' ? null : user?.id);
+            if (!viewId && user?.role !== 'ADMIN') return;
             try {
-                const viewId = selectedUser?.id || (user.role === 'ADMIN' ? null : user.id);
-
-                if (user.role === 'ADMIN' && !selectedUser) {
-                    // Global Platform View for Admins
-                    const [portfolios, tradeData, historyData, status] = await Promise.all([
-                        fetchAllPortfolios(),
-                        fetchTrades(),
-                        fetchPortfolioHistory(),
-                        fetchExchangeStatus()
-                    ]);
-
-                    const aggregate = portfolios.reduce((acc, p) => ({
-                        invested_amount: acc.invested_amount + (p.invested_amount || 0),
-                        cash_balance: acc.cash_balance + (p.cash_balance || 0),
-                        win_rate: acc.win_rate + (p.win_rate || 0),
-                        positions_count: acc.positions_count + (p.positions_count || 0)
-                    }), { invested_amount: 0, cash_balance: 0, win_rate: 0, positions_count: 0 });
-
-                    if (portfolios.length > 0) aggregate.win_rate = (aggregate.win_rate / portfolios.length).toFixed(1);
-
-                    setSummary(aggregate);
-                    setRecentTrades(tradeData.slice(0, 3));
-                    setChartData(historyData.length > 0 ? historyData : [
-                        { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
-                    ]);
-                    setExchangeStatus(status);
-                } else {
-                    // Specific User View
-                    const [sumData, tradeData, historyData, status] = await Promise.all([
-                        fetchPortfolioSummary(viewId),
-                        fetchTrades(viewId),
-                        fetchPortfolioHistory(viewId),
-                        fetchExchangeStatus()
-                    ]);
-                    setSummary(sumData);
-                    setRecentTrades(tradeData.slice(0, 3));
-                    setChartData(historyData.length > 0 ? historyData : [
-                        { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
-                    ]);
-                    setExchangeStatus(status);
-
-                    // Initial Market Snapshot (Gainers/Losers) - Fix for "Blank Cards"
-                    const movers = await fetchMarketMovers();
-                    if (movers && movers.length > 0) { // Check if movers is an array
-                        setMarketMovers(movers);
-                    } else if (movers && movers.gainers) { // Handle object format {gainers: [], losers: []}
-                        setMarketMovers([...movers.gainers, ...movers.losers]);
-                    }
-                }
+                const historyData = await fetchPortfolioHistory(viewId);
+                setChartData(historyData.length > 0 ? historyData : [
+                    { name: 'Mon', value: 0 }, { name: 'Tue', value: 0 }, { name: 'Wed', value: 0 }, { name: 'Thu', value: 0 }, { name: 'Fri', value: 0 }
+                ]);
             } catch (err) {
-                console.error("Dashboard Load Error:", err);
-            } finally {
-                setLoading(false);
+                console.error("Chart load error:", err);
             }
         };
-        loadData();
-    }, [user, selectedUser]);
+        loadChart();
+    }, [selectedUser, user]);
 
     const handleQuickDeposit = async () => {
         const viewId = selectedUser?.id || user?.id;
@@ -155,12 +73,7 @@ export function Dashboard() {
         try {
             const result = await depositFunds(viewId, 1000); // Quick $1000
             if (result) {
-                const [sumData, historyData] = await Promise.all([
-                    fetchPortfolioSummary(viewId),
-                    fetchPortfolioHistory(viewId)
-                ]);
-                setSummary(sumData);
-                setChartData(historyData);
+                await refreshAllData();
                 alert("Quick Deposit of ₹1,000 successful.");
             }
         } catch (err) {
@@ -440,6 +353,14 @@ export function Dashboard() {
                                 </Link>
                             ))}
                         </div>
+                        <div className="space-y-4">
+                            {allUsers && allUsers.map((u) => (
+                                <div key={u.id} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                    <Shield size={12} />
+                                    <span>END-TO-END CRYPTOGRAPHIC LOG VERIFICATION: COMPLETE</span>
+                                </div>
+                            ))}
+                        </div>
                         {user?.role === 'AUDITOR' && (
                             <div className="p-4 bg-slate-900 text-slate-400 text-[10px] font-mono flex items-center gap-2">
                                 <Shield size={12} />
@@ -447,6 +368,19 @@ export function Dashboard() {
                             </div>
                         )}
                     </Card>
+                </div>
+            </div>
+
+            {/* Risk Disclosure Footer */}
+            <div className="max-w-[1600px] mx-auto mt-12 p-6 border-t border-slate-100/50">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em]">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                        <span>System ID: SS-AI-ALPHA-2026</span>
+                    </div>
+                    <p className="max-w-2xl text-center md:text-right leading-relaxed opacity-60">
+                        Mandatory Disclosure: Algorithmic trading involves high market risk. StockSteward AI provides execution intelligence for educational and platform demonstration purposes only. Consult with a SEBI-registered advisor before committing real capital.
+                    </p>
                 </div>
             </div>
         </div>

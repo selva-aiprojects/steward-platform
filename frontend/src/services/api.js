@@ -13,6 +13,21 @@ export const socket = io(BASE_URL, {
     reconnectionAttempts: 5
 });
 
+socket.on('connect', () => console.log("✅ Socket connected:", socket.id));
+socket.on('connect_error', (err) => console.error("❌ Socket connection error:", err));
+
+export const checkApiHealth = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/health`);
+        const data = await response.json();
+        console.log("🏥 API Health Status:", data);
+        return data;
+    } catch (error) {
+        console.error("🏥 API Health Check FAILED:", error);
+        return { status: "unreachable", error: error.message };
+    }
+};
+
 export const fetchUsers = async () => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`);

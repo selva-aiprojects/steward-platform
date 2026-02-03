@@ -34,13 +34,46 @@ class KiteService:
             return None
         
         try:
-            # Format: EXCHANGE:SYMBOL (e.g., NSE:RELIANCE)
             instrument = f"{exchange}:{symbol}"
             quotes = kite.quote([instrument])
             return quotes.get(instrument)
         except Exception as e:
             logger.error(f"Error fetching quote for {symbol}: {e}")
             return None
+
+    def get_quotes(self, symbols: list):
+        """Fetches quotes for multiple symbols at once."""
+        kite = self.get_client()
+        if not kite or not settings.ZERODHA_ACCESS_TOKEN:
+            return {}
+        
+        try:
+            instruments = [f"NSE:{s}" if ":" not in s else s for s in symbols]
+            return kite.quote(instruments)
+        except Exception as e:
+            logger.error(f"Error fetching bulk quotes: {e}")
+            return {}
+
+    def get_historical(self, symbol: str, from_date, to_date, interval="day", exchange="NSE"):
+        """Fetches historical OHLC data from Kite."""
+        kite = self.get_client()
+        if not kite or not settings.ZERODHA_ACCESS_TOKEN:
+            return []
+        
+        try:
+            # Need instrument_token for historical data. 
+            # In production, this would be cached or fetched once.
+            instruments = kite.instruments(exchange)
+            token = next((i['instrument_token'] for i in instruments if i['tradingsymbol'] == symbol), None)
+            
+            if not token:
+                logger.error(f"Instrument token not found for {symbol}")
+                return []
+                
+            return kite.historical_data(token, from_date, to_date, interval)
+        except Exception as e:
+            logger.error(f"Error fetching historical data for {symbol}: {e}")
+            return []
 
     def generate_session(self, request_token: str):
         kite = self.get_client()

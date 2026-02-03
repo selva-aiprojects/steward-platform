@@ -31,9 +31,24 @@ def seed_db():
             {"name": "Natasha Romanoff", "email": "nat@shield.gov", "used": 95000, "unused": 5000, "risk": "MODERATE", "win_rate": 62.0},
         ]
 
-        main_user_id = None
+        # Custom ID Map to match frontend Login.jsx
+        id_map = {
+            "Alexander Pierce": 1,
+            "Sarah Connor": 2,
+            "Tony Stark": 3,
+            "Bruce Wayne": 777, # Business Owner
+            "Natasha Romanoff": 888 # Auditor
+        }
+
+        # Add Superadmin explicitly (ID 999)
+        admin = User(id=999, full_name="Super Admin", email="admin@stocksteward.ai", hashed_password="hashedword", risk_tolerance="LOW", is_active=True)
+        db.add(admin)
+        db.flush()
+
         for u in users_data:
+            user_id = id_map.get(u["name"])
             user = User(
+                id=user_id,
                 full_name=u["name"],
                 email=u["email"],
                 hashed_password="hashed_password_placeholder",

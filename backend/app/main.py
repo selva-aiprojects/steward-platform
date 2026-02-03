@@ -32,6 +32,22 @@ socket_app = socketio.ASGIApp(sio, app)
 last_market_movers = {'gainers': [], 'losers': []}
 last_steward_prediction = {"prediction": "Initializing...", "history": []}
 
+# Mock data for fallback mode
+mock_gainers = [
+    {'symbol': 'RELIANCE', 'price': 2450.00, 'change': '+1.20%'},
+    {'symbol': 'TCS', 'price': 3820.00, 'change': '+0.85%'},
+    {'symbol': 'INFY', 'price': 1540.00, 'change': '+2.10%'},
+    {'symbol': 'HDFCBANK', 'price': 1680.00, 'change': '+1.45%'},
+    {'symbol': 'ICICIBANK', 'price': 940.00, 'change': '+1.15%'}
+]
+mock_losers = [
+    {'symbol': 'WIPRO', 'price': 420.00, 'change': '-1.10%'},
+    {'symbol': 'TATASTEEL', 'price': 115.00, 'change': '-2.30%'},
+    {'symbol': 'ONGC', 'price': 185.00, 'change': '-0.95%'},
+    {'symbol': 'SBIN', 'price': 580.00, 'change': '-1.50%'},
+    {'symbol': 'ITC', 'price': 440.00, 'change': '-0.75%'}
+]
+
 @sio.event
 async def join_stream(sid, data):
     """
@@ -71,6 +87,7 @@ async def market_feed():
     Background worker that broadcasts market updates.
     Switches between Live Zerodha Data and Mock Data based on EXECUTION_MODE.
     """
+    global last_market_movers, last_steward_prediction
     from app.services.kite_service import kite_service
     from app.core.config import settings
     import os
@@ -93,6 +110,16 @@ async def market_feed():
         await asyncio.sleep(10 if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
         
         try:
+            # Setup Groq once per cycle (if key exists)
+            groq_key = os.getenv("GROQ_API_KEY")
+            groq_client = None
+            if groq_key:
+                try:
+                    from groq import Groq
+                    groq_client = Groq(api_key=groq_key)
+                except ImportError:
+                    print("Groq library not installed")
+
             if settings.EXECUTION_MODE == "LIVE_TRADING":
                 # 1. Fetch real quotes for the watchlist
                 quotes = {}
@@ -115,21 +142,11 @@ async def market_feed():
                 losers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_losers]
                 
                 # Update global state
-                global last_market_movers
                 last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
                 
                 # Emit consolidated movers event
                 await sio.emit('market_movers', last_market_movers, room='market_data')
 
-                # 3. Setup Groq for projections (if key exists)
-                groq_key = os.getenv("GROQ_API_KEY")
-                groq_client = None
-                if groq_key:
-                    try:
-                        from groq import Groq
-                        groq_client = Groq(api_key=groq_key)
-                    except ImportError:
-                        print("Groq library not installed")
 
                 # Emit individual updates for ticker tape effects
                 movers = top_gainers[:2] + top_losers[-2:]
@@ -170,7 +187,6 @@ async def market_feed():
                         prediction = completion.choices[0].message.content.strip()
                         
                         # Update global state
-                        global last_steward_prediction
                         last_steward_prediction = {'prediction': prediction, 'history': prediction_history}
                             
                         await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
@@ -179,15 +195,16 @@ async def market_feed():
             else:
                 # Mock Mode Fallback
                 symbol = random.choice(['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK'])
-                mock_gainers = [{'symbol': 'MOCK_UP', 'price': 120.5, 'change': 2.5}, {'symbol': 'MOCK_UP2', 'price': 300, 'change': 1.2}]
-                mock_losers = [{'symbol': 'MOCK_DN', 'price': 90.5, 'change': -1.5}, {'symbol': 'MOCK_DN2', 'price': 50, 'change': -0.8}]
+                # Update global state for REST compatibility
+                last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
                 
-                await sio.emit('market_movers', {'gainers': mock_gainers, 'losers': mock_losers}, room='market_data')
+                await sio.emit('market_movers', last_market_movers, room='market_data')
 
                 update = {
                     'symbol': symbol,
                     'price': round(random.uniform(100, 1000), 2),
-                    'change': f"{random.choice(['+', '-'])}{round(random.uniform(0, 5), 2)}%",
+                    'change': f"{random.choice(['+', '-'])}{round(random.uniform(0, 5), 2)}%"
+                }
                 projection = "AI Projection pending: System in MOCK mode."
                 
                 # Enable Groq Analysis even for Mock Data if available
@@ -205,8 +222,12 @@ async def market_feed():
 
                 update['projection'] = projection
                 update['type'] = 'up' # Mock change logic
-                }
                 await sio.emit('market_update', update, room='market_data')
+
+                # Also update global prediction in mock mode
+                if last_steward_prediction['prediction'] == "Initializing...":
+                    last_steward_prediction['prediction'] = "Market showing neutral momentum in mock session. Monitoring AI signals."
+                    await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
                 
         except Exception as e:
             print(f"Market feed error: {e}")

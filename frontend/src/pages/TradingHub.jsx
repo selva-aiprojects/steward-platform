@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, TrendingDown, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2, X, ArrowRight, Activity } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy } from "../services/api";
+import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy, socket } from "../services/api";
 
 import { useUser } from "../context/UserContext";
+import { useAppData } from "../context/AppDataContext";
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export function TradingHub() {
-    const { user: contextUser, setUser: contextSetUser } = useUser();
+    const { user: contextUser } = useUser();
+    const {
+        summary,
+        projections,
+        strategies: appStrategies,
+        exchangeStatus,
+        stewardPrediction: appStewardPrediction,
+        loading,
+        toggleTradingMode: appToggleTradingMode,
+        refreshAllData
+    } = useAppData();
+
     const [strategies, setStrategies] = useState([]);
-    const [projections, setProjections] = useState([]);
-    const [summary, setSummary] = useState(null);
-    const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms' });
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [toggling, setToggling] = useState(false);
     const [executing, setExecuting] = useState(false);
     const [provisioning, setProvisioning] = useState(false);
@@ -27,7 +35,8 @@ export function TradingHub() {
     const [orderQty, setOrderQty] = useState(10);
     const [activeHoldings, setActiveHoldings] = useState([]);
     const [tradeStatus, setTradeStatus] = useState(null);
-    const [stewardPrediction, setStewardPrediction] = useState("Steward AI is currently monitoring market signals for optimal entry...");
+
+    const user = contextUser;
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -51,62 +60,26 @@ export function TradingHub() {
     }, []);
 
     useEffect(() => {
-        const loadData = async () => {
+        if (appStrategies) setStrategies(appStrategies);
+    }, [appStrategies]);
+
+    useEffect(() => {
+        const loadHoldings = async () => {
             if (!contextUser) return;
             try {
-                const [strats, projs, userData, sumData, status, currentHoldings] = await Promise.all([
-                    fetchStrategies(),
-                    fetchProjections(),
-                    fetchUser(contextUser.id),
-                    fetchPortfolioSummary(contextUser.id),
-                    fetchExchangeStatus(),
-                    fetchHoldings(contextUser.id)
-                ]);
-                setStrategies(strats);
-                setProjections(projs);
-                setUser(userData);
-                setSummary(sumData);
-                setExchangeStatus(status);
-                setActiveHoldings(currentHoldings);
+                const currentHoldings = await fetchHoldings(contextUser.id);
+                setActiveHoldings(Array.isArray(currentHoldings) ? currentHoldings : []);
             } catch (err) {
-                console.error("Trading Hub Fetch Error:", err);
-            } finally {
-                setLoading(false);
+                console.error("Failed to load holdings:", err);
             }
         };
-
-        const onMarketPrediction = (data) => {
-            if (data.prediction) setStewardPrediction(data.prediction);
-        };
-
-        if (socket) {
-            socket.on('steward_prediction', onMarketPrediction);
-        }
-
-        loadData();
-
-        return () => {
-            if (socket) socket.off('steward_prediction', onMarketPrediction);
-        };
+        loadHoldings();
     }, [contextUser]);
 
     const toggleTradingMode = async () => {
-        if (!user) return;
-        const oldMode = user.trading_mode;
-        const newMode = oldMode === 'AUTO' ? 'MANUAL' : 'AUTO';
-
         setToggling(true);
         try {
-            const updated = await updateUser(user.id, { trading_mode: newMode });
-            if (updated) {
-                setUser(updated);
-                // Also update global context so other pages (Dashboard) reflect the mode change
-                if (contextUser?.id === updated.id) {
-                    contextSetUser(updated);
-                }
-            }
-        } catch (err) {
-            console.error("Failed to toggle mode:", err);
+            await appToggleTradingMode();
         } finally {
             setToggling(false);
         }
@@ -128,7 +101,7 @@ export function TradingHub() {
 
             const result = await executeTrade(user.id, tradeData);
             if (result) {
-                // Refresh holdings
+                await refreshAllData();
                 const updatedHoldings = await fetchHoldings(user.id);
                 setActiveHoldings(updatedHoldings);
                 setTradeStatus({ type: 'success', msg: `${action} successful: ${orderQty} units of ${orderTicker}` });
@@ -404,57 +377,15 @@ export function TradingHub() {
                         )}
 
                         <div data-testid="automated-strategies-list" className={`grid grid-cols-1 gap-4 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}`}>
-                            {strategies.map((strat) => (
+                            {Array.isArray(strategies) && strategies.length > 0 ? strategies.map((strat) => (
                                 <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
-                                    <div className="flex flex-wrap items-center justify-between gap-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white ${strat.status === 'RUNNING' ? 'bg-primary' : 'bg-slate-300'
-                                                }`}>
-                                                {strat.symbol.substring(0, 2)}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-black text-slate-900 leading-none">{strat.name}</h3>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{strat.symbol}</span>
-                                                    <span className="h-1 w-1 rounded-full bg-slate-200" />
-                                                    <span className={`text-[10px] font-black uppercase ${strat.status === 'RUNNING' ? 'text-green-500' : 'text-slate-400'
-                                                        }`}>{strat.status}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 border-l border-r px-8 border-slate-50">
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Profitability</p>
-                                                <p className={`text-sm font-black ${strat.pnl.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{strat.pnl}</p>
-                                            </div>
-                                            <div className="hidden md:block">
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Drawdown</p>
-                                                <p className="text-sm font-black text-slate-900">1.2%</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">State</p>
-                                                <p className="text-sm font-black text-slate-500 uppercase text-[10px]">Optimizing</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            {strat.status === 'RUNNING' ? (
-                                                <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all">
-                                                    <Pause size={18} />
-                                                </button>
-                                            ) : (
-                                                <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-green-50 rounded-xl transition-all">
-                                                    <Play size={18} />
-                                                </button>
-                                            )}
-                                            <button className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all">
-                                                CFG
-                                            </button>
-                                        </div>
-                                    </div>
+                                    ...
                                 </Card>
-                            ))}
+                            )) : (
+                                <div className="p-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Active Strategies Provisioned</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -529,7 +460,7 @@ export function TradingHub() {
                             <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest">Global Watcher Alpha</span>
                             <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: AP-SOUTH-1 (Mumbai)</span>
                         </div>
-                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{stewardPrediction}"</h3>
+                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{appStewardPrediction}"</h3>
                         <p className="text-slate-300 text-[10px] font-black leading-relaxed mb-8 uppercase tracking-[0.2em] flex items-center gap-2">
                             <span className="h-2 w-2 bg-green-500 rounded-full animate-ping" />
                             Live Steward Forecast Stream

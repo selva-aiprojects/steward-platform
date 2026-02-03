@@ -39,8 +39,14 @@ class StrategyAgent(BaseAgent):
         try:
             from groq import Groq
             client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+            
+            system_prompt = "You are the StockSteward AI Senior Analyst. Provide high-precision algorithmic trading signals based on market data and technical indicators. Always justify with institutional-grade rationale."
+            
             chat_completion = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
                 model="llama-3.3-70b-versatile",
                 response_format={"type": "json_object"}
             )

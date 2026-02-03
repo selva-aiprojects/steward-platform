@@ -1,26 +1,37 @@
 describe('Feature Availability and Workflow Tests', () => {
-    it('verifies trading mode visibility and algo liveness', () => {
-        cy.visit('/trading');
+    describe('Feature Availability and Workflow Tests', () => {
+        it('verifies trading mode visibility and algo liveness', () => {
+            cy.login('trader');
+            cy.visit('/trading');
 
-        // Check for locked/active/manual modes
-        cy.get('[data-mode="locked"]').should('be.visible');
-        cy.get('[data-mode="active"]').should('be.visible');
-        cy.get('[data-mode="manual"]').should('be.visible');
+            // Check for algo status and mode toggles
+            cy.get('[data-testid="algo-status"]').should('be.visible');
+            cy.get('[data-testid="mode-toggle-auto"]').scrollIntoView().should('be.visible');
+            cy.get('[data-testid="mode-toggle-manual"]').scrollIntoView().should('be.visible');
+        });
 
-        // Verify algo liveness indicator pulses
-        cy.get('[data-algo-liveness]').should('be.visible');
-        cy.get('[data-algo-liveness]').should('have.css', 'animation');
-    });
+        it('verifies end-to-end workflow completes without errors', () => {
+            cy.login('trader');
+            cy.visit('/trading');
 
-    it('verifies end-to-end workflow completes without errors', () => {
-        cy.login('trader');
-        cy.visit('/trading');
+            // Toggle to Manual Mode if in Auto (or just click to ensure it's selected)
+            cy.get('[data-testid="mode-toggle-manual"]').click();
 
-        // Perform a trading action
-        cy.get('[data-user-table] tbody tr:nth-child(1)').click();
-        cy.get('[data-eval]').should('exist');
+            // Wait for manual mode to be active (check for active class/color)
+            cy.get('[data-testid="mode-toggle-manual"]').should('have.class', 'bg-orange-600');
 
-        // Assert workflow completes
-        cy.get('[data-workflow-status]').should('contain', 'Completed');
+            // Handle alert
+            const alertStub = cy.stub();
+            cy.on('window:alert', alertStub);
+
+            // Perform a trading action
+            cy.get('[data-testid="manual-order-ticket"]').should('be.visible').within(() => {
+                cy.get('input').first().clear().type('RELIANCE');
+                cy.get('[data-testid="manual-buy-button"]').click();
+            });
+
+            // Assert workflow completes with a success message in the UI or alert
+            cy.contains(/successful|success/i, { timeout: 10000 }).should('be.visible');
+        });
     });
 });

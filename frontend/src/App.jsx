@@ -12,6 +12,7 @@ import Subscription from "./pages/Subscription"
 import { Help } from "./pages/Help";
 import Support from "./pages/Support";
 import { useUser } from "./context/UserContext"
+import { AppDataProvider } from "./context/AppDataContext"
 import { useNavigate, useLocation, Navigate } from "react-router-dom"
 
 // Inner components for Auth Logic to be inside Router context
@@ -39,29 +40,31 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="stocksteward-ui-theme">
       <Router>
         <AuthWrapper>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
-            <Route path="/trading" element={<RequireAuth><Layout><TradingHub /></Layout></RequireAuth>} />
-            <Route path="/portfolio" element={
-              <RequireAuth>
-                <Layout>
-                  <Portfolio />
-                </Layout>
-              </RequireAuth>
-            } />
-            <Route path="/subscription" element={
-              <RequireAuth>
-                <Layout>
-                  <Subscription />
-                </Layout>
-              </RequireAuth>
-            } />
-            <Route path="/help" element={<RequireAuth><Layout><Help /></Layout></RequireAuth>} />
-            <Route path="/reports" element={<RequireAuth><Layout><Reports /></Layout></RequireAuth>} />
-            <Route path="/users" element={<RequireAuth><Layout><Users /></Layout></RequireAuth>} />
-            <Route path="/support" element={<RequireAuth><Layout><Support /></Layout></RequireAuth>} />
-          </Routes>
+          <AppDataProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
+              <Route path="/trading" element={<RequireAuth><Layout><TradingHub /></Layout></RequireAuth>} />
+              <Route path="/portfolio" element={
+                <RequireAuth>
+                  <Layout>
+                    <Portfolio />
+                  </Layout>
+                </RequireAuth>
+              } />
+              <Route path="/subscription" element={
+                <RequireAuth>
+                  <Layout>
+                    <Subscription />
+                  </Layout>
+                </RequireAuth>
+              } />
+              <Route path="/help" element={<RequireAuth><Layout><Help /></Layout></RequireAuth>} />
+              <Route path="/reports" element={<RequireAuth><Layout><Reports /></Layout></RequireAuth>} />
+              <Route path="/users" element={<RequireAuth><Layout><Users /></Layout></RequireAuth>} />
+              <Route path="/support" element={<RequireAuth><Layout><Support /></Layout></RequireAuth>} />
+            </Routes>
+          </AppDataProvider>
         </AuthWrapper>
       </Router>
     </ThemeProvider>

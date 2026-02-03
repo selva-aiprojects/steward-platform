@@ -9,62 +9,47 @@ import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
 import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds, addToWatchlist, removeFromWatchlist, socket } from "../services/api";
 import { useUser } from '../context/UserContext';
+import { useAppData } from '../context/AppDataContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const Portfolio = () => {
   const { user, selectedUser } = useUser();
-  const [activeHoldings, setActiveHoldings] = useState([]);
+  const {
+    summary,
+    holdings: activeHoldings,
+    watchlist: appWatchlist,
+    projections,
+    stewardPrediction: appStewardPrediction,
+    loading,
+    refreshAllData
+  } = useAppData();
+
   const [watchlist, setWatchlist] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [projections, setProjections] = useState([]);
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [depositing, setDepositing] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(5000);
   const [draggedItem, setDraggedItem] = useState(null);
-  const [stewardPrediction, setStewardPrediction] = useState("Sector rotation suggests moving allocation to high-growth NSE scripts based on recent volume surges.");
 
   const viewId = selectedUser?.id || user?.id;
   const isManual = user?.trading_mode === 'MANUAL';
 
   useEffect(() => {
-    const loadData = async () => {
+    if (appWatchlist) setWatchlist(appWatchlist);
+  }, [appWatchlist]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
       if (!viewId) return;
-      setLoading(true);
       try {
-        const [holdingsData, watchlistData, sumData, projData, historyData] = await Promise.all([
-          fetchHoldings(viewId),
-          fetchWatchlist(),
-          fetchPortfolioSummary(viewId),
-          fetchProjections(),
-          fetchPortfolioHistory(viewId)
-        ]);
-        setActiveHoldings(holdingsData);
-        setWatchlist(watchlistData);
-        setSummary(sumData);
-        setProjections(projData);
-        setHistory(historyData);
+        const historyData = await fetchPortfolioHistory(viewId);
+        setHistory(Array.isArray(historyData) ? historyData : []);
       } catch (err) {
-        console.error("Portfolio Load Error:", err);
-      } finally {
-        setLoading(false);
+        console.error("History Load Error:", err);
       }
     };
-    const onMarketPrediction = (data) => {
-      if (data.prediction) setStewardPrediction(data.prediction);
-    };
-
-    if (socket) {
-      socket.on('steward_prediction', onMarketPrediction);
-    }
-
-    loadData();
-
-    return () => {
-      if (socket) socket.off('steward_prediction', onMarketPrediction);
-    };
+    loadHistory();
   }, [viewId]);
 
   const handleDeposit = async () => {
@@ -73,9 +58,7 @@ const Portfolio = () => {
     try {
       const result = await depositFunds(viewId, depositAmount);
       if (result) {
-        // Refresh summary to show new balance
-        const updatedSummary = await fetchPortfolioSummary(viewId);
-        setSummary(updatedSummary);
+        await refreshAllData();
         setShowDepositModal(false);
         alert(`Successfully deposited ₹${depositAmount.toLocaleString()} into your vault.`);
       }
@@ -118,6 +101,7 @@ const Portfolio = () => {
         // Add to DB watchlist
         await addToWatchlist(viewId, draggedItem.symbol);
       }
+      await refreshAllData();
     } catch (err) {
       console.error("Drop persistence failed:", err);
     }
@@ -322,7 +306,7 @@ const Portfolio = () => {
               </span>
             </h4>
             <p className="text-[11px] text-indigo-700 leading-relaxed font-medium italic">
-              "{stewardPrediction}"
+              "{appStewardPrediction}"
             </p>
           </div>
         </Card>
@@ -370,7 +354,7 @@ const Portfolio = () => {
 
         {/* Allocation Pie Chart */}
         <Card className="lg:col-span-4 p-8 border-slate-100 shadow-sm flex flex-col justify-center">
-          <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Current Risk Exposure</h2>
+          <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Portfolio Allocation</h2>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

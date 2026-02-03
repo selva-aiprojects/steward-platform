@@ -3,8 +3,10 @@ import { Card } from "../components/ui/card";
 import { User, Wallet, Shield, PieChart, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
 import { fetchUsers, fetchAllPortfolios, updateUser, createAuditLog } from "../services/api";
 import { useUser } from "../context/UserContext";
+import { useAppData } from "../context/AppDataContext";
 
 export function Users() {
+    const { allUsers: appUsers, refreshAllData } = useAppData();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -12,13 +14,11 @@ export function Users() {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [usersData, portfoliosData] = await Promise.all([
-                    fetchUsers(),
-                    fetchAllPortfolios()
-                ]);
+                // We still need all portfolios for aggregate view
+                const portfoliosData = await fetchAllPortfolios();
 
                 // Map users to their portfolios
-                const combined = usersData.map(user => {
+                const combined = appUsers.map(user => {
                     const portfolio = portfoliosData.find(p => p.user_id === user.id) || {
                         invested_amount: 0,
                         cash_balance: 0,
@@ -32,7 +32,9 @@ export function Users() {
                         used: portfolio.invested_amount,
                         unused: portfolio.cash_balance,
                         risk: user.risk_tolerance,
-                        win_rate: `${portfolio.win_rate}%`
+                        win_rate: `${portfolio.win_rate}%`,
+                        trading_mode: user.trading_mode,
+                        allowed_sectors: user.allowed_sectors
                     };
                 });
                 setUsers(combined);
@@ -42,8 +44,10 @@ export function Users() {
                 setLoading(false);
             }
         };
-        loadData();
-    }, []);
+        if (appUsers && appUsers.length > 0) {
+            loadData();
+        }
+    }, [appUsers]);
 
     if (loading) {
         return (
@@ -112,6 +116,7 @@ export function Users() {
 
             setIsModalOpen(false);
             setAdminComment('');
+            await refreshAllData();
             alert("Policy updated successfully and logged in audit trail.");
         } catch (error) {
             console.error("Failed to save configuration:", error);

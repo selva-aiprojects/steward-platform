@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2 } from 'lucide-react';
 import { fetchTrades, fetchStrategies, fetchDailyPnL } from "../services/api";
 import { useUser } from "../context/UserContext";
+import { useAppData } from "../context/AppDataContext";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -17,6 +18,12 @@ const mockPerformance = [
 
 export function Reports() {
     const { user, selectedUser } = useUser();
+    const {
+        trades: appTrades,
+        strategies: appStrategies,
+        loading: appLoading
+    } = useAppData();
+
     const [timeframe, setTimeframe] = useState('Daily');
     const [trades, setTrades] = useState([]);
     const [performance, setPerformance] = useState([]);
@@ -26,16 +33,22 @@ export function Reports() {
     const viewId = selectedUser?.id || (user?.role === 'ADMIN' ? null : user?.id);
 
     useEffect(() => {
-        const loadData = async () => {
+        if (appTrades) {
+            setTrades(appTrades.filter(t => t.decision_logic));
+        }
+    }, [appTrades]);
+
+    useEffect(() => {
+        if (appStrategies) {
+            setStrategies(appStrategies);
+        }
+    }, [appStrategies]);
+
+    useEffect(() => {
+        const loadPnL = async () => {
             setLoading(true);
             try {
-                const [tradeData, summaryData, dailyPnL] = await Promise.all([
-                    fetchTrades(viewId),
-                    fetchStrategies(),
-                    fetchDailyPnL(viewId)
-                ]);
-                setTrades(tradeData.filter(t => t.decision_logic));
-                setStrategies(summaryData);
+                const dailyPnL = await fetchDailyPnL(viewId);
                 setPerformance(dailyPnL.length > 0 ? dailyPnL : [
                     { name: 'Mon', user: 0, agent: 0 },
                     { name: 'Tue', user: 0, agent: 0 },
@@ -44,12 +57,12 @@ export function Reports() {
                     { name: 'Fri', user: 0, agent: 0 },
                 ]);
             } catch (err) {
-                console.error("Reports Fetch Error:", err);
+                console.error("PnL Fetch Error:", err);
             } finally {
                 setLoading(false);
             }
         };
-        loadData();
+        loadPnL();
     }, [viewId]);
 
     const downloadReport = () => {

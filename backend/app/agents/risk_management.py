@@ -10,6 +10,7 @@ class RiskManagementAgent(BaseAgent):
     - VETO POWER: Can reject any proposal.
     - Check structural validity.
     - Check capital limits (Max loss, Max position).
+    - Sector/Industry restriction check (FR-15).
     - Check compliance rules.
     """
     
@@ -91,6 +92,10 @@ class RiskManagementAgent(BaseAgent):
         elif estimated_total > current_cash:
             rejection_reason = "Insufficient cash balance."
 
+        # Rule D: Industry/Sector Restrictions (FR-15)
+        elif not self.check_sector_restriction(proposal.get("symbol"), user_profile.get("allowed_sectors", "ALL")):
+            rejection_reason = f"Symbol {proposal.get('symbol')} belongs to a restricted sector for this account."
+
         # --- 4. DECISION ---
         if rejection_reason:
             return {
@@ -111,7 +116,7 @@ class RiskManagementAgent(BaseAgent):
                 "approved": True,
                 "risk_score": 10, # Low risk
                 "reason": "Within defined limits",
-                "rules_checked": ["max_loss_per_trade", "daily_drawdown", "cash_balance"],
+                "rules_checked": ["max_loss_per_trade", "daily_drawdown", "cash_balance", "industry_restriction"],
                 "limits": {
                     "stop_loss_price": round(stop_loss_price, 2),
                     "take_profit_price": round(take_profit_price, 2),
@@ -119,3 +124,25 @@ class RiskManagementAgent(BaseAgent):
                 }
             }
         }
+
+    def check_sector_restriction(self, symbol: str, allowed_sectors: str) -> bool:
+        """
+        Verifies if a symbol belongs to an allowed sector.
+        FR-15 enforcement using a database-oriented lookup or internal mapping.
+        """
+        if allowed_sectors == "ALL":
+            return True
+            
+        # Internal Sector Mapping (Source of Truth for internal-only/demonstration)
+        SECTOR_MAP = {
+            "RELIANCE": "Energy", "TCS": "IT", "INFY": "IT", "HDFCBANK": "Finance",
+            "ICICIBANK": "Finance", "SBIN": "Finance", "BHARTIARTL": "Telecom",
+            "ITC": "FMCG", "HINDUNILVR": "FMCG", "LT": "Infrastructure",
+            "SUNPHARMA": "Healthcare", "DRREDDY": "Healthcare", "CIPLA": "Healthcare",
+            "TATAMOTORS": "Automobile", "MARUTI": "Automobile"
+        }
+        
+        symbol_sector = SECTOR_MAP.get(symbol, "Unknown")
+        allowed_list = [s.strip() for s in allowed_sectors.split(",")]
+        
+        return symbol_sector in allowed_list
