@@ -4,7 +4,7 @@ import { useUser } from "../context/UserContext";
 import { HelpCircle, Shield, Zap, FileText, Briefcase, CheckCircle2 } from 'lucide-react';
 
 const HELP_DATA = {
-    ADMIN: {
+    SUPERADMIN: {
         title: "Superadmin Command Manual",
         icon: Shield,
         color: "text-indigo-600",
@@ -15,7 +15,7 @@ const HELP_DATA = {
             { title: "Infrastructure Config", items: ["API Gateways", "Model Tuning"] }
         ]
     },
-    USER: {
+    TRADER: {
         title: "Trader / Investor Manual",
         icon: Zap,
         color: "text-primary",
@@ -52,8 +52,8 @@ const HELP_DATA = {
 
 export function Help() {
     const { user } = useUser();
-    const role = user?.role || 'USER';
-    const data = HELP_DATA[role] || HELP_DATA.USER;
+    const role = user?.role || 'TRADER';
+    const data = HELP_DATA[role] || HELP_DATA.TRADER;
     const Icon = data.icon;
 
     return (
@@ -106,7 +106,7 @@ export function Help() {
             </div>
 
             <footer className="text-center text-slate-400">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em]">StockSteward AI • Confidential Documentation • v4.0.2</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]">StockSteward AI - Confidential Documentation - v4.0.2</p>
             </footer>
         </div>
     );

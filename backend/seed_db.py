@@ -25,36 +25,50 @@ def seed_db():
         
         # 1. Users & Portfolios
         users_data = [
-            {"name": "Alexander Pierce", "email": "alex@stocksteward.ai", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 68.0},
-            {"name": "Sarah Connor", "email": "sarah.c@sky.net", "used": 10000, "unused": 0, "risk": "HIGH", "win_rate": 74.0},
-            {"name": "Tony Stark", "email": "tony@starkintl.ai", "used": 10000, "unused": 0, "risk": "AGGRESSIVE", "win_rate": 81.0},
-            {"name": "Bruce Wayne", "email": "bruce@waynecorp.com", "used": 10000, "unused": 0, "risk": "LOW", "win_rate": 55.0},
-            {"name": "Natasha Romanoff", "email": "nat@shield.gov", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 62.0},
+            {"id": 1, "name": "Alexander Pierce", "email": "alex@stocksteward.ai", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 68.0},
+            {"id": 2, "name": "Sarah Connor", "email": "sarah.c@sky.net", "used": 10000, "unused": 0, "risk": "HIGH", "win_rate": 74.0},
+            {"id": 3, "name": "Tony Stark", "email": "tony@starkintl.ai", "used": 10000, "unused": 0, "risk": "AGGRESSIVE", "win_rate": 81.0},
+            {"id": 4, "name": "Bruce Wayne", "email": "bruce@waynecorp.com", "used": 10000, "unused": 0, "risk": "LOW", "win_rate": 55.0},
+            {"id": 5, "name": "Natasha Romanoff", "email": "nat@shield.gov", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 62.0},
         ]
 
-        # Custom ID Map to match frontend Login.jsx
-        id_map = {
-            "Alexander Pierce": 1,
-            "Sarah Connor": 2,
-            "Tony Stark": 3,
-            "Bruce Wayne": 777, # Business Owner
-            "Natasha Romanoff": 888 # Auditor
-        }
-
         # Add Superadmin explicitly (ID 999)
-        admin = User(id=999, full_name="Super Admin", email="admin@stocksteward.ai", hashed_password="hashedword", risk_tolerance="LOW", is_active=True)
+        from app.core.security import get_password_hash
+        admin = User(id=999, full_name="Super Admin", email="admin@stocksteward.ai", hashed_password=get_password_hash("admin123"), risk_tolerance="LOW", is_active=True, role="SUPERADMIN")
         db.add(admin)
         db.flush()
 
+        owner = User(
+            id=777,
+            full_name="Business Owner",
+            email="owner@stocksteward.ai",
+            hashed_password=get_password_hash("owner123"),
+            risk_tolerance="MODERATE",
+            is_active=True,
+            role="BUSINESS_OWNER"
+        )
+        db.add(owner)
+
+        auditor = User(
+            id=888,
+            full_name="Compliance Auditor",
+            email="audit@stocksteward.ai",
+            hashed_password=get_password_hash("audit123"),
+            risk_tolerance="LOW",
+            is_active=True,
+            role="AUDITOR"
+        )
+        db.add(auditor)
+
         for u in users_data:
-            user_id = id_map.get(u["name"])
             user = User(
-                id=user_id,
+                id=u["id"],
                 full_name=u["name"],
                 email=u["email"],
-                hashed_password="hashed_password_placeholder",
+                hashed_password=get_password_hash("trader123"),
                 risk_tolerance=u["risk"],
-                is_active=True
+                is_active=True,
+                role="TRADER"
             )
             db.add(user)
             db.flush() 
@@ -71,7 +85,7 @@ def seed_db():
             db.add(portfolio)
             db.flush()
 
-            # Seed Holdings (₹10,000 invested across 3 equities)
+            # Seed Holdings (INR 10,000 invested across 3 equities)
             holdings_seed = [
                 {"symbol": "RELIANCE", "qty": 1, "price": 2500.0},
                 {"symbol": "TCS", "qty": 1, "price": 3500.0},

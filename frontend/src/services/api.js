@@ -13,17 +13,17 @@ export const socket = io(BASE_URL, {
     reconnectionAttempts: 5
 });
 
-socket.on('connect', () => console.log("✅ Socket connected:", socket.id));
-socket.on('connect_error', (err) => console.error("❌ Socket connection error:", err));
+socket.on('connect', () => console.log("Socket connected:", socket.id));
+socket.on('connect_error', (err) => console.error("Socket connection error:", err));
 
 export const checkApiHealth = async () => {
     try {
         const response = await fetch(`${BASE_URL}/health`);
         const data = await response.json();
-        console.log("🏥 API Health Status:", data);
+        console.log("API Health Status:", data);
         return data;
     } catch (error) {
-        console.error("🏥 API Health Check FAILED:", error);
+        console.error("API Health Check FAILED:", error);
         return { status: "unreachable", error: error.message };
     }
 };
@@ -185,6 +185,21 @@ export const fetchWatchlist = async (userId) => {
     }
 };
 
+export const loginUser = async (email, password) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        if (!response.ok) throw new Error('Invalid credentials');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const depositFunds = async (userId, amount) => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/deposit`, {
@@ -282,6 +297,21 @@ export const fetchMarketMovers = async () => {
     }
 };
 
+export const withdrawFunds = async (userId, amount) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/withdraw`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, amount })
+        });
+        if (!response.ok) throw new Error('Withdraw failed');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchSectorHeatmap = async () => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/market/heatmap`);
@@ -342,4 +372,5 @@ export const fetchMarketResearch = async () => {
         return null;
     }
 };
+
 

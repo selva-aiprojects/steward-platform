@@ -53,13 +53,13 @@ mock_losers = [
 async def join_stream(sid, data):
     """
     Clients request to join specific role-based streams.
-    Data expected: {'role': 'ADMIN' | 'USER', 'userId': ...}
+    Data expected: {'role': 'SUPERADMIN' | 'BUSINESS_OWNER' | 'TRADER' | 'AUDITOR', 'userId': ...}
     """
-    role = data.get('role', 'USER')
+    role = data.get('role', 'TRADER')
     print(f"Socket {sid} requesting stream access for role: {role}")
     
     # 1. End User Stream (Standard Market Data)
-    if role in ['USER', 'ADMIN', 'BUSINESS_OWNER']:
+    if role in ['TRADER', 'SUPERADMIN', 'BUSINESS_OWNER']:
         await sio.enter_room(sid, 'market_data')
         await sio.emit('stream_status', {'msg': 'Connected to Live Market Feed'}, to=sid)
         
@@ -70,8 +70,8 @@ async def join_stream(sid, data):
             await sio.emit('steward_prediction', last_steward_prediction, to=sid)
 
     # 2. Superadmin & Business Owner Stream (System Telemetry)
-    if role in ['ADMIN', 'BUSINESS_OWNER']:
-        await sio.enter_room(sid, 'admin_data')
+    if role in ['SUPERADMIN', 'BUSINESS_OWNER']:
+        await sio.enter_room(sid, 'admin_telemetry')
         await sio.emit('stream_status', {'msg': 'Connected to Command Center Telemetry'}, to=sid)
         
     # 3. Auditor Stream

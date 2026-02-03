@@ -10,6 +10,7 @@ class User(Base):
     full_name = Column(String, index=True)
     risk_tolerance = Column(String, default="MODERATE") # LOW, MODERATE, HIGH, AGGRESSIVE
     trading_mode = Column(String, default="AUTO") # AUTO, MANUAL
+    role = Column(String, default="TRADER") # SUPERADMIN, BUSINESS_OWNER, TRADER, AUDITOR
     allowed_sectors = Column(String, default="ALL") # Comma-separated list or "ALL"
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)

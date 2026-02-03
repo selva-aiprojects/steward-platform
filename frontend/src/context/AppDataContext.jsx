@@ -7,7 +7,7 @@ const AppDataContext = createContext();
 export const useAppData = () => useContext(AppDataContext);
 
 export const AppDataProvider = ({ children }) => {
-    const { user, selectedUser, setUser: setContextUser, setSelectedUser } = useUser();
+    const { user, selectedUser, setUser: setContextUser, setSelectedUser, isAdmin } = useUser();
     const [summary, setSummary] = useState(null);
     const [holdings, setHoldings] = useState([]);
     const [watchlist, setWatchlist] = useState([]);
@@ -63,9 +63,15 @@ export const AppDataProvider = ({ children }) => {
 
             // Update User Context with fresh data from backend
             if (viewId === user?.id) {
-                setContextUser(userData);
+                setContextUser({
+                    ...userData,
+                    name: userData?.full_name || userData?.name || userData?.email
+                });
             } else if (viewId === selectedUser?.id) {
-                setSelectedUser(userData);
+                setSelectedUser({
+                    ...userData,
+                    name: userData?.full_name || userData?.name || userData?.email
+                });
             }
 
             if (moversData) {
@@ -84,16 +90,19 @@ export const AppDataProvider = ({ children }) => {
             setOrderBook(depthData || { bids: [], asks: [] });
             setMacroIndicators(macroData);
 
-            if (user?.role === 'ADMIN' || user?.is_superuser) {
+            if (isAdmin || user?.is_superuser) {
                 const users = await fetchUsers();
-                setAllUsers(users);
+                setAllUsers((users || []).map(u => ({
+                    ...u,
+                    name: u.full_name || u.name || u.email
+                })));
             }
         } catch (error) {
             console.error("Failed to refresh app data:", error);
         } finally {
             setLoading(false);
         }
-    }, [viewId]);
+    }, [viewId, user, selectedUser, isAdmin, setContextUser, setSelectedUser]);
 
     useEffect(() => {
         if (viewId) {
@@ -114,7 +123,7 @@ export const AppDataProvider = ({ children }) => {
 
         const onConnect = () => {
             console.log("AppDataContext connected to socket");
-            socket.emit('join_stream', { role: user?.role || 'USER', userId: user?.id });
+            socket.emit('join_stream', { role: user?.role || 'TRADER', userId: user?.id });
         };
 
         const onMarketUpdate = (data) => {

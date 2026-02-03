@@ -18,14 +18,14 @@ from app.models.watchlist import WatchlistItem
 from app.core.security import get_password_hash
 
 def reset_and_seed():
-    print("🧹 Cleaning up existing data (Full Reset)...")
+    print("Cleaning up existing data (Full Reset)...")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
     try:
-        print("🌱 Seeding Roles and Users...")
-        
+        print("Seeding Roles and Users...")
+
         # 1. Special Roles
         # Admin
         admin = User(
@@ -34,32 +34,35 @@ def reset_and_seed():
             email="admin@stocksteward.ai",
             hashed_password=get_password_hash("admin123"),
             is_superuser=True,
+            role="SUPERADMIN",
             risk_tolerance="LOW"
         )
         db.add(admin)
-        
+
         # Auditor
         auditor = User(
             id=888,
             full_name="Compliance Auditor",
             email="audit@stocksteward.ai",
             hashed_password=get_password_hash("audit123"),
-            risk_tolerance="LOW"
+            risk_tolerance="LOW",
+            role="AUDITOR"
         )
         db.add(auditor)
-        
+
         # Business Owner
         owner = User(
             id=777,
             full_name="Business Owner",
             email="owner@stocksteward.ai",
             hashed_password=get_password_hash("owner123"),
-            risk_tolerance="MODERATE"
+            risk_tolerance="MODERATE",
+            role="BUSINESS_OWNER"
         )
         db.add(owner)
         db.flush()
 
-        # 2. Demo Trade Users (5 users) - ₹10,000 invested with a few equities
+        # 2. Demo Trade Users (5 users) - INR 10,000 invested with a few equities
         traders_data = [
             {"id": 1, "name": "Alexander Pierce", "email": "alex@stocksteward.ai", "risk": "MODERATE", "capital": 10000},
             {"id": 2, "name": "Sarah Connor", "email": "sarah.c@sky.net", "risk": "HIGH", "capital": 10000},
@@ -73,7 +76,7 @@ def reset_and_seed():
             {"symbol": "TCS", "qty": 1, "price": 3500.0},
             {"symbol": "HDFCBANK", "qty": 5, "price": 800.0},
         ]
-        
+
         for t in traders_data:
             user = User(
                 id=t["id"],
@@ -81,7 +84,8 @@ def reset_and_seed():
                 email=t["email"],
                 hashed_password=get_password_hash("trader123"),
                 risk_tolerance=t["risk"],
-                trading_mode="AUTO" if random.random() > 0.3 else "MANUAL"
+                trading_mode="AUTO" if random.random() > 0.3 else "MANUAL",
+                role="TRADER"
             )
             db.add(user)
             db.flush()
@@ -102,7 +106,7 @@ def reset_and_seed():
             activity = Activity(
                 user_id=user.id,
                 activity_type="FUND_DEPOSIT",
-                description=f"Initial capital injection of ₹{deposit_amount:,} approved by system."
+                description=f"Initial capital injection of INR {deposit_amount:,} approved by system."
             )
             db.add(activity)
 
@@ -153,11 +157,11 @@ def reset_and_seed():
 
         # 4. Global Projections
         projections_data = [
-            { "ticker": 'RELIANCE', "move": '+4.2%', "action": 'BUY', "logic": 'Strong support at 2900 with volume spike.' },
-            { "ticker": 'TCS', "move": '+2.5%', "action": 'ACCUMULATE', "logic": 'Steady recovery post-quarterly results.' },
-            { "ticker": 'HDFCBANK', "move": '-1.8%', "action": 'HOLD', "logic": 'Short-term consolidation phase detected.' },
-            { "ticker": 'INFY', "move": '+5.1%', "action": 'BUY', "logic": 'Breakout expected on AI-infrastructure growth.' },
-            { "ticker": 'ICICIBANK', "move": '+3.0%', "action": 'BUY', "logic": 'Banking index rotation favor.' },
+            {"ticker": "RELIANCE", "move": "+4.2%", "action": "BUY", "logic": "Strong support at 2900 with volume spike."},
+            {"ticker": "TCS", "move": "+2.5%", "action": "ACCUMULATE", "logic": "Steady recovery post-quarterly results."},
+            {"ticker": "HDFCBANK", "move": "-1.8%", "action": "HOLD", "logic": "Short-term consolidation phase detected."},
+            {"ticker": "INFY", "move": "+5.1%", "action": "BUY", "logic": "Breakout expected on AI-infrastructure growth."},
+            {"ticker": "ICICIBANK", "move": "+3.0%", "action": "BUY", "logic": "Banking index rotation favor."},
         ]
         for p in projections_data:
             proj = Projection(
@@ -169,10 +173,10 @@ def reset_and_seed():
             db.add(proj)
 
         db.commit()
-        print(f"✅ Database reset and seeded with {len(traders_data)} users and historical data!")
-        
+        print(f"Database reset and seeded with {len(traders_data)} users and historical data!")
+
     except Exception as e:
-        print(f"❌ Error during reset and seed: {e}")
+        print(f"Error during reset and seed: {e}")
         db.rollback()
     finally:
         db.close()

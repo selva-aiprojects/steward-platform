@@ -6,6 +6,10 @@ ALTER TABLE users
   ADD COLUMN approval_threshold DOUBLE PRECISION,
   ADD COLUMN confidence_threshold DOUBLE PRECISION;
 
+-- 1b) User role column
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS role VARCHAR(32) DEFAULT 'TRADER';
+
 -- 2) Trade approvals queue
 CREATE TABLE IF NOT EXISTS trade_approvals (
   id SERIAL PRIMARY KEY,

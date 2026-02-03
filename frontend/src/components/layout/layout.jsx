@@ -81,7 +81,7 @@ export function Layout({ children }) {
                         <span>Support</span>
                     </NavLink>
 
-                    {(user?.role === 'USER' || user?.role === 'BUSINESS_OWNER') && (
+                    {(user?.role === 'TRADER' || user?.role === 'BUSINESS_OWNER') && (
                         <>
                             <div className="my-2 border-t border-white/10 mx-4" />
                             <Link to="/subscription" onClick={closeMenu} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-black group hover:bg-amber-400/10 ${location.pathname === '/subscription' ? 'bg-amber-400/20 text-amber-400 border border-amber-400/20 shadow-lg shadow-amber-900/20' : 'text-amber-400/70 hover:text-amber-400'}`}>

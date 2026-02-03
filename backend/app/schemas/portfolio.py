@@ -40,3 +40,7 @@ class DepositRequest(BaseModel):
     user_id: int
     amount: float
 
+class WithdrawRequest(BaseModel):
+    user_id: int
+    amount: float
+

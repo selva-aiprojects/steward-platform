@@ -10,6 +10,12 @@ ALTER TABLE users
   ADD COLUMN confidence_threshold DOUBLE PRECISION;
 ```
 
+## 1b) User role column
+```sql
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS role VARCHAR(32) DEFAULT 'TRADER';
+```
+
 ## 2) Trade approvals queue
 ```sql
 CREATE TABLE IF NOT EXISTS trade_approvals (

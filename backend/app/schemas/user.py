@@ -6,6 +6,7 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
     risk_tolerance: Optional[str] = "MODERATE"
     trading_mode: Optional[str] = "AUTO"
+    role: Optional[str] = "TRADER"
     allowed_sectors: Optional[str] = "ALL"
     is_active: bool = True
     trading_suspended: Optional[bool] = False
@@ -20,6 +21,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     password: Optional[str] = None
     trading_mode: Optional[str] = None
+    role: Optional[str] = None
     allowed_sectors: Optional[str] = None
     is_active: Optional[bool] = None
     trading_suspended: Optional[bool] = None

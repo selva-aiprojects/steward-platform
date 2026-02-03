@@ -1,32 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { Card } from "../components/ui/card";
-import { ShieldCheck, User, Lock, ArrowRight, Loader2, FileText, Briefcase } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchUsers, loginUser } from '../services/api';
 
 export function Login() {
     const { login } = useUser();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [users, setUsers] = useState([]);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    const handleLogin = (role) => {
-        setLoading(true);
-        setTimeout(() => {
-            let userData;
-            if (role === 'ADMIN') {
-                userData = { id: 999, name: 'Super Admin', email: 'admin@stocksteward.ai', role: 'ADMIN', avatar: 'SA' };
-            } else if (role === 'TRADER') {
-                userData = { id: 1, name: 'Active Trader', email: 'trader@example.com', role: 'USER', avatar: 'AT' };
-            } else if (role === 'AUDITOR') {
-                userData = { id: 888, name: 'Compliance Auditor', email: 'audit@stocksteward.ai', role: 'AUDITOR', avatar: 'CA' };
-            } else if (role === 'BUSINESS_OWNER') {
-                userData = { id: 777, name: 'Business Owner', email: 'owner@stocksteward.ai', role: 'BUSINESS_OWNER', avatar: 'BO' };
+    useEffect(() => {
+        const loadUsers = async () => {
+            const data = await fetchUsers();
+            setUsers(Array.isArray(data) ? data : []);
+            if (data && data.length > 0) {
+                setEmail(data[0].email);
             }
+        };
+        loadUsers();
+    }, []);
 
-            login(userData);
-            setLoading(false);
+    const handleLogin = async () => {
+        setLoading(true);
+        try {
+            const userData = await loginUser(email, password);
+            if (!userData) {
+                setLoading(false);
+                return;
+            }
+            login({
+                id: userData.id,
+                name: userData.full_name || userData.email,
+                email: userData.email,
+                role: userData.role || 'TRADER',
+                avatar: (userData.full_name || userData.email).slice(0, 2).toUpperCase()
+            });
             navigate('/');
-        }, 800);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -46,29 +62,35 @@ export function Login() {
                     <p className="text-sm text-slate-500 font-medium mt-1">Institutional Grade Wealth Management</p>
                 </div>
 
-                <div className="space-y-3">
-                    <button data-testid="login-admin" onClick={() => handleLogin('ADMIN')} disabled={loading} className="w-full group relative p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all flex items-center gap-3 text-left">
-                        <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-700"><Lock size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black text-slate-900">Superadmin</h3><p className="text-[10px] text-slate-500">System Config & Oversight</p></div>
-                        <ArrowRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
-                    </button>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">User</label>
+                        <select
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                        >
+                            {users.map((u) => (
+                                <option key={u.id} value={u.email}>{u.full_name || u.email} ({u.role || 'TRADER'})</option>
+                            ))}
+                        </select>
+                    </div>
 
-                    <button data-testid="login-trader" onClick={() => handleLogin('TRADER')} disabled={loading} className="w-full group relative p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all flex items-center gap-3 text-left">
-                        <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center text-green-700"><User size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black text-slate-900">Trader / Investor</h3><p className="text-[10px] text-slate-500">Portfolio & Execution</p></div>
-                        <ArrowRight size={14} className="text-slate-300 group-hover:text-green-600 transition-colors" />
-                    </button>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Use: trader123 / admin123 / owner123 / audit123"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                        />
+                    </div>
 
-                    <button data-testid="login-auditor" onClick={() => handleLogin('AUDITOR')} disabled={loading} className="w-full group relative p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all flex items-center gap-3 text-left">
-                        <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-700"><FileText size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black text-slate-900">Auditor / Compliance</h3><p className="text-[10px] text-slate-500">Read-only Logs & Reports</p></div>
-                        <ArrowRight size={14} className="text-slate-300 group-hover:text-amber-600 transition-colors" />
-                    </button>
-
-                    <button data-testid="login-business-owner" onClick={() => handleLogin('BUSINESS_OWNER')} disabled={loading} className="w-full group relative p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all flex items-center gap-3 text-left">
-                        <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-700"><Briefcase size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black text-slate-900">Business Owner</h3><p className="text-[10px] text-slate-500">Executive Dashboard View</p></div>
-                        <ArrowRight size={14} className="text-slate-300 group-hover:text-purple-600 transition-colors" />
+                    <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all flex items-center gap-3 text-left">
+                        <div className="h-8 w-8 bg-white/10 rounded-lg flex items-center justify-center text-white"><Lock size={16} /></div>
+                        <div className="flex-1"><h3 className="text-xs font-black text-white">Secure Login</h3><p className="text-[10px] text-white/60">Role-based access</p></div>
+                        <ArrowRight size={14} className="text-white/70 group-hover:text-white transition-colors" />
                     </button>
                 </div>
 
@@ -79,7 +101,7 @@ export function Login() {
                 )}
 
                 <div className="mt-8 text-center">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Secure Access • 256-bit Encryption</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Secure Access - 256-bit Encryption</p>
                 </div>
             </Card>
         </div>

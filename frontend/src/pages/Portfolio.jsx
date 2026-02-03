@@ -7,7 +7,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchHoldings, fetchWatchlist, fetchPortfolioHistory, fetchPortfolioSummary, fetchProjections, depositFunds, addToWatchlist, removeFromWatchlist, socket } from "../services/api";
+import { fetchPortfolioHistory, depositFunds, withdrawFunds, addToWatchlist, removeFromWatchlist } from "../services/api";
 import { useUser } from '../context/UserContext';
 import { useAppData } from '../context/AppDataContext';
 
@@ -30,6 +30,9 @@ const Portfolio = () => {
   const [depositing, setDepositing] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(5000);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState(2000);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const viewId = selectedUser?.id || user?.id;
@@ -60,12 +63,29 @@ const Portfolio = () => {
       if (result) {
         await refreshAllData();
         setShowDepositModal(false);
-        alert(`Successfully deposited ₹${depositAmount.toLocaleString()} into your vault.`);
+        alert(`Successfully deposited INR ${depositAmount.toLocaleString()} into your vault.`);
       }
     } catch (err) {
       console.error("Deposit failed:", err);
     } finally {
       setDepositing(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!viewId || withdrawAmount <= 0) return;
+    setWithdrawing(true);
+    try {
+      const result = await withdrawFunds(viewId, withdrawAmount);
+      if (result) {
+        await refreshAllData();
+        setShowWithdrawModal(false);
+        alert(`Successfully withdrew INR ${withdrawAmount.toLocaleString()} from your vault.`);
+      }
+    } catch (err) {
+      console.error("Withdraw failed:", err);
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -87,18 +107,11 @@ const Portfolio = () => {
 
     try {
       if (targetSection === 'active' && draggedItem.type === 'watch') {
-        // For demo: Moving to 'active' just adds it to holdings (buy 1 unit)
-        // In real app, this would open a Buy modal.
+        // For demo: remove from watchlist and let refresh hydrate holdings
         setWatchlist(watchlist.filter(i => i.id !== draggedItem.id));
-        setActiveHoldings([...activeHoldings, { ...draggedItem, type: 'active', quantity: 1, avgPrice: draggedItem.currentPrice, pnl: 0, pnlPct: 0 }]);
-
-        // Remove from DB watchlist
         await removeFromWatchlist(viewId, draggedItem.symbol);
       } else if (targetSection === 'watch' && draggedItem.type === 'active') {
-        setActiveHoldings(activeHoldings.filter(i => i.id !== draggedItem.id));
         setWatchlist([...watchlist, { ...draggedItem, type: 'watch', change: '0.0%' }]);
-
-        // Add to DB watchlist
         await addToWatchlist(viewId, draggedItem.symbol);
       }
       await refreshAllData();
@@ -108,10 +121,13 @@ const Portfolio = () => {
     setDraggedItem(null);
   };
 
-  const allocationData = activeHoldings.length > 0 ? activeHoldings.map(h => ({
-    name: h.symbol,
-    value: h.quantity * h.currentPrice
-  })) : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
+  const allocationData = activeHoldings.length > 0 ? activeHoldings.map(h => {
+    const price = h.current_price ?? h.currentPrice ?? 0;
+    return {
+      name: h.symbol,
+      value: h.quantity * price
+    };
+  }) : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
 
   if (loading) {
     return (
@@ -136,7 +152,7 @@ const Portfolio = () => {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
             <h2 className="text-3xl font-black text-slate-900 leading-none">
-              ₹{((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+              INR {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
           <button
@@ -145,6 +161,13 @@ const Portfolio = () => {
           >
             <Plus size={18} />
             Deposit
+          </button>
+          <button
+            onClick={() => setShowWithdrawModal(true)}
+            className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-lg shadow-slate-200/40"
+          >
+            <ArrowDownRight size={18} />
+            Withdraw
           </button>
           <Link to="/trading" className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-slate-900/20">
             <Zap size={18} fill="currentColor" />
@@ -177,7 +200,7 @@ const Portfolio = () => {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (INR)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">INR </span>
                   <input
                     type="number"
                     value={depositAmount}
@@ -205,6 +228,64 @@ const Portfolio = () => {
               >
                 {depositing ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />}
                 {depositing ? 'Securing Funds...' : 'Execute Deposit'}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-900 to-slate-600" />
+            <button
+              onClick={() => !withdrawing && setShowWithdrawModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-900 shadow-inner">
+                <ArrowDownRight size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Withdraw Capital</h3>
+              <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Cash-out from Virtual Vault</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Withdraw Amount (INR)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">INR</span>
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(parseInt(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-xl font-black text-slate-900 focus:ring-4 focus:ring-slate-200 transition-all outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="opacity-60">Processing Time</span>
+                  <span className="text-primary font-bold">Instant</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="opacity-60">Compliance Check</span>
+                  <span className="text-green-400">PASS</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleWithdraw}
+                disabled={withdrawing}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
+              >
+                {withdrawing ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />}
+                {withdrawing ? 'Securing Withdrawal...' : 'Execute Withdraw'}
               </button>
             </div>
           </Card>
@@ -245,7 +326,7 @@ const Portfolio = () => {
                     <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
                     <div>
                       <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">₹{stock.currentPrice.toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">INR {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -292,7 +373,7 @@ const Portfolio = () => {
                     <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
                     {isManual && <GripVertical className="text-slate-300" size={12} />}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-mono">₹{stock.currentPrice.toFixed(2)}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">INR {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
                 </div>
               </Link>
             ))}
@@ -433,3 +514,4 @@ const Portfolio = () => {
 };
 
 export default Portfolio;
+

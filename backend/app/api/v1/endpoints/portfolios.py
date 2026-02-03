@@ -77,6 +77,26 @@ def deposit_funds(
     db.refresh(portfolio)
     return portfolio
 
+@router.post("/withdraw", response_model=schemas.PortfolioResponse)
+def withdraw_funds(
+    *,
+    db: Session = Depends(get_db),
+    withdraw_in: schemas.WithdrawRequest,
+) -> Any:
+    """
+    Withdraw funds from a user's portfolio.
+    """
+    portfolio = db.query(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == withdraw_in.user_id).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    if portfolio.cash_balance < withdraw_in.amount:
+        raise HTTPException(status_code=400, detail="Insufficient cash balance")
+    portfolio.cash_balance -= withdraw_in.amount
+    db.add(portfolio)
+    db.commit()
+    db.refresh(portfolio)
+    return portfolio
+
 @router.get("/holdings", response_model=List[schemas.HoldingResponse])
 def get_holdings(
     *,

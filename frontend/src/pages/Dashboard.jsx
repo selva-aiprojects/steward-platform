@@ -16,7 +16,7 @@ import { useAppData } from "../context/AppDataContext";
 import { MarketTicker } from "../components/MarketTicker";
 
 export function Dashboard() {
-    const { user, selectedUser, setSelectedUser } = useUser();
+    const { user, selectedUser, setSelectedUser, isAdmin } = useUser();
     const {
         summary,
         trades: recentTrades,
@@ -59,8 +59,8 @@ export function Dashboard() {
     // For now, I'll keep chart data local but fetched on mount/change
     useEffect(() => {
         const loadChart = async () => {
-            const viewId = selectedUser?.id || (user?.role === 'ADMIN' ? null : user?.id);
-            if (!viewId && user?.role !== 'ADMIN') return;
+            const viewId = selectedUser?.id || (isAdmin ? null : user?.id);
+            if (!viewId && !isAdmin) return;
             try {
                 const historyData = await fetchPortfolioHistory(viewId);
                 setChartData(historyData.length > 0 ? historyData : [
@@ -81,7 +81,7 @@ export function Dashboard() {
             const result = await depositFunds(viewId, 1000); // Quick $1000
             if (result) {
                 await refreshAllData();
-                alert("Quick Deposit of ₹1,000 successful.");
+                alert("Quick Deposit of INR 1,000 successful.");
             }
         } catch (err) {
             console.error("Quick deposit failed:", err);
@@ -93,7 +93,7 @@ export function Dashboard() {
     const metrics = [
         {
             label: user?.role === 'BUSINESS_OWNER' ? 'Total Managed Assets' : 'Total Equity',
-            value: `₹${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
+            value: `INR ${((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}`,
             change: summary?.win_rate ? `+${(summary.win_rate * 0.15).toFixed(1)}%` : '+0.0%',
             icon: BarChart2,
             color: 'text-primary',
@@ -101,7 +101,7 @@ export function Dashboard() {
         },
         {
             label: 'Ready Capital',
-            value: summary ? `₹${(summary.cash_balance || 0).toLocaleString()}` : '₹0',
+            value: summary ? `INR ${(summary.cash_balance || 0).toLocaleString()}` : 'INR 0',
             change: socketStatus === 'connected' ? 'SECURE' : 'OFFLINE',
             icon: DollarSign,
             color: 'text-indigo-600',
@@ -118,7 +118,7 @@ export function Dashboard() {
         },
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
-            value: `₹${(summary?.invested_amount || 0).toLocaleString()}`,
+            value: `INR ${(summary?.invested_amount || 0).toLocaleString()}`,
             change: summary?.positions_count ? `${summary.positions_count} positions` : 'No active positions',
             icon: Activity,
             color: 'text-indigo-600',
@@ -133,12 +133,12 @@ export function Dashboard() {
             link: '/reports'
         },
         {
-            label: user?.role === 'ADMIN' ? 'Live System Load' : 'System Health',
-            value: user?.role === 'ADMIN' && adminTelemetry ? adminTelemetry.system_load : (socketStatus === 'connected' ? '100%' : 'OFFLINE'),
-            change: user?.role === 'ADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : (exchangeStatus?.status || 'ONLINE'),
+            label: user?.role === 'SUPERADMIN' ? 'Live System Load' : 'System Health',
+            value: user?.role === 'SUPERADMIN' && adminTelemetry ? adminTelemetry.system_load : (socketStatus === 'connected' ? '100%' : 'OFFLINE'),
+            change: user?.role === 'SUPERADMIN' && adminTelemetry ? `Active Users: ${adminTelemetry.active_users}` : (exchangeStatus?.status || 'ONLINE'),
             icon: Shield,
             color: 'text-green-600',
-            link: user?.role === 'ADMIN' ? '/users' : '/'
+            link: user?.role === 'SUPERADMIN' ? '/users' : '/'
         },
     ];
 
@@ -158,19 +158,19 @@ export function Dashboard() {
                 <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
-                            {user?.role === 'ADMIN' ? (selectedUser ? `Auditing: ${selectedUser.name}` : 'Platform Executive Control') :
+                            {user?.role === 'SUPERADMIN' ? (selectedUser ? `Auditing: ${selectedUser.name || selectedUser.full_name || selectedUser.email}` : 'Platform Executive Control') :
                                 user?.role === 'AUDITOR' ? 'Compliance Oversight' :
                                     user?.role === 'BUSINESS_OWNER' ? 'Executive Dashboard' :
                                         `Welcome, ${user?.name || 'Investor'}`}
                         </h1>
                         <div className="flex items-center gap-2 mt-2">
-                            <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'ADMIN' ? 'bg-indigo-500' :
+                            <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'SUPERADMIN' ? 'bg-indigo-500' :
                                 user?.role === 'AUDITOR' ? 'bg-amber-500' :
                                     user?.role === 'BUSINESS_OWNER' ? 'bg-purple-500' :
                                         'bg-primary'
                                 }`} />
                             <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
-                                {user?.role === 'ADMIN' ? (selectedUser ? 'User Inspection Mode: ACTIVE' : 'Global System Oversight: ACTIVE') :
+                                {user?.role === 'SUPERADMIN' ? (selectedUser ? 'User Inspection Mode: ACTIVE' : 'Global System Oversight: ACTIVE') :
                                     user?.role === 'AUDITOR' ? 'Audit Logging: ENABLED' :
                                         user?.role === 'BUSINESS_OWNER' ? 'Revenue Monitoring: PASSIVE' :
                                             'Personal Wealth Agent: ACTIVE'}
@@ -178,7 +178,7 @@ export function Dashboard() {
                         </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                        {user?.role === 'ADMIN' && (
+                        {isAdmin && (
                             <div className="flex items-center gap-3 bg-white border border-slate-200 p-1.5 rounded-xl shadow-sm">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Scope</span>
                                 <select
@@ -190,14 +190,19 @@ export function Dashboard() {
                                             setSelectedUser(null);
                                         } else {
                                             const u = allUsers.find(user => user.id === parseInt(val));
-                                            if (u) setSelectedUser(u);
+                                            if (u) {
+                                                setSelectedUser({
+                                                    ...u,
+                                                    name: u.full_name || u.name || u.email
+                                                });
+                                            }
                                         }
                                     }}
                                 >
                                     <option value="GLOBAL">Platform Summary</option>
                                     <optgroup label="Active Users">
                                         {allUsers.map(u => (
-                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                            <option key={u.id} value={u.id}>{u.full_name || u.name || u.email}</option>
                                         ))}
                                     </optgroup>
                                 </select>
@@ -378,7 +383,7 @@ export function Dashboard() {
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
-                                        tickFormatter={(val) => `$${val}`}
+                                        tickFormatter={(val) => `INR ${val}`}
                                     />
                                     <Tooltip
                                         contentStyle={{
@@ -539,7 +544,7 @@ export function Dashboard() {
                         <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Macro Indicators</h3>
                         <div className="space-y-2 text-xs font-bold text-slate-700">
                             <div className="flex justify-between"><span>USD/INR</span><span>{macroIndicators?.usd_inr ?? '--'}</span></div>
-                            <div className="flex justify-between"><span>Gold (₹/10g)</span><span>{macroIndicators?.gold ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>Gold (INR/10g)</span><span>{macroIndicators?.gold ?? '--'}</span></div>
                             <div className="flex justify-between"><span>Crude (USD)</span><span>{macroIndicators?.crude ?? '--'}</span></div>
                             <div className="flex justify-between"><span>10Y Yield</span><span>{macroIndicators?.["10y_yield"] ?? '--'}%</span></div>
                         </div>
@@ -602,3 +607,4 @@ export function Dashboard() {
         </div>
     );
 }
+
