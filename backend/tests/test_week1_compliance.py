@@ -42,6 +42,7 @@ def seed_user():
                 allowed_sectors="ALL",
                 is_active=True,
                 is_superuser=True,
+                role="SUPERADMIN",
             )
             db.add(user)
             db.commit()
@@ -102,7 +103,10 @@ async def test_high_value_trade_requires_approval():
         approval_id = data.get("approval_id")
         assert approval_id is not None
 
-        approve = await client.post(f"/api/v1/approvals/{approval_id}/approve?approver_id=1")
+        approve = await client.post(
+            f"/api/v1/approvals/{approval_id}/approve?approver_id=1",
+            headers={"X-User-Id": "1", "X-User-Role": "SUPERADMIN"},
+        )
         assert approve.status_code == 200
         approve_data = approve.json()
         assert approve_data["status"] == "EXECUTED"

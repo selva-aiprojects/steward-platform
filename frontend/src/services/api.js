@@ -7,6 +7,21 @@ const API_PREFIX = '/api/v1';
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
 
+const getAuthHeaders = () => {
+    try {
+        const raw = localStorage.getItem('stocksteward_user');
+        if (!raw) return {};
+        const user = JSON.parse(raw);
+        if (!user?.id) return {};
+        return {
+            'X-User-Id': String(user.id),
+            'X-User-Role': user.role || 'TRADER'
+        };
+    } catch (error) {
+        return {};
+    }
+};
+
 export const socket = io(BASE_URL, {
     transports: ['websocket'],
     autoConnect: true,
@@ -30,7 +45,9 @@ export const checkApiHealth = async () => {
 
 export const fetchUsers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`, {
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error('Failed to fetch users');
         return await response.json();
     } catch (error) {
@@ -41,7 +58,9 @@ export const fetchUsers = async () => {
 
 export const fetchUser = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`);
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error('Failed to fetch user');
         return await response.json();
     } catch (error) {
@@ -54,7 +73,7 @@ export const updateUser = async (userId, data) => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(data)
         });
         if (!response.ok) throw new Error('Failed to update user');
@@ -236,7 +255,7 @@ export const fetchExchangeStatus = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' };
+        return { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE/MCX' };
     }
 };
 
@@ -372,5 +391,3 @@ export const fetchMarketResearch = async () => {
         return null;
     }
 };
-
-

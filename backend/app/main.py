@@ -38,15 +38,15 @@ mock_gainers = [
     {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2450.00, 'change': '+1.20%'},
     {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': '+0.85%'},
     {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': '+2.10%'},
-    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1680.00, 'change': '+1.45%'},
-    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 940.00, 'change': '+1.15%'}
+    {'symbol': 'SENSEX', 'exchange': 'BSE', 'price': 72420.00, 'change': '+0.55%'},
+    {'symbol': 'GOLD', 'exchange': 'MCX', 'price': 62450.00, 'change': '+0.70%'}
 ]
 mock_losers = [
     {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.00, 'change': '-1.10%'},
     {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.00, 'change': '-2.30%'},
-    {'symbol': 'ONGC', 'exchange': 'NSE', 'price': 185.00, 'change': '-0.95%'},
     {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': '-1.50%'},
-    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 440.00, 'change': '-0.75%'}
+    {'symbol': 'CRUDEOIL', 'exchange': 'MCX', 'price': 6940.00, 'change': '-0.90%'},
+    {'symbol': 'BOM500002', 'exchange': 'BSE', 'price': 1790.00, 'change': '-0.45%'}
 ]
 
 @sio.event

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Any, Dict
 import json
 from app.core.database import get_db
+from app.core.rbac import get_current_user, require_roles
 from app import models, schemas
 from app.services.trade_service import TradeService
 
@@ -16,6 +17,7 @@ def list_approvals(
     user_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
+    current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER", "AUDITOR"])),
 ) -> Any:
     query = db.query(models.trade_approval.TradeApproval)
     if status:
@@ -30,6 +32,7 @@ async def approve_trade(
     approval_id: int,
     approver_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
     approval = db.query(models.trade_approval.TradeApproval).filter(models.trade_approval.TradeApproval.id == approval_id).first()
     if not approval:
@@ -65,6 +68,7 @@ def reject_trade(
     reason: Optional[str] = None,
     approver_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
     approval = db.query(models.trade_approval.TradeApproval).filter(models.trade_approval.TradeApproval.id == approval_id).first()
     if not approval:

@@ -30,6 +30,23 @@ def seed_user():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        admin = db.query(User).filter(User.id == 1).first()
+        if not admin:
+            admin = User(
+                id=1,
+                email="admin@stocksteward.ai",
+                full_name="Regression Admin",
+                hashed_password=get_password_hash("admin123"),
+                risk_tolerance="LOW",
+                trading_mode="AUTO",
+                allowed_sectors="ALL",
+                is_active=True,
+                is_superuser=True,
+                role="SUPERADMIN",
+            )
+            db.add(admin)
+            db.commit()
+
         user = db.query(User).filter(User.id == 10).first()
         if not user:
             user = User(
@@ -109,10 +126,10 @@ async def test_user_role_validation():
             "full_name": "Bad Role",
             "password": "pass123",
             "role": "ROOT",
-        })
+        }, headers={"X-User-Id": "1", "X-User-Role": "SUPERADMIN"})
         assert create.status_code == 400
 
         update = await client.put("/api/v1/users/10", json={
             "role": "ROOT",
-        })
+        }, headers={"X-User-Id": "1", "X-User-Role": "SUPERADMIN"})
         assert update.status_code == 400

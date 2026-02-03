@@ -4,6 +4,7 @@ from typing import Any, List
 from app import schemas, models
 from app.core.database import get_db
 from app.core.security import get_password_hash
+from app.core.rbac import get_current_user, require_roles
 
 router = APIRouter()
 ALLOWED_ROLES = {"SUPERADMIN", "BUSINESS_OWNER", "TRADER", "AUDITOR"}
@@ -13,6 +14,7 @@ def create_user(
     *,
     db: Session = Depends(get_db),
     user_in: schemas.UserCreate,
+    current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
     """
     Create new user.
@@ -48,6 +50,7 @@ def read_users(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
+    current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
     """
     Retrieve users.
@@ -60,10 +63,14 @@ def read_user(
     *,
     db: Session = Depends(get_db),
     user_id: int,
+    current_user: models.user.User = Depends(get_current_user),
 ) -> Any:
     """
     Get a specific user by id.
     """
+    if current_user.role not in ["SUPERADMIN", "BUSINESS_OWNER", "AUDITOR"] and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Insufficient privileges")
+
     user = db.query(models.user.User).filter(models.user.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -75,6 +82,7 @@ def update_user(
     db: Session = Depends(get_db),
     user_id: int,
     user_in: schemas.UserUpdate,
+    current_user: models.user.User = Depends(get_current_user),
 ) -> Any:
     """
     Update a user.
@@ -83,6 +91,11 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    if current_user.role == "TRADER" and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Insufficient privileges")
+    if current_user.role == "AUDITOR":
+        raise HTTPException(status_code=403, detail="Read-only role")
+
     # Check if trading mode is changing
     if user_in.trading_mode and user_in.trading_mode != user.trading_mode:
         activity = models.activity.Activity(
@@ -93,6 +106,11 @@ def update_user(
         db.add(activity)
 
     update_data = user_in.model_dump(exclude_unset=True)
+    if current_user.role == "TRADER":
+        allowed_fields = {"trading_mode"}
+        disallowed = set(update_data.keys()) - allowed_fields
+        if disallowed:
+            raise HTTPException(status_code=403, detail="Cannot modify restricted fields")
     if "role" in update_data:
         if update_data["role"] not in ALLOWED_ROLES:
             raise HTTPException(status_code=400, detail="Invalid role")

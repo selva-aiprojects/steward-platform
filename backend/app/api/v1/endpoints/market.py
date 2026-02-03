@@ -13,7 +13,7 @@ def get_market_status() -> Any:
     return {
         "status": "ONLINE",
         "latency": "24ms",
-        "exchange": "NSE" # Default to NSE as requested earlier
+        "exchange": "NSE/BSE/MCX"
     }
 
 @router.get("/movers")
