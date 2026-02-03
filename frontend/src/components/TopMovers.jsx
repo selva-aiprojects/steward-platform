@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MoveUp, MoveDown, Loader2, Activity } from "lucide-react";
+import { MoveUp, MoveDown, Loader2 } from "lucide-react";
 import { socket, fetchMarketMovers } from "../services/api";
 
 export function TopMovers() {
@@ -27,8 +27,10 @@ export function TopMovers() {
             setMovers(data);
         });
 
+        const interval = setInterval(loadInitial, 15000);
         return () => {
             socket.off('market_movers');
+            clearInterval(interval);
         };
     }, []);
 
@@ -46,7 +48,8 @@ export function TopMovers() {
                         </div>
                         <div>
                             <p className="font-black text-slate-900 text-xs">{item.symbol}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">₹{item.price}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">INR {item.price}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{item.exchange || 'NSE'}</p>
                         </div>
                     </div>
                     <div className={`text-xs font-black ${type === 'UP' ? 'text-green-600' : 'text-red-500'}`}>
@@ -64,7 +67,7 @@ export function TopMovers() {
                     <h3 className="font-heading font-black text-slate-900 text-base">Market Movers</h3>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-ping" />
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Live NSE Feed</span>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Live Market Feed</span>
                     </div>
                 </div>
                 <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -88,7 +91,7 @@ export function TopMovers() {
             {loading ? (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-400">
                     <Loader2 className="animate-spin mb-2" size={20} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Scanning NSE...</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Scanning market...</span>
                 </div>
             ) : (
                 <div className="animate-in fade-in duration-500">
@@ -98,3 +101,4 @@ export function TopMovers() {
         </div>
     );
 }
+

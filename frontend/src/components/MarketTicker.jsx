@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Zap } from 'lucide-react';
-import { socket } from '../services/api';
+import { socket, fetchMarketMovers } from '../services/api';
 import { useAppData } from '../context/AppDataContext';
 
 export function MarketTicker() {
@@ -33,6 +33,27 @@ export function MarketTicker() {
         }));
         setStocks(seed);
     }, [marketMovers, stocks.length]);
+
+    useEffect(() => {
+        const poll = async () => {
+            if (stocks.length > 0) return;
+            const data = await fetchMarketMovers();
+            if (data?.gainers) {
+                const seed = [...data.gainers, ...data.losers].map(m => ({
+                    symbol: m.symbol,
+                    exchange: m.exchange || 'NSE',
+                    price: m.price || m.last_price || 0,
+                    change: m.change || 0
+                }));
+                if (seed.length) {
+                    setStocks(seed.slice(0, 15));
+                }
+            }
+        };
+        const interval = setInterval(poll, 10000);
+        poll();
+        return () => clearInterval(interval);
+    }, [stocks.length]);
 
     if (stocks.length === 0) return null;
 

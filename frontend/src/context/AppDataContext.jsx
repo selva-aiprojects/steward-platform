@@ -59,10 +59,18 @@ export const AppDataProvider = ({ children }) => {
             ]);
 
             setSummary(sumData);
-            setHoldings(Array.isArray(holdingsData) ? holdingsData : []);
-            setWatchlist(Array.isArray(watchlistData) ? watchlistData : []);
-            setTrades(Array.isArray(tradesData) ? tradesData : []);
-            setProjections(Array.isArray(projData) ? projData : []);
+            if (!hasLoaded || (Array.isArray(holdingsData) && holdingsData.length > 0)) {
+                setHoldings(Array.isArray(holdingsData) ? holdingsData : []);
+            }
+            if (!hasLoaded || (Array.isArray(watchlistData) && watchlistData.length > 0)) {
+                setWatchlist(Array.isArray(watchlistData) ? watchlistData : []);
+            }
+            if (!hasLoaded || (Array.isArray(tradesData) && tradesData.length > 0)) {
+                setTrades(Array.isArray(tradesData) ? tradesData : []);
+            }
+            if (!hasLoaded || (Array.isArray(projData) && projData.length > 0)) {
+                setProjections(Array.isArray(projData) ? projData : []);
+            }
 
             // Update User Context with fresh data from backend
             if (viewId === user?.id) {
@@ -87,11 +95,21 @@ export const AppDataProvider = ({ children }) => {
 
             setExchangeStatus(statusData);
             setMarketResearch(researchData);
-            setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);
-            setMarketNews(Array.isArray(newsData) ? newsData : []);
-            setOptionsSnapshot(Array.isArray(optionsData) ? optionsData : []);
-            setOrderBook(depthData || { bids: [], asks: [] });
-            setMacroIndicators(macroData);
+            if (!hasLoaded || (Array.isArray(heatmapData) && heatmapData.length > 0)) {
+                setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);
+            }
+            if (!hasLoaded || (Array.isArray(newsData) && newsData.length > 0)) {
+                setMarketNews(Array.isArray(newsData) ? newsData : []);
+            }
+            if (!hasLoaded || (Array.isArray(optionsData) && optionsData.length > 0)) {
+                setOptionsSnapshot(Array.isArray(optionsData) ? optionsData : []);
+            }
+            if (!hasLoaded || depthData) {
+                setOrderBook(depthData || { bids: [], asks: [] });
+            }
+            if (!hasLoaded || macroData) {
+                setMacroIndicators(macroData);
+            }
 
             if (isAdmin || user?.is_superuser) {
                 const users = await fetchUsers();
