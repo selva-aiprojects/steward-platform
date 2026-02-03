@@ -150,6 +150,12 @@ export function Dashboard() {
         );
     }
 
+    const sortedTrades = [...(recentTrades || [])].sort((a, b) => {
+        const at = new Date(a.timestamp || 0).getTime();
+        const bt = new Date(b.timestamp || 0).getTime();
+        return bt - at;
+    });
+
     return (
         <div data-testid="dashboard-container" className="flex flex-col min-h-screen animate-in fade-in slide-in-from-top-4 duration-700 pb-4">
             <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
@@ -422,8 +428,8 @@ export function Dashboard() {
                             </div>
                             <Settings size={14} className="text-slate-400" />
                         </div>
-                        <div className="divide-y divide-slate-50">
-                            {recentTrades.map((log, i) => (
+                        <div className="divide-y divide-slate-50 max-h-[420px] overflow-y-auto pr-2">
+                            {sortedTrades.map((log, i) => (
                                 <Link to="/reports" key={i}>
                                     <div className="p-5 flex items-start justify-between gap-4 hover:bg-indigo-50/50 transition-colors group">
                                         <div className="flex gap-4">
