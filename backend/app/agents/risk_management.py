@@ -70,6 +70,7 @@ class RiskManagementAgent(BaseAgent):
         # --- 3. RULE CHECKS ---
         
         rejection_reason = None
+        required_cash = None
         
         # Rule A: Max Trade Value / Position Sizing check (Capital at Risk)
         # Simplified: Risking the entire trade value? Or calculating risk based on stop loss?
@@ -91,6 +92,7 @@ class RiskManagementAgent(BaseAgent):
         # Rule C: Sanity Use of Cash
         elif estimated_total > current_cash:
             rejection_reason = "Insufficient cash balance."
+            required_cash = round(estimated_total - current_cash, 2)
 
         # Rule D: Industry/Sector Restrictions (FR-15)
         elif not self.check_sector_restriction(proposal.get("symbol"), user_profile.get("allowed_sectors", "ALL")):
@@ -103,6 +105,7 @@ class RiskManagementAgent(BaseAgent):
                     "approved": False,
                     "risk_score": 100,
                     "reason": rejection_reason,
+                    "required_cash": required_cash if rejection_reason == "Insufficient cash balance." else None,
                     "generated_at": str(context.get("trace_id"))
                 }
             }

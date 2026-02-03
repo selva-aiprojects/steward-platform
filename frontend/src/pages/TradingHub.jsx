@@ -114,6 +114,13 @@ export function TradingHub() {
             };
 
             const result = await executeTrade(user.id, tradeData);
+            if (result?.status === 'INSUFFICIENT_FUNDS') {
+                const required = result.required_cash || 0;
+                setTopupAmount(Math.ceil(required));
+                setShowTopupModal(true);
+                setExecuting(false);
+                return;
+            }
             if (result) {
                 await refreshAllData();
                 const updatedHoldings = await fetchHoldings(user.id);

@@ -138,6 +138,15 @@ class OrchestratorAgent(BaseAgent):
             # CRITICAL: STOP IF RISK REJECTS
             risk_assessment = context.get("risk_assessment", {})
             if not risk_assessment.get("approved"):
+                if risk_assessment.get("reason") == "Insufficient cash balance.":
+                    return {
+                        "status": "INSUFFICIENT_FUNDS",
+                        "reason": "Insufficient cash balance.",
+                        "trace_id": trace_id,
+                        "risk_score": risk_assessment.get("risk_score"),
+                        "required_cash": risk_assessment.get("required_cash"),
+                        "trace": trace
+                    }
                 return {
                     "status": "REJECTED",
                     "reason": f"Risk Veto: {risk_assessment.get('reason')}",
