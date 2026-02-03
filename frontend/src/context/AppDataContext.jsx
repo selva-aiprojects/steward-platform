@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch } from '../services/api';
+import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators } from '../services/api';
 import { useUser } from './UserContext';
 
 const AppDataContext = createContext();
@@ -15,6 +15,11 @@ export const AppDataProvider = ({ children }) => {
     const [projections, setProjections] = useState([]);
     const [marketMovers, setMarketMovers] = useState([]);
     const [marketResearch, setMarketResearch] = useState(null);
+    const [sectorHeatmap, setSectorHeatmap] = useState([]);
+    const [marketNews, setMarketNews] = useState([]);
+    const [optionsSnapshot, setOptionsSnapshot] = useState([]);
+    const [orderBook, setOrderBook] = useState({ bids: [], asks: [] });
+    const [macroIndicators, setMacroIndicators] = useState(null);
     const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
     const [stewardPrediction, setStewardPrediction] = useState({
         prediction: "Initializing market intelligence...",
@@ -33,7 +38,7 @@ export const AppDataProvider = ({ children }) => {
         if (!viewId) return;
         setLoading(true);
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData, researchData] = await Promise.all([
+            const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
@@ -42,7 +47,12 @@ export const AppDataProvider = ({ children }) => {
                 fetchMarketMovers(),
                 fetchExchangeStatus(),
                 fetchUser(viewId),
-                fetchMarketResearch()
+                fetchMarketResearch(),
+                fetchSectorHeatmap(),
+                fetchMarketNews(),
+                fetchOptionsSnapshot(),
+                fetchOrderBookDepth(),
+                fetchMacroIndicators()
             ]);
 
             setSummary(sumData);
@@ -68,6 +78,11 @@ export const AppDataProvider = ({ children }) => {
 
             setExchangeStatus(statusData);
             setMarketResearch(researchData);
+            setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);
+            setMarketNews(Array.isArray(newsData) ? newsData : []);
+            setOptionsSnapshot(Array.isArray(optionsData) ? optionsData : []);
+            setOrderBook(depthData || { bids: [], asks: [] });
+            setMacroIndicators(macroData);
 
             if (user?.role === 'ADMIN' || user?.is_superuser) {
                 const users = await fetchUsers();
@@ -173,6 +188,11 @@ export const AppDataProvider = ({ children }) => {
             allUsers,
             adminTelemetry,
             marketResearch,
+            sectorHeatmap,
+            marketNews,
+            optionsSnapshot,
+            orderBook,
+            macroIndicators,
             loading,
             refreshAllData,
             toggleTradingMode

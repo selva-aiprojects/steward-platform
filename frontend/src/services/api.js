@@ -282,6 +282,56 @@ export const fetchMarketMovers = async () => {
     }
 };
 
+export const fetchSectorHeatmap = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/heatmap`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return [];
+    }
+};
+
+export const fetchMarketNews = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/news`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return [];
+    }
+};
+
+export const fetchOptionsSnapshot = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/options`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return [];
+    }
+};
+
+export const fetchOrderBookDepth = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/depth`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return { bids: [], asks: [] };
+    }
+};
+
+export const fetchMacroIndicators = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/macro`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
+};
+
 export const fetchMarketResearch = async () => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/ai/market-research`);

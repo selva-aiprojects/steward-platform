@@ -24,6 +24,11 @@ export function Dashboard() {
         exchangeStatus,
         stewardPrediction,
         marketResearch,
+        sectorHeatmap,
+        marketNews,
+        optionsSnapshot,
+        orderBook,
+        macroIndicators,
         adminTelemetry,
         loading,
         allUsers,
@@ -496,6 +501,84 @@ export function Dashboard() {
                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${w.bias === 'BUY' ? 'bg-green-100 text-green-700' : w.bias === 'SELL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
                                             {w.bias}
                                         </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Sector Heatmap</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            {sectorHeatmap.map((s, i) => (
+                                <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-slate-700 uppercase">{s.sector}</span>
+                                    <span className={`text-[10px] font-black ${s.score >= 0 ? 'text-green-600' : 'text-red-500'}`}>{s.score}%</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Live News</h3>
+                        <div className="space-y-3">
+                            {marketNews.map((n, i) => (
+                                <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-800 flex items-center justify-between">
+                                    <span>{n.headline}</span>
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${n.impact === 'HIGH' ? 'bg-red-100 text-red-700' : n.impact === 'MEDIUM' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                                        {n.impact}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Macro Indicators</h3>
+                        <div className="space-y-2 text-xs font-bold text-slate-700">
+                            <div className="flex justify-between"><span>USD/INR</span><span>{macroIndicators?.usd_inr ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>Gold (₹/10g)</span><span>{macroIndicators?.gold ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>Crude (USD)</span><span>{macroIndicators?.crude ?? '--'}</span></div>
+                            <div className="flex justify-between"><span>10Y Yield</span><span>{macroIndicators?.["10y_yield"] ?? '--'}%</span></div>
+                        </div>
+                    </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Options Snapshot</h3>
+                        <div className="space-y-3">
+                            {optionsSnapshot.map((o, i) => (
+                                <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-800 flex items-center justify-between">
+                                    <span>{o.symbol}</span>
+                                    <span>IV {o.iv}%</span>
+                                    <span className={`${o.oi_change >= 0 ? 'text-green-600' : 'text-red-500'}`}>{o.oi_change}% OI</span>
+                                    <span>PC {o.put_call}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Order Book Depth</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
+                                {orderBook?.bids?.map((b, i) => (
+                                    <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
+                                        <span>{b.price}</span>
+                                        <span>{b.qty}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
+                                {orderBook?.asks?.map((a, i) => (
+                                    <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
+                                        <span>{a.price}</span>
+                                        <span>{a.qty}</span>
                                     </div>
                                 ))}
                             </div>
