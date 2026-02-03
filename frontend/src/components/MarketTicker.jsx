@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { socket } from '../services/api';
+import { useAppData } from '../context/AppDataContext';
 
 export function MarketTicker() {
     const [stocks, setStocks] = useState([]);
+    const { marketMovers } = useAppData();
 
     useEffect(() => {
         const handleUpdate = (data) => {
@@ -19,6 +21,18 @@ export function MarketTicker() {
         socket.on('market_update', handleUpdate);
         return () => socket.off('market_update', handleUpdate);
     }, []);
+
+    useEffect(() => {
+        if (stocks.length > 0) return;
+        if (!marketMovers || marketMovers.length === 0) return;
+        const seed = marketMovers.slice(0, 10).map(m => ({
+            symbol: m.symbol,
+            exchange: m.exchange || 'NSE',
+            price: m.price || m.last_price || 0,
+            change: m.change || 0
+        }));
+        setStocks(seed);
+    }, [marketMovers, stocks.length]);
 
     if (stocks.length === 0) return null;
 

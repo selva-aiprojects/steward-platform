@@ -35,7 +35,7 @@ export const AppDataProvider = ({ children }) => {
             const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
-                fetchWatchlist(), // Watchlist usually global or user specific? api.js doesn't take userId
+                fetchWatchlist(viewId),
                 fetchTrades(viewId),
                 fetchProjections(),
                 fetchMarketMovers(),
@@ -81,6 +81,14 @@ export const AppDataProvider = ({ children }) => {
         if (viewId) {
             refreshAllData();
         }
+    }, [viewId, refreshAllData]);
+
+    useEffect(() => {
+        if (!viewId) return;
+        const interval = setInterval(() => {
+            refreshAllData();
+        }, 15000);
+        return () => clearInterval(interval);
     }, [viewId, refreshAllData]);
 
     useEffect(() => {

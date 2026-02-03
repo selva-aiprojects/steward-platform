@@ -173,9 +173,10 @@ export const fetchHoldings = async (userId) => {
     }
 };
 
-export const fetchWatchlist = async () => {
+export const fetchWatchlist = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/`);
+        const url = userId ? `${BASE_URL}${API_PREFIX}/watchlist/?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/watchlist/`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch watchlist');
         return await response.json();
     } catch (error) {

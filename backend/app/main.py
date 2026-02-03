@@ -35,18 +35,18 @@ last_steward_prediction = {"prediction": "Initializing...", "history": []}
 
 # Mock data for fallback mode
 mock_gainers = [
-    {'symbol': 'RELIANCE', 'price': 2450.00, 'change': '+1.20%'},
-    {'symbol': 'TCS', 'price': 3820.00, 'change': '+0.85%'},
-    {'symbol': 'INFY', 'price': 1540.00, 'change': '+2.10%'},
-    {'symbol': 'HDFCBANK', 'price': 1680.00, 'change': '+1.45%'},
-    {'symbol': 'ICICIBANK', 'price': 940.00, 'change': '+1.15%'}
+    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2450.00, 'change': '+1.20%'},
+    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': '+0.85%'},
+    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': '+2.10%'},
+    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1680.00, 'change': '+1.45%'},
+    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 940.00, 'change': '+1.15%'}
 ]
 mock_losers = [
-    {'symbol': 'WIPRO', 'price': 420.00, 'change': '-1.10%'},
-    {'symbol': 'TATASTEEL', 'price': 115.00, 'change': '-2.30%'},
-    {'symbol': 'ONGC', 'price': 185.00, 'change': '-0.95%'},
-    {'symbol': 'SBIN', 'price': 580.00, 'change': '-1.50%'},
-    {'symbol': 'ITC', 'price': 440.00, 'change': '-0.75%'}
+    {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.00, 'change': '-1.10%'},
+    {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.00, 'change': '-2.30%'},
+    {'symbol': 'ONGC', 'exchange': 'NSE', 'price': 185.00, 'change': '-0.95%'},
+    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': '-1.50%'},
+    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 440.00, 'change': '-0.75%'}
 ]
 
 @sio.event
@@ -219,8 +219,15 @@ async def market_feed():
                 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
 
+                mock_watchlist = [
+                    ("NSE", "RELIANCE"), ("NSE", "TCS"), ("NSE", "INFY"),
+                    ("BSE", "SENSEX"), ("BSE", "BOM500002"),
+                    ("MCX", "GOLD"), ("MCX", "SILVER"), ("MCX", "CRUDEOIL")
+                ]
+                exchange, symbol = random.choice(mock_watchlist)
                 update = {
                     'symbol': symbol,
+                    'exchange': exchange,
                     'price': round(random.uniform(100, 1000), 2),
                     'change': round(random.uniform(-5, 5), 2)
                 }
