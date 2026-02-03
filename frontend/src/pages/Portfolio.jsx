@@ -33,6 +33,7 @@ const Portfolio = () => {
   const [withdrawing, setWithdrawing] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState(2000);
+  const [fundStatus, setFundStatus] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const viewId = selectedUser?.id || user?.id;
@@ -63,10 +64,12 @@ const Portfolio = () => {
       if (result) {
         await refreshAllData();
         setShowDepositModal(false);
+        setFundStatus({ type: 'success', msg: `Deposit completed: INR ${depositAmount.toLocaleString()}` });
         alert(`Successfully deposited INR ${depositAmount.toLocaleString()} into your vault.`);
       }
     } catch (err) {
       console.error("Deposit failed:", err);
+      setFundStatus({ type: 'error', msg: 'Deposit failed. Please retry.' });
     } finally {
       setDepositing(false);
     }
@@ -80,10 +83,12 @@ const Portfolio = () => {
       if (result) {
         await refreshAllData();
         setShowWithdrawModal(false);
+        setFundStatus({ type: 'success', msg: `Withdraw completed: INR ${withdrawAmount.toLocaleString()}` });
         alert(`Successfully withdrew INR ${withdrawAmount.toLocaleString()} from your vault.`);
       }
     } catch (err) {
       console.error("Withdraw failed:", err);
+      setFundStatus({ type: 'error', msg: 'Withdraw failed. Please retry.' });
     } finally {
       setWithdrawing(false);
     }
@@ -175,6 +180,11 @@ const Portfolio = () => {
           </Link>
         </div>
       </header>
+      {fundStatus && (
+        <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${fundStatus.type === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'}`}>
+          {fundStatus.msg}
+        </div>
+      )}
 
       {/* Deposit Modal */}
       {showDepositModal && (

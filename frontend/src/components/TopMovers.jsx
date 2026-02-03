@@ -41,6 +41,12 @@ export function TopMovers() {
                     Waiting for Market Data...
                 </div>
             ) : items.map((item, i) => (
+                (() => {
+                    const changeValue = typeof item.change === 'string' ? parseFloat(item.change) : (item.change ?? 0);
+                    const changeLabel = typeof item.change === 'string' && item.change.includes('%')
+                        ? item.change
+                        : `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
+                    return (
                 <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white hover:shadow-sm transition-all border border-slate-100">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${type === 'UP' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
@@ -53,9 +59,11 @@ export function TopMovers() {
                         </div>
                     </div>
                     <div className={`text-xs font-black ${type === 'UP' ? 'text-green-600' : 'text-red-500'}`}>
-                        {type === 'UP' ? '+' : ''}{item.change}%
+                        {changeLabel}
                     </div>
                 </div>
+                    );
+                })()
             ))}
         </div>
     );

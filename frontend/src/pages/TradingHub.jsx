@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, TrendingDown, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2, X, ArrowRight, Activity } from 'lucide-react';
 import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy, socket } from "../services/api";
@@ -16,6 +16,8 @@ export function TradingHub() {
         exchangeStatus,
         stewardPrediction: appStewardPrediction,
         marketResearch,
+        marketMovers,
+        watchlist,
         loading,
         toggleTradingMode: appToggleTradingMode,
         refreshAllData
@@ -88,13 +90,20 @@ export function TradingHub() {
 
     const handleManualTrade = async (action) => {
         if (!user || user.trading_mode !== 'MANUAL') return;
+        if (!orderTicker || orderQty <= 0) {
+            setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
+            setTimeout(() => setTradeStatus(null), 4000);
+            return;
+        }
 
         setExecuting(true);
         try {
+            const normalizedSymbol = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
+            const priceFromMarket = (marketMovers || []).find(m => m.symbol === normalizedSymbol)?.price;
             const tradeData = {
-                symbol: orderTicker,
+                symbol: normalizedSymbol,
                 action: action, // BUY or SELL
-                price: 2450.00, // Mock live price for now
+                price: priceFromMarket || 2450.00, // Mock live price fallback
                 quantity: orderQty,
                 type: 'MANUAL',
                 decision_logic: `User manual override: Explicit ${action} command executed via Trading Hub.`
@@ -125,7 +134,7 @@ export function TradingHub() {
                 name: newStratName,
                 symbol: newStratSymbol,
                 status: 'RUNNING',
-                pnl: '+₹0.00',
+                pnl: '+INR 0.00',
                 trades: '0'
             };
             const result = await launchStrategy(contextUser.id, stratData);
@@ -151,6 +160,43 @@ export function TradingHub() {
     }
 
 
+    const symbolOptions = useMemo(() => {
+        const base = [
+            { symbol: 'RELIANCE', exchange: 'NSE' },
+            { symbol: 'TCS', exchange: 'NSE' },
+            { symbol: 'HDFCBANK', exchange: 'NSE' },
+            { symbol: 'INFY', exchange: 'NSE' },
+            { symbol: 'ICICIBANK', exchange: 'NSE' },
+            { symbol: 'SENSEX', exchange: 'BSE' },
+            { symbol: 'BOM500002', exchange: 'BSE' },
+            { symbol: 'BOM500010', exchange: 'BSE' },
+            { symbol: 'GOLD', exchange: 'MCX' },
+            { symbol: 'SILVER', exchange: 'MCX' },
+            { symbol: 'CRUDEOIL', exchange: 'MCX' },
+            { symbol: 'NATURALGAS', exchange: 'MCX' }
+        ];
+
+        const fromHoldings = (activeHoldings || []).map(h => ({ symbol: h.symbol, exchange: h.exchange || 'NSE' }));
+        const fromWatchlist = (watchlist || []).map(w => ({ symbol: w.symbol, exchange: w.exchange || 'NSE' }));
+        const fromMovers = (marketMovers || []).map(m => ({ symbol: m.symbol, exchange: m.exchange || 'NSE' }));
+        const fromProjections = (projections || []).map(p => ({ symbol: p.ticker, exchange: 'NSE' }));
+
+        const combined = [...base, ...fromHoldings, ...fromWatchlist, ...fromMovers, ...fromProjections];
+        const seen = new Set();
+        return combined.filter(item => {
+            if (!item.symbol) return false;
+            const key = `${item.exchange}:${item.symbol}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [activeHoldings, watchlist, marketMovers, projections]);
+
+    useEffect(() => {
+        if (symbolOptions.length > 0 && !orderTicker) {
+            setOrderTicker(symbolOptions[0].symbol);
+        }
+    }, [symbolOptions, orderTicker]);
 
     return (
         <div data-testid="trading-hub-container" className="pb-4 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -244,10 +290,18 @@ export function TradingHub() {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Asset/Ticker</label>
                                 <input
                                     type="text"
+                                    list="strategy-ticker-options"
                                     value={newStratSymbol}
                                     onChange={(e) => setNewStratSymbol(e.target.value.toUpperCase())}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                                 />
+                                <datalist id="strategy-ticker-options">
+                                    {symbolOptions.map((item) => (
+                                        <option key={`${item.exchange}-strat-${item.symbol}`} value={item.symbol}>
+                                            {item.exchange}
+                                        </option>
+                                    ))}
+                                </datalist>
                             </div>
 
                             <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
@@ -297,13 +351,35 @@ export function TradingHub() {
                     <div data-testid="manual-order-ticket" className={`flex flex-col md:flex-row gap-6 items-end ${user?.trading_mode === 'AUTO' ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
                         <div className="flex-1 w-full space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
-                            <input
-                                type="text"
-                                value={orderTicker}
-                                onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                placeholder="RELIANCE, TCS, INFY..."
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    list="ticker-options"
+                                    value={orderTicker}
+                                    onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                    placeholder="Type or select a symbol"
+                                />
+                                <datalist id="ticker-options">
+                                    {symbolOptions.map((item) => (
+                                        <option key={`${item.exchange}-${item.symbol}`} value={item.symbol}>
+                                            {item.exchange}
+                                        </option>
+                                    ))}
+                                </datalist>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {symbolOptions.slice(0, 6).map((item) => (
+                                    <button
+                                        key={`${item.exchange}-quick-${item.symbol}`}
+                                        type="button"
+                                        onClick={() => setOrderTicker(item.symbol)}
+                                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${orderTicker === item.symbol ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        {item.exchange}:{item.symbol}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="w-full md:w-32 space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units</label>
@@ -341,6 +417,11 @@ export function TradingHub() {
                             </div>
                         )}
                     </div>
+                    {user?.trading_mode === 'AUTO' && (
+                        <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Manual trading is disabled in AUTO mode. Switch to MANUAL to place orders.
+                        </div>
+                    )}
                 </Card>
 
                 <Card className="p-6 border-slate-200 shadow-sm flex flex-col justify-center items-center text-center bg-slate-50 border-dashed">
@@ -523,3 +604,5 @@ export function TradingHub() {
         </div>
     );
 }
+
+
