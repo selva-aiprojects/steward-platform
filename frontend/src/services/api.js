@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 // Fallback to localhost for development
 const RAW_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
-const BASE_URL = RAW_API_URL.replace(/\/api\/v1\/?$/, '');
+const BASE_URL = RAW_API_URL.replace(/\/$/, '');
 const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
