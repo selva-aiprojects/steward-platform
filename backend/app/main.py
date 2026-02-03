@@ -121,25 +121,27 @@ async def market_feed():
                     print("Groq library not installed")
 
             if settings.EXECUTION_MODE == "LIVE_TRADING":
-                # 1. Fetch real quotes for the watchlist
-                quotes = {}
-                for symbol in watchlist:
-                    q = kite_service.get_quote(symbol)
-                    if q:
-                        # Kite quote 'change' is usually pre-calculated
-                        quotes[symbol] = q
+                # 1. Fetch real quotes for the whole watchlist in one bulk call
+                # KiteConnect.quote() returns a dict: {"NSE:SYMBOL": {...}}
+                raw_quotes = kite_service.get_quotes(watchlist)
                 
-                if not quotes:
+                if not raw_quotes:
                     continue
 
+                # Normalize keys for easier processing
+                quotes = {s.split(":")[-1]: q for s, q in raw_quotes.items()}
+
                 # 2. Identify Gainers and Losers
-                sorted_movers = sorted(quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
+                # Filter out any that might have missing change data
+                valid_quotes = {s: q for s, q in quotes.items() if 'change' in q}
+                sorted_movers = sorted(valid_quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
+                
                 top_gainers = sorted_movers[:5] # Top 5
                 top_losers = sorted_movers[-5:] # Bottom 5
                 
                 # Format movers for frontend
-                gainers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_gainers]
-                losers_data = [{'symbol': s, 'price': q['last_price'], 'change': q['change']} for s, q in top_losers]
+                gainers_data = [{'symbol': s, 'price': q['last_price'], 'change': f"{q['change']}%"} for s, q in top_gainers]
+                losers_data = [{'symbol': s, 'price': q['last_price'], 'change': f"{q['change']}%"} for s, q in top_losers]
                 
                 # Update global state
                 last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
