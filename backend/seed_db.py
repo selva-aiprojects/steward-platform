@@ -7,7 +7,8 @@ sys.path.append(os.getcwd())
 
 from app.core.database import SessionLocal, engine, Base
 from app.models.user import User
-from app.models.portfolio import Portfolio
+from app.models.portfolio import Portfolio, Holding
+from app.models.watchlist import WatchlistItem
 from app.models.trade import Trade
 from app.models.strategy import Strategy
 from app.models.projection import Projection
@@ -24,11 +25,11 @@ def seed_db():
         
         # 1. Users & Portfolios
         users_data = [
-            {"name": "Alexander Pierce", "email": "alex@stocksteward.ai", "used": 125000, "unused": 45000, "risk": "MODERATE", "win_rate": 68.0},
-            {"name": "Sarah Connor", "email": "sarah.c@sky.net", "used": 250000, "unused": 12000, "risk": "HIGH", "win_rate": 74.0},
-            {"name": "Tony Stark", "email": "tony@starkintl.ai", "used": 840000, "unused": 50000, "risk": "AGGRESSIVE", "win_rate": 81.0},
-            {"name": "Bruce Wayne", "email": "bruce@waynecorp.com", "used": 0, "unused": 1000000, "risk": "LOW", "win_rate": 0.0},
-            {"name": "Natasha Romanoff", "email": "nat@shield.gov", "used": 95000, "unused": 5000, "risk": "MODERATE", "win_rate": 62.0},
+            {"name": "Alexander Pierce", "email": "alex@stocksteward.ai", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 68.0},
+            {"name": "Sarah Connor", "email": "sarah.c@sky.net", "used": 10000, "unused": 0, "risk": "HIGH", "win_rate": 74.0},
+            {"name": "Tony Stark", "email": "tony@starkintl.ai", "used": 10000, "unused": 0, "risk": "AGGRESSIVE", "win_rate": 81.0},
+            {"name": "Bruce Wayne", "email": "bruce@waynecorp.com", "used": 10000, "unused": 0, "risk": "LOW", "win_rate": 55.0},
+            {"name": "Natasha Romanoff", "email": "nat@shield.gov", "used": 10000, "unused": 0, "risk": "MODERATE", "win_rate": 62.0},
         ]
 
         # Custom ID Map to match frontend Login.jsx
@@ -69,6 +70,32 @@ def seed_db():
             )
             db.add(portfolio)
             db.flush()
+
+            # Seed Holdings (₹10,000 invested across 3 equities)
+            holdings_seed = [
+                {"symbol": "RELIANCE", "qty": 1, "price": 2500.0},
+                {"symbol": "TCS", "qty": 1, "price": 3500.0},
+                {"symbol": "HDFCBANK", "qty": 5, "price": 800.0},
+            ]
+            for h in holdings_seed:
+                holding = Holding(
+                    portfolio_id=portfolio.id,
+                    symbol=h["symbol"],
+                    quantity=h["qty"],
+                    avg_price=h["price"],
+                    current_price=h["price"],
+                    pnl=0.0,
+                    pnl_pct=0.0
+                )
+                db.add(holding)
+
+                wi = WatchlistItem(
+                    user_id=user.id,
+                    symbol=h["symbol"],
+                    current_price=h["price"],
+                    change="0.0%"
+                )
+                db.add(wi)
 
             # 2. Strategies (for the Trading Hub)
             if u["name"] == "Alexander Pierce":

@@ -59,21 +59,20 @@ def reset_and_seed():
         db.add(owner)
         db.flush()
 
-        # 2. Synthetic Trade Users (10 users)
+        # 2. Demo Trade Users (5 users) - ₹10,000 invested with a few equities
         traders_data = [
-            {"id": 1, "name": "Alexander Pierce", "email": "alex@stocksteward.ai", "risk": "MODERATE", "capital": 500000},
-            {"id": 2, "name": "Sarah Connor", "email": "sarah.c@sky.net", "risk": "HIGH", "capital": 1200000},
-            {"id": 3, "name": "Tony Stark", "email": "tony@starkintl.ai", "risk": "AGGRESSIVE", "capital": 5000000},
-            {"id": 4, "name": "Emily Blunt", "email": "emily@example.com", "risk": "MODERATE", "capital": 800000},
-            {"id": 5, "name": "James Bond", "email": "007@mi6.gov.uk", "risk": "HIGH", "capital": 2500000},
-            {"id": 6, "name": "Wanda Maximoff", "email": "wanda@avengers.org", "risk": "AGGRESSIVE", "capital": 1500000},
-            {"id": 7, "name": "Peter Parker", "email": "peter.p@dailybugle.com", "risk": "LOW", "capital": 300000},
-            {"id": 8, "name": "Diana Prince", "email": "diana@themyscira.gov", "risk": "MODERATE", "capital": 4000000},
-            {"id": 9, "name": "Clark Kent", "email": "clark@dailyplanet.com", "risk": "LOW", "capital": 600000},
-            {"id": 10, "name": "Bruce Banner", "email": "bruce.b@gamma.edu", "risk": "HIGH", "capital": 2000000},
+            {"id": 1, "name": "Alexander Pierce", "email": "alex@stocksteward.ai", "risk": "MODERATE", "capital": 10000},
+            {"id": 2, "name": "Sarah Connor", "email": "sarah.c@sky.net", "risk": "HIGH", "capital": 10000},
+            {"id": 3, "name": "Tony Stark", "email": "tony@starkintl.ai", "risk": "AGGRESSIVE", "capital": 10000},
+            {"id": 4, "name": "Bruce Wayne", "email": "bruce@waynecorp.com", "risk": "LOW", "capital": 10000},
+            {"id": 5, "name": "Natasha Romanoff", "email": "nat@shield.gov", "risk": "MODERATE", "capital": 10000},
         ]
 
-        symbols = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK']
+        holdings_seed = [
+            {"symbol": "RELIANCE", "qty": 1, "price": 2500.0},
+            {"symbol": "TCS", "qty": 1, "price": 3500.0},
+            {"symbol": "HDFCBANK", "qty": 5, "price": 800.0},
+        ]
         
         for t in traders_data:
             user = User(
@@ -92,8 +91,8 @@ def reset_and_seed():
             portfolio = Portfolio(
                 user_id=user.id,
                 name=f"{t['name']}'s Primary Portfolio",
-                cash_balance=deposit_amount,
-                invested_amount=0.0,
+                cash_balance=0.0,
+                invested_amount=deposit_amount,
                 win_rate=round(random.uniform(55, 85), 1)
             )
             db.add(portfolio)
@@ -107,62 +106,48 @@ def reset_and_seed():
             )
             db.add(activity)
 
-            # 3. Seed Holdings and Trades (Synthetic History)
-            num_trades = random.randint(15, 25)
-            invested_so_far = 0
-            
-            for _ in range(num_trades):
-                symbol = random.choice(symbols)
-                action = random.choice(['BUY', 'SELL'])
-                qty = random.randint(10, 100)
-                price = round(random.uniform(500, 3500), 2)
-                
-                # Simple logic to simulate past trades
+            # 3. Seed Holdings and Trades (Small demo history)
+            for h in holdings_seed:
+                holding = Holding(
+                    portfolio_id=portfolio.id,
+                    symbol=h["symbol"],
+                    quantity=h["qty"],
+                    avg_price=h["price"],
+                    current_price=h["price"],
+                    pnl=0.0,
+                    pnl_pct=0.0
+                )
+                db.add(holding)
+
+            trades_seed = [
+                {"symbol": "RELIANCE", "action": "BUY", "qty": 1, "price": 2500.0, "pnl": "+1.2%"},
+                {"symbol": "TCS", "action": "BUY", "qty": 1, "price": 3500.0, "pnl": "+0.8%"},
+                {"symbol": "HDFCBANK", "action": "BUY", "qty": 5, "price": 800.0, "pnl": "+0.5%"},
+            ]
+            for entry in trades_seed:
                 trade = Trade(
                     portfolio_id=portfolio.id,
-                    symbol=symbol,
-                    action=action,
-                    quantity=qty,
-                    price=price,
+                    symbol=entry["symbol"],
+                    action=entry["action"],
+                    quantity=entry["qty"],
+                    price=entry["price"],
                     status="EXECUTED",
                     execution_mode="PAPER_TRADING",
-                    timestamp=datetime.utcnow() - timedelta(days=random.randint(1, 30), hours=random.randint(1, 23)),
-                    risk_score=round(random.uniform(0.1, 0.9), 2),
-                    pnl=f"{random.choice(['+', '-'])}{round(random.uniform(0, 5), 2)}%",
-                    decision_logic=f"Synthetic trade generated for {t['name']} based on {t['risk']} profile.",
-                    market_behavior="Simulated market volatility."
+                    timestamp=datetime.utcnow() - timedelta(hours=random.randint(1, 24)),
+                    risk_score=0.2,
+                    pnl=entry["pnl"],
+                    decision_logic=f"Seeded demo trade for {t['name']}.",
+                    market_behavior="Seeded demo market behavior."
                 )
                 db.add(trade)
 
-            # Seed some active holdings
-            for symbol in random.sample(symbols, k=3):
-                qty = random.randint(5, 50)
-                avg_p = round(random.uniform(500, 3500), 2)
-                curr_p = avg_p * random.uniform(0.9, 1.1)
-                h_pnl = (curr_p - avg_p) * qty
-                h_pnl_pct = ((curr_p / avg_p) - 1) * 100
-                
-                holding = Holding(
-                    portfolio_id=portfolio.id,
-                    symbol=symbol,
-                    quantity=qty,
-                    avg_price=avg_p,
-                    current_price=curr_p,
-                    pnl=h_pnl,
-                    pnl_pct=h_pnl_pct
-                )
-                db.add(holding)
-                invested_so_far += (qty * avg_p)
-
-            # Update portfolio summary
-            portfolio.invested_amount = invested_so_far
-            portfolio.cash_balance -= invested_so_far
-            
             # Watchlist
-            for symbol in random.sample(symbols, k=4):
+            for h in holdings_seed:
                 wi = WatchlistItem(
                     user_id=user.id,
-                    symbol=symbol
+                    symbol=h["symbol"],
+                    current_price=h["price"],
+                    change="0.0%"
                 )
                 db.add(wi)
 
