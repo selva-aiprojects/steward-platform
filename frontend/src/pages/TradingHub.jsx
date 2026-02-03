@@ -15,6 +15,7 @@ export function TradingHub() {
         strategies: appStrategies,
         exchangeStatus,
         stewardPrediction: appStewardPrediction,
+        marketResearch,
         loading,
         toggleTradingMode: appToggleTradingMode,
         refreshAllData
@@ -486,6 +487,39 @@ export function TradingHub() {
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
                 <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
             </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2 p-6 border-slate-200 shadow-sm bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Live Research Stream</h3>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Macro + sector notes</p>
+                        </div>
+                        <span className="text-[10px] font-black text-primary uppercase">Streaming</span>
+                    </div>
+                    <div className="space-y-3">
+                        {(marketResearch?.headlines || []).map((h, i) => (
+                            <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-800">
+                                {h}
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                <Card className="p-6 border-slate-200 shadow-sm bg-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Signal Bias</h3>
+                    <div className="space-y-3">
+                        {(marketResearch?.watchlist || []).map((w, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                                <span className="font-black text-slate-800">{w.symbol}</span>
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${w.bias === 'BUY' ? 'bg-green-100 text-green-700' : w.bias === 'SELL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {w.bias}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }

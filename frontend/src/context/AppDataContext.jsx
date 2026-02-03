@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser } from '../services/api';
+import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch } from '../services/api';
 import { useUser } from './UserContext';
 
 const AppDataContext = createContext();
@@ -14,6 +14,7 @@ export const AppDataProvider = ({ children }) => {
     const [trades, setTrades] = useState([]);
     const [projections, setProjections] = useState([]);
     const [marketMovers, setMarketMovers] = useState([]);
+    const [marketResearch, setMarketResearch] = useState(null);
     const [exchangeStatus, setExchangeStatus] = useState({ status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
     const [stewardPrediction, setStewardPrediction] = useState({
         prediction: "Initializing market intelligence...",
@@ -32,7 +33,7 @@ export const AppDataProvider = ({ children }) => {
         if (!viewId) return;
         setLoading(true);
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData] = await Promise.all([
+            const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData, researchData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
@@ -40,7 +41,8 @@ export const AppDataProvider = ({ children }) => {
                 fetchProjections(),
                 fetchMarketMovers(),
                 fetchExchangeStatus(),
-                fetchUser(viewId)
+                fetchUser(viewId),
+                fetchMarketResearch()
             ]);
 
             setSummary(sumData);
@@ -65,6 +67,7 @@ export const AppDataProvider = ({ children }) => {
             }
 
             setExchangeStatus(statusData);
+            setMarketResearch(researchData);
 
             if (user?.role === 'ADMIN' || user?.is_superuser) {
                 const users = await fetchUsers();
@@ -169,6 +172,7 @@ export const AppDataProvider = ({ children }) => {
             stewardPrediction,
             allUsers,
             adminTelemetry,
+            marketResearch,
             loading,
             refreshAllData,
             toggleTradingMode

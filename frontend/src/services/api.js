@@ -282,3 +282,14 @@ export const fetchMarketMovers = async () => {
     }
 };
 
+export const fetchMarketResearch = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/ai/market-research`);
+        if (!response.ok) throw new Error('Failed to fetch market research');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+

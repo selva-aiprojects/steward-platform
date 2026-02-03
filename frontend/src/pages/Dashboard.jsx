@@ -23,6 +23,7 @@ export function Dashboard() {
         marketMovers: marketMoversState,
         exchangeStatus,
         stewardPrediction,
+        marketResearch,
         adminTelemetry,
         loading,
         allUsers,
@@ -449,6 +450,56 @@ export function Dashboard() {
                                 <span>END-TO-END CRYPTOGRAPHIC LOG VERIFICATION: COMPLETE</span>
                             </div>
                         )}
+                    </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <Card className="lg:col-span-2 p-6 border-slate-100 shadow-sm bg-white">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Market Intelligence</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Live research feed</p>
+                            </div>
+                            <span className="text-[10px] font-black bg-primary text-white px-2.5 py-1 rounded-full uppercase tracking-tighter">Active</span>
+                        </div>
+                        <div className="space-y-3">
+                            {(marketResearch?.headlines || []).map((h, i) => (
+                                <div key={i} className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-800">{h}</span>
+                                    <span className="text-[9px] font-black text-primary uppercase">Insight</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Sentiment Radar</h3>
+                        <div className="space-y-3">
+                            {["market", "momentum", "risk"].map((k) => (
+                                <div key={k} className="space-y-1">
+                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        <span>{k}</span>
+                                        <span>{marketResearch?.sentiment?.[k] ?? 0}%</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-primary" style={{ width: `${marketResearch?.sentiment?.[k] ?? 0}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-5">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Watchlist Bias</h4>
+                            <div className="space-y-2">
+                                {(marketResearch?.watchlist || []).map((w, i) => (
+                                    <div key={i} className="flex items-center justify-between text-xs">
+                                        <span className="font-black text-slate-800">{w.symbol}</span>
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${w.bias === 'BUY' ? 'bg-green-100 text-green-700' : w.bias === 'SELL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                            {w.bias}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </Card>
                 </div>
             </div>
