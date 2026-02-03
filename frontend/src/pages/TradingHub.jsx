@@ -460,7 +460,7 @@ export function TradingHub() {
                             <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest">Global Watcher Alpha</span>
                             <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: AP-SOUTH-1 (Mumbai)</span>
                         </div>
-                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{appStewardPrediction}"</h3>
+                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{appStewardPrediction?.prediction || "Market intelligence syncing..."}"</h3>
                         <p className="text-slate-300 text-[10px] font-black leading-relaxed mb-8 uppercase tracking-[0.2em] flex items-center gap-2">
                             <span className="h-2 w-2 bg-green-500 rounded-full animate-ping" />
                             Live Steward Forecast Stream

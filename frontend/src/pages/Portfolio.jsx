@@ -306,7 +306,7 @@ const Portfolio = () => {
               </span>
             </h4>
             <p className="text-[11px] text-indigo-700 leading-relaxed font-medium italic">
-              "{appStewardPrediction}"
+              "{appStewardPrediction?.prediction || "Market intelligence syncing..."}"
             </p>
           </div>
         </Card>
