@@ -8,7 +8,7 @@ import {
 import { useUser } from "../../context/UserContext"
 import { useTheme } from "../theme-provider"
 import logo from "../../assets/logo.png"
-import { Ticker } from "../Ticker"
+import { MarketTicker } from "../MarketTicker"
 import ChatWidget from "../ChatWidget";
 
 export function Layout({ children }) {
@@ -145,7 +145,7 @@ export function Layout({ children }) {
             {/* Main Content */}
             <main className="flex-1 w-full overflow-y-auto">
                 <div className="sticky top-0 z-40 w-full animate-in fade-in duration-700">
-                    <Ticker />
+                    <MarketTicker />
                 </div>
                 <div className="max-w-[1600px] mx-auto p-4 md:p-8">
                     {user && (

@@ -13,6 +13,18 @@ export function MarketTicker() {
         { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 },
         { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
     ];
+    const exchangeClass = (exchange) => {
+        switch ((exchange || '').toUpperCase()) {
+            case 'NSE':
+                return 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10';
+            case 'BSE':
+                return 'text-sky-300 border-sky-500/40 bg-sky-500/10';
+            case 'MCX':
+                return 'text-amber-300 border-amber-500/40 bg-amber-500/10';
+            default:
+                return 'text-slate-300 border-slate-600/40 bg-slate-700/40';
+        }
+    };
 
     useEffect(() => {
         const handleUpdate = (data) => {
@@ -78,7 +90,9 @@ export function MarketTicker() {
                 {[...stocks, ...stocks].map((stock, i) => (
                     <div key={i} className="flex items-center gap-4 bg-slate-800/50 px-4 py-1.5 rounded-lg border border-slate-700/50">
                         <div className="flex flex-col">
-                            <span className="text-[7px] font-black text-primary uppercase tracking-[0.2em] leading-none mb-0.5">{stock.exchange || 'NSE'}</span>
+                            <span className={`text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(stock.exchange)}`}>
+                                {stock.exchange || 'NSE'}
+                            </span>
                             <span className="text-[10px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
                         </div>
                         <div className="flex flex-col items-end">
