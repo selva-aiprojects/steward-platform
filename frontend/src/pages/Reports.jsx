@@ -365,6 +365,7 @@ export function Reports() {
                     </div>
                 </Card>
             </div>
+            <div className="space-y-6">
                 <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Execution Intelligence Journal</h2>
                 <div className="grid grid-cols-1 gap-6">
                     {trades.map((entry) => (
