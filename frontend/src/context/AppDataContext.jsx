@@ -31,12 +31,15 @@ export const AppDataProvider = ({ children }) => {
     const [allUsers, setAllUsers] = useState([]);
     const [adminTelemetry, setAdminTelemetry] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     const viewId = selectedUser?.id || user?.id;
 
     const refreshAllData = useCallback(async () => {
         if (!viewId) return;
-        setLoading(true);
+        if (!hasLoaded) {
+            setLoading(true);
+        }
         try {
             const [sumData, holdingsData, watchlistData, tradesData, projData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
@@ -100,9 +103,12 @@ export const AppDataProvider = ({ children }) => {
         } catch (error) {
             console.error("Failed to refresh app data:", error);
         } finally {
-            setLoading(false);
+            if (!hasLoaded) {
+                setLoading(false);
+                setHasLoaded(true);
+            }
         }
-    }, [viewId, user, selectedUser, isAdmin, setContextUser, setSelectedUser]);
+    }, [viewId, user, selectedUser, isAdmin, setContextUser, setSelectedUser, hasLoaded]);
 
     useEffect(() => {
         if (viewId) {

@@ -65,15 +65,25 @@ export function Login() {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">User</label>
-                        <select
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-                        >
-                            {users.map((u) => (
-                                <option key={u.id} value={u.email}>{u.full_name || u.email} ({u.role || 'TRADER'})</option>
-                            ))}
-                        </select>
+                        {users.length > 0 ? (
+                            <select
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                            >
+                                {users.map((u) => (
+                                    <option key={u.id} value={u.email}>{u.full_name || u.email} ({u.role || 'TRADER'})</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="user@stocksteward.ai"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                            />
+                        )}
                     </div>
 
                     <div className="space-y-2">
