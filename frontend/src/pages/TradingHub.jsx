@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from "../components/ui/card";
 import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, TrendingDown, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2, X, ArrowRight, Activity } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy, socket } from "../services/api";
+import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy, socket, depositFunds } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
@@ -36,6 +36,10 @@ export function TradingHub() {
     ]);
     const [orderTicker, setOrderTicker] = useState('RELIANCE');
     const [orderQty, setOrderQty] = useState(10);
+    const [basket, setBasket] = useState([]);
+    const [showBasketModal, setShowBasketModal] = useState(false);
+    const [showTopupModal, setShowTopupModal] = useState(false);
+    const [topupAmount, setTopupAmount] = useState(0);
     const [activeHoldings, setActiveHoldings] = useState([]);
     const [tradeStatus, setTradeStatus] = useState(null);
 
@@ -121,6 +125,76 @@ export function TradingHub() {
             console.error("Manual trade failed:", err);
             setTradeStatus({ type: 'error', msg: `Trade Failed: ${err.message}` });
             setTimeout(() => setTradeStatus(null), 5000);
+        } finally {
+            setExecuting(false);
+        }
+    };
+
+    const getPriceForSymbol = (symbol) => {
+        const normalized = symbol.includes(':') ? symbol.split(':').pop() : symbol;
+        const priceFromMarket = (marketMovers || []).find(m => m.symbol === normalized)?.price;
+        return priceFromMarket || 2450.00;
+    };
+
+    const addToBasket = () => {
+        if (!orderTicker || orderQty <= 0) {
+            setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
+            setTimeout(() => setTradeStatus(null), 4000);
+            return;
+        }
+        const normalized = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
+        const price = getPriceForSymbol(normalized);
+        setBasket(prev => ([...prev, {
+            id: Date.now(),
+            symbol: normalized,
+            quantity: orderQty,
+            price,
+            side: 'BUY'
+        }]));
+        setTradeStatus({ type: 'success', msg: `Added ${orderQty} ${normalized} to basket.` });
+        setTimeout(() => setTradeStatus(null), 3000);
+    };
+
+    const removeFromBasket = (id) => {
+        setBasket(prev => prev.filter(item => item.id !== id));
+    };
+
+    const basketTotal = basket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    const executeBasket = async () => {
+        if (!user || user.trading_mode !== 'MANUAL') return;
+        if (basket.length === 0) return;
+
+        const cashBalance = summary?.cash_balance || 0;
+        if (basketTotal > cashBalance) {
+            const shortfall = basketTotal - cashBalance;
+            setTopupAmount(Math.ceil(shortfall));
+            setShowTopupModal(true);
+            return;
+        }
+
+        setExecuting(true);
+        try {
+            for (const item of basket) {
+                await executeTrade(user.id, {
+                    symbol: item.symbol,
+                    action: item.side,
+                    price: item.price,
+                    quantity: item.quantity,
+                    type: 'MANUAL',
+                    decision_logic: `Basket order: ${item.side} ${item.quantity} ${item.symbol}`
+                });
+            }
+            await refreshAllData();
+            const updatedHoldings = await fetchHoldings(user.id);
+            setActiveHoldings(updatedHoldings);
+            setBasket([]);
+            setTradeStatus({ type: 'success', msg: 'Basket executed successfully.' });
+            setTimeout(() => setTradeStatus(null), 4000);
+        } catch (err) {
+            console.error('Basket trade failed:', err);
+            setTradeStatus({ type: 'error', msg: 'Basket execution failed.' });
+            setTimeout(() => setTradeStatus(null), 4000);
         } finally {
             setExecuting(false);
         }
@@ -401,6 +475,14 @@ export function TradingHub() {
                                 Buy
                             </button>
                             <button
+                                type="button"
+                                onClick={addToBasket}
+                                disabled={executing}
+                                className="flex-1 md:flex-none bg-slate-900 text-white px-6 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95"
+                            >
+                                Add to Basket
+                            </button>
+                            <button
                                 data-testid="manual-sell-button"
                                 onClick={() => handleManualTrade('SELL')}
                                 disabled={executing}
@@ -420,6 +502,17 @@ export function TradingHub() {
                     {user?.trading_mode === 'AUTO' && (
                         <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
                             Manual trading is disabled in AUTO mode. Switch to MANUAL to place orders.
+                        </div>
+                    )}
+                    {user?.trading_mode === 'MANUAL' && (
+                        <div className="mt-4 w-full">
+                            <button
+                                type="button"
+                                onClick={() => setShowBasketModal(true)}
+                                className="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
+                            >
+                                Basket ({basket.length}) - INR {basketTotal.toLocaleString()}
+                            </button>
                         </div>
                     )}
                 </Card>
@@ -604,6 +697,101 @@ export function TradingHub() {
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
                 <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
             </Card>
+
+            {showBasketModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <Card className="w-full max-w-xl bg-white p-6 rounded-3xl shadow-2xl relative">
+                        <button
+                            onClick={() => setShowBasketModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Order Basket</h3>
+                        {basket.length === 0 ? (
+                            <div className="text-xs text-slate-500">No orders in basket.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {basket.map(item => (
+                                    <div key={item.id} className="flex items-center justify-between text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                                        <span>{item.symbol}</span>
+                                        <span>{item.quantity} @ INR {item.price}</span>
+                                        <span className="text-primary">{item.side}</span>
+                                        <button
+                                            onClick={() => removeFromBasket(item.id)}
+                                            className="text-[9px] font-black uppercase tracking-widest text-red-500"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div className="mt-4 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total</span>
+                            <span className="text-sm font-black text-slate-900">INR {basketTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowBasketModal(false)}
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 rounded-lg"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => { setShowBasketModal(false); executeBasket(); }}
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-primary text-white rounded-lg"
+                            >
+                                Execute Basket
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {showTopupModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <Card className="w-full max-w-md bg-white p-6 rounded-3xl shadow-2xl relative">
+                        <button
+                            onClick={() => setShowTopupModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Insufficient Funds</h3>
+                        <p className="text-xs text-slate-600">You need additional INR {topupAmount.toLocaleString()} to execute this basket.</p>
+                        <div className="mt-4">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top-up Amount (INR)</label>
+                            <input
+                                type="number"
+                                value={topupAmount}
+                                onChange={(e) => setTopupAmount(parseInt(e.target.value || '0'))}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-black"
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowTopupModal(false)}
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 rounded-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    await refreshAllData();
+                                    await fetchPortfolioSummary(user.id);
+                                    await depositFunds(user.id, topupAmount);
+                                    setShowTopupModal(false);
+                                    executeBasket();
+                                }}
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-primary text-white rounded-lg"
+                            >
+                                Add Funds & Execute
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 p-6 border-slate-200 shadow-sm bg-white">
