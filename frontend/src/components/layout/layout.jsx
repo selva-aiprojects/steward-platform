@@ -16,6 +16,9 @@ export function Layout({ children }) {
     const location = useLocation();
     const { user, logout, isAdmin } = useUser();
     const { theme, toggleTheme } = useTheme();
+    const buildSha = process.env.REACT_APP_BUILD_SHA || process.env.REACT_APP_GIT_SHA || "";
+    const buildTime = process.env.REACT_APP_BUILD_TIME || "";
+    const buildLabel = buildSha ? buildSha.slice(0, 7) : "dev";
 
     const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -166,6 +169,15 @@ export function Layout({ children }) {
                                         <span className="text-[10px] font-bold bg-[#0A2A4D] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
                                             Role: {user.role}
                                         </span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Build</span>
+                                        <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-lg border border-slate-200 uppercase tracking-widest">
+                                            {buildLabel}
+                                        </span>
+                                        {buildTime && (
+                                            <span className="text-[8px] font-bold text-slate-400 mt-1">{buildTime}</span>
+                                        )}
                                     </div>
                                     <Link
                                         to="/help"
