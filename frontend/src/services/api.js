@@ -6,6 +6,7 @@ const RAW_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
 const BASE_URL = RAW_API_URL.replace(/\/$/, '');
 const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
+const SOCKET_URL = HAS_VERSIONED_PATH ? BASE_URL.replace(/\/api\/v1$/, '') : BASE_URL;
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
 
@@ -24,7 +25,7 @@ const getAuthHeaders = () => {
     }
 };
 
-export const socket = io(BASE_URL, {
+export const socket = io(SOCKET_URL, {
     transports: ['websocket'],
     autoConnect: true,
     reconnectionAttempts: 5

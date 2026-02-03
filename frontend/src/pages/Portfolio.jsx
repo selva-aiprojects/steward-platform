@@ -340,9 +340,18 @@ const Portfolio = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-black ${stock.pnlPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {stock.pnlPct >= 0 ? '+' : ''}{stock.pnlPct}%
-                    </p>
+                    {(() => {
+                      const avgPrice = stock.avg_price ?? stock.avgPrice ?? 0;
+                      const currentPrice = stock.current_price ?? stock.currentPrice ?? 0;
+                      const derivedPnlPct = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0;
+                      const pnlPctRaw = stock.pnl_pct ?? stock.pnlPct ?? derivedPnlPct;
+                      const pnlPct = typeof pnlPctRaw === 'number' ? pnlPctRaw : parseFloat(pnlPctRaw) || 0;
+                      return (
+                        <p className={`text-sm font-black ${pnlPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
+                        </p>
+                      );
+                    })()}
                     <p className="text-[10px] text-slate-400 font-bold uppercase">PnL</p>
                   </div>
                 </div>

@@ -6,6 +6,13 @@ import { useAppData } from '../context/AppDataContext';
 export function MarketTicker() {
     const [stocks, setStocks] = useState([]);
     const { marketMovers } = useAppData();
+    const fallbackStocks = [
+        { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
+        { symbol: 'TCS', exchange: 'NSE', price: 3450, change: -0.5 },
+        { symbol: 'HDFCBANK', exchange: 'NSE', price: 1450, change: 0.8 },
+        { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 },
+        { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
+    ];
 
     useEffect(() => {
         const handleUpdate = (data) => {
@@ -52,7 +59,15 @@ export function MarketTicker() {
         };
         const interval = setInterval(poll, 10000);
         poll();
-        return () => clearInterval(interval);
+        const fallbackTimer = setTimeout(() => {
+            if (stocks.length === 0) {
+                setStocks(fallbackStocks);
+            }
+        }, 2500);
+        return () => {
+            clearInterval(interval);
+            clearTimeout(fallbackTimer);
+        };
     }, [stocks.length]);
 
     if (stocks.length === 0) return null;

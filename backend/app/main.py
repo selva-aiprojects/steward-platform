@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.core.config import settings
 from app.api.v1.api import api_router
+from app.core.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 import socketio
 import asyncio
@@ -288,6 +289,7 @@ async def admin_feed():
 async def startup_event():
     if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
         return
+    Base.metadata.create_all(bind=engine)
     asyncio.create_task(market_feed())
     asyncio.create_task(admin_feed())
 

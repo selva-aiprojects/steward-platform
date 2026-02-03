@@ -6,6 +6,18 @@ export function TopMovers() {
     const [movers, setMovers] = useState({ gainers: [], losers: [] });
     const [activeTab, setActiveTab] = useState("GAINERS");
     const [loading, setLoading] = useState(true);
+    const fallbackMovers = {
+        gainers: [
+            { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
+            { symbol: 'HDFCBANK', exchange: 'NSE', price: 1450, change: 0.8 },
+            { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 }
+        ],
+        losers: [
+            { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 },
+            { symbol: 'TCS', exchange: 'NSE', price: 3450, change: -0.5 },
+            { symbol: 'BOM500002', exchange: 'BSE', price: 1790, change: -0.45 }
+        ]
+    };
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -16,6 +28,9 @@ export function TopMovers() {
                     // Handle array format if returned
                     setMovers({ gainers: data.slice(0, 5), losers: [] });
                 }
+            }
+            if ((!data || (!data.gainers && !data.length)) && movers.gainers.length === 0) {
+                setMovers(fallbackMovers);
             }
             setLoading(false);
         };

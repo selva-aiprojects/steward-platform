@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     DEFAULT_CONFIDENCE_THRESHOLD: float = 0.6
     
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/stocksteward"
+    # Default to local SQLite to avoid startup failures when DATABASE_URL is not provided.
+    DATABASE_URL: str = "sqlite:///./stocksteward.db"
     
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
