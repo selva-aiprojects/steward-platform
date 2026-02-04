@@ -653,7 +653,7 @@ export function TradingHub() {
                                                 <span className="text-sm text-slate-500 ml-2">{order.side}</span>
                                             </div>
                                             <div className="flex items-center gap-4">
-                                                <span className="font-black">{order.quantity} @ {"\u20B9"} {order.price}</span>
+                                                <span className="font-black">{order.quantity} @ INR {order.price}</span>
                                                 <button 
                                                     onClick={() => setBasket(prev => prev.filter((_, i) => i !== index))}
                                                     className="text-red-500 hover:text-red-700"
@@ -667,7 +667,7 @@ export function TradingHub() {
                                 
                                 <div className="flex justify-between items-center mb-6 p-4 bg-slate-50 rounded-xl">
                                     <span className="font-black text-slate-900">Total Value:</span>
-                                    <span className="text-xl font-black text-slate-900">{"\u20B9"} {basketTotal.toFixed(2)}</span>
+                                    <span className="text-xl font-black text-slate-900">INR {basketTotal.toFixed(2)}</span>
                                 </div>
                                 
                                 <div className="flex justify-end gap-3">
@@ -721,4 +721,5 @@ export function TradingHub() {
         </div>
     );
 }
+
 

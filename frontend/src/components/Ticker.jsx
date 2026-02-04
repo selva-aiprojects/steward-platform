@@ -101,7 +101,7 @@ function TickerItem({ item }) {
                 <span className="text-[11px] font-bold text-slate-300">{item.symbol}</span>
             </div>
             <div className={`flex items-center gap-1 text-[11px] font-black ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                <span>{"\u20B9"} {priceLabel}</span>
+                <span>INR {priceLabel || '--'}</span>
                 {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
                 <span>{changeLabel}</span>
             </div>

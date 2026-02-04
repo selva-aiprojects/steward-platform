@@ -15,6 +15,27 @@ const mockPerformance = [
     { name: 'Thu', user: 2780, agent: 3908 },
     { name: 'Fri', user: 1890, agent: 4800 },
 ];
+const fallbackMovers = [
+    { symbol: 'RELIANCE', change: 1.2 },
+    { symbol: 'TCS', change: -0.5 },
+    { symbol: 'HDFCBANK', change: 0.8 },
+    { symbol: 'INFY', change: 0.6 },
+    { symbol: 'ICICIBANK', change: -0.3 }
+];
+const fallbackProjections = [
+    { ticker: 'RELIANCE', move_prediction: 'HOLD' },
+    { ticker: 'TCS', move_prediction: 'BUY' },
+    { ticker: 'INFY', move_prediction: 'HOLD' },
+    { ticker: 'HDFCBANK', move_prediction: 'BUY' },
+    { ticker: 'ICICIBANK', move_prediction: 'HOLD' }
+];
+const fallbackWatchlist = [
+    { symbol: 'RELIANCE', change: '+0.6%' },
+    { symbol: 'TCS', change: '-0.2%' },
+    { symbol: 'INFY', change: '+0.4%' },
+    { symbol: 'HDFCBANK', change: '+0.3%' },
+    { symbol: 'ICICIBANK', change: '-0.1%' }
+];
 
 export function Reports() {
     const { user, selectedUser, isAdmin } = useUser();
@@ -62,6 +83,7 @@ export function Reports() {
                 ]);
             } catch (err) {
                 console.error("PnL Fetch Error:", err);
+                setPerformance(mockPerformance);
             } finally {
                 setLoading(false);
             }
@@ -86,9 +108,9 @@ export function Reports() {
 
         const algoData = strategies.map(s => [
             s.name,
-            `? ${(s.volume || 0).toLocaleString()}`,
+            `INR ${(s.volume || 0).toLocaleString()}`,
             `${s.win_rate || 0}%`,
-            `${(s.pnl || 0) >= 0 ? '+' : ''}${(s.pnl || 0).toLocaleString()}`,
+            `${(s.pnl || 0) >= 0 ? '+' : ''}INR ${(s.pnl || 0).toLocaleString()}`,
             s.status || 'OFFLINE'
         ]);
 
@@ -112,7 +134,7 @@ export function Reports() {
             new Date(t.timestamp).toLocaleTimeString(),
             t.symbol,
             t.action,
-            `? ${t.price}`,
+            `INR ${t.price}`,
             t.decision_logic.substring(0, 50) + '...'
         ]);
 
@@ -189,7 +211,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">{"\u20B9"} 18.4K</p>
+                            <p className="text-2xl font-black text-slate-900">INR 18.4K</p>
                             <p className="text-[10px] text-green-600 font-black uppercase tracking-tighter">+12.4% THIS PERIOD</p>
                         </div>
                     </div>
@@ -222,7 +244,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">{"\u20B9"} 64.2K</p>
+                            <p className="text-2xl font-black text-slate-900">INR 64.2K</p>
                             <p className="text-[10px] text-primary font-black uppercase tracking-tighter">+24.8% THIS PERIOD</p>
                         </div>
                     </div>
@@ -265,24 +287,32 @@ export function Reports() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {strategies.map((row, i) => (
-                                <tr key={i} className="hover:bg-slate-50 transition-colors group cursor-pointer">
-                                    <td className="px-8 py-6">
-                                        <p className="font-black text-slate-900">{row.name}</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Execution Frequency: {row.frequency || 'HIGH'}</p>
-                                    </td>
-                                    <td className="px-8 py-6 font-bold text-slate-600 text-xs">? {(row.volume || 0).toLocaleString()}</td>
-                                    <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win_rate || 0}%</td>
-                                    <td className={`px-8 py-6 font-black text-sm ${(row.pnl || 0) >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                        {(row.pnl || 0) >= 0 ? '+' : ''}? {(row.pnl || 0).toLocaleString()}
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-tighter ${row.status === 'STABLE' ? 'bg-green-50 text-green-700' :
-                                            row.status === 'OPTIMIZING' ? 'bg-primary/10 text-primary' : 'bg-orange-50 text-orange-600'
-                                            }`}>{row.status || 'OFFLINE'}</span>
+                            {strategies.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-10 text-center text-xs font-black text-slate-400 uppercase tracking-widest">
+                                        No strategy data available
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                strategies.map((row, i) => (
+                                    <tr key={i} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                                        <td className="px-8 py-6">
+                                            <p className="font-black text-slate-900">{row.name}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Execution Frequency: {row.frequency || 'HIGH'}</p>
+                                        </td>
+                                        <td className="px-8 py-6 font-bold text-slate-600 text-xs">INR {(row.volume || 0).toLocaleString()}</td>
+                                        <td className="px-8 py-6 font-black text-green-600 text-xs">{row.win_rate || 0}%</td>
+                                        <td className={`px-8 py-6 font-black text-sm ${(row.pnl || 0) >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                                            {(row.pnl || 0) >= 0 ? '+' : ''}INR {(row.pnl || 0).toLocaleString()}
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-tighter ${row.status === 'STABLE' ? 'bg-green-50 text-green-700' :
+                                                row.status === 'OPTIMIZING' ? 'bg-primary/10 text-primary' : 'bg-orange-50 text-orange-600'
+                                                }`}>{row.status || 'OFFLINE'}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -292,7 +322,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Gainers</h3>
                     <div className="space-y-3">
-                        {(marketMovers || []).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) >= 0).slice(0, 5).map((m, i) => {
+                        {(marketMovers && marketMovers.length ? marketMovers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) >= 0).slice(0, 5).map((m, i) => {
                             const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
                             const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
                                 ? m.change
@@ -310,7 +340,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Losers</h3>
                     <div className="space-y-3">
-                        {(marketMovers || []).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) < 0).slice(0, 5).map((m, i) => {
+                        {(marketMovers && marketMovers.length ? marketMovers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) < 0).slice(0, 5).map((m, i) => {
                             const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
                             const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
                                 ? m.change
@@ -328,7 +358,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Tomorrow Outlook</h3>
                     <div className="space-y-3">
-                        {(projections || []).slice(0, 5).map((p, i) => (
+                        {(projections && projections.length ? projections : fallbackProjections).slice(0, 5).map((p, i) => (
                             <div key={`p-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
                                 <span>{p.ticker}</span>
                                 <span className="text-primary">{p.move_prediction}</span>
@@ -356,7 +386,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Watchlist Snapshot</h3>
                     <div className="space-y-3">
-                        {(watchlist || []).slice(0, 6).map((w, i) => (
+                        {(watchlist && watchlist.length ? watchlist : fallbackWatchlist).slice(0, 6).map((w, i) => (
                             <div key={`w-${i}`} className="flex items-center justify-between text-xs font-bold text-slate-700">
                                 <span>{w.symbol}</span>
                                 <span className="text-slate-500">{w.change || '0.0%'}</span>
@@ -368,50 +398,56 @@ export function Reports() {
             <div className="space-y-6">
                 <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Execution Intelligence Journal</h2>
                 <div className="grid grid-cols-1 gap-6">
-                    {trades.map((entry) => (
-                        <Card key={entry.id} className="p-0 border-slate-100 shadow-sm overflow-hidden bg-white">
-                            <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-50">
-                                <div className="p-6 md:w-48 bg-slate-50/50">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-[10px] font-black text-slate-400">
-                                            {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <span className="text-[10px] font-black text-primary">TX-{entry.id}</span>
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-900">{entry.symbol}</h3>
-                                    <span className={`inline-block mt-2 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest ${entry.action === 'BUY' ? 'bg-green-500 text-white' :
-                                        entry.action === 'SELL' ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'
-                                        }`}>{entry.action}</span>
-                                </div>
-
-                                <div className="p-6 flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Market Behavior Snapshot</p>
-                                        <p className="text-xs font-bold text-slate-700 leading-relaxed italic border-l-2 border-primary pl-3">
-                                            "{entry.market_behavior}"
-                                        </p>
-                                        <div className="mt-4">
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Entry/Snapshot Price</p>
-                                            <p className="text-sm font-black text-slate-900">? {entry.price}</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Algo Smart Decision Logic</p>
-                                        <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                            {entry.decision_logic}
-                                        </p>
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Session Outcome</p>
-                                                <p className={`text-sm font-black ${entry.pnl?.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{entry.pnl}</p>
-                                            </div>
-                                            <button className="text-[10px] font-black text-slate-400 hover:text-primary transition-colors cursor-pointer uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Audit Deep-Link</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    {trades.length === 0 ? (
+                        <Card className="p-10 border-slate-100 shadow-sm bg-white text-center">
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No execution logs available</p>
                         </Card>
-                    ))}
+                    ) : (
+                        trades.map((entry) => (
+                            <Card key={entry.id} className="p-0 border-slate-100 shadow-sm overflow-hidden bg-white">
+                                <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-50">
+                                    <div className="p-6 md:w-48 bg-slate-50/50">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[10px] font-black text-slate-400">
+                                                {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            <span className="text-[10px] font-black text-primary">TX-{entry.id}</span>
+                                        </div>
+                                        <h3 className="text-2xl font-black text-slate-900">{entry.symbol}</h3>
+                                        <span className={`inline-block mt-2 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest ${entry.action === 'BUY' ? 'bg-green-500 text-white' :
+                                            entry.action === 'SELL' ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'
+                                            }`}>{entry.action}</span>
+                                    </div>
+
+                                    <div className="p-6 flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Market Behavior Snapshot</p>
+                                            <p className="text-xs font-bold text-slate-700 leading-relaxed italic border-l-2 border-primary pl-3">
+                                                "{entry.market_behavior}"
+                                            </p>
+                                            <div className="mt-4">
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Entry/Snapshot Price</p>
+                                                <p className="text-sm font-black text-slate-900">INR {entry.price}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Algo Smart Decision Logic</p>
+                                            <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                                                {entry.decision_logic}
+                                            </p>
+                                            <div className="mt-4 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Session Outcome</p>
+                                                    <p className={`text-sm font-black ${entry.pnl?.startsWith('+') ? 'text-primary' : 'text-slate-900'}`}>{entry.pnl}</p>
+                                                </div>
+                                                <button className="text-[10px] font-black text-slate-400 hover:text-primary transition-colors cursor-pointer uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Audit Deep-Link</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

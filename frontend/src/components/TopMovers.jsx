@@ -39,7 +39,9 @@ export function TopMovers() {
 
         // Socket listener for real-time updates
         socket.on('market_movers', (data) => {
-            setMovers(data);
+            if (data?.gainers?.length || data?.losers?.length) {
+                setMovers(data);
+            }
         });
 
         const interval = setInterval(loadInitial, 15000);
@@ -69,7 +71,7 @@ export function TopMovers() {
                         </div>
                         <div>
                             <p className="font-black text-slate-900 text-xs">{item.symbol}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">{"\u20B9"} {item.price}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">INR {item.price ?? '--'}</p>
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{item.exchange || 'NSE'}</p>
                         </div>
                     </div>
@@ -118,7 +120,9 @@ export function TopMovers() {
                 </div>
             ) : (
                 <div className="animate-in fade-in duration-500">
-                    {activeTab === "GAINERS" ? <List items={movers.gainers} type="UP" /> : <List items={movers.losers} type="DOWN" />}
+                    {activeTab === "GAINERS"
+                        ? <List items={(movers.gainers.length ? movers.gainers : fallbackMovers.gainers)} type="UP" />
+                        : <List items={(movers.losers.length ? movers.losers : fallbackMovers.losers)} type="DOWN" />}
                 </div>
             )}
         </div>

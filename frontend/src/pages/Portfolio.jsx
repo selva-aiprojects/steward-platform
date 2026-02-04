@@ -250,7 +250,7 @@ export function Portfolio() {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
             <h2 className="text-3xl font-black text-slate-900 leading-none">
-              {"\u20B9"} {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+              INR {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
           <button
@@ -432,17 +432,17 @@ export function Portfolio() {
                         </div>
                         <div>
                           <h4 className="font-black text-slate-900">{holding.symbol}</h4>
-                          <p className="text-xs text-slate-500">{holding.quantity || 0} shares @ {"\u20B9"}{(avgPrice || 0).toFixed(2)}</p>
+                          <p className="text-xs text-slate-500">{holding.quantity || 0} shares @ INR {(avgPrice || 0).toFixed(2)}</p>
                         </div>
                       </div>
                       
                       <div className="text-right">
-                        <p className="font-black text-slate-900">{"\u20B9"}{currentPrice.toFixed(2)}</p>
+                        <p className="font-black text-slate-900">INR {currentPrice.toFixed(2)}</p>
                         <p className={`text-sm font-black ${pnlPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                           {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
                         </p>
                         <p className={`text-xs font-bold ${pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {pnl >= 0 ? '+' : ''}{"\u20B9"}{pnl.toFixed(2)}
+                          {pnl >= 0 ? '+' : ''}INR {pnl.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -480,7 +480,7 @@ export function Portfolio() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`\u20B9 ${value.toLocaleString()}`, 'Value']} />
+                <Tooltip formatter={(value) => [`INR ${value.toLocaleString()}`, 'Value']} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -490,7 +490,7 @@ export function Portfolio() {
             {allocationData.map((item, index) => (
               <div key={index} className="flex justify-between text-sm">
                 <span className="font-bold text-slate-700">{item.name}</span>
-                <span className="font-black text-slate-900">{"\u20B9"}{item.value.toLocaleString()}</span>
+                <span className="font-black text-slate-900">INR {item.value.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -542,10 +542,10 @@ export function Portfolio() {
                 axisLine={false} 
                 tickLine={false} 
                 tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} 
-                tickFormatter={(val) => `\u20B9 ${val}`}
+                tickFormatter={(val) => `INR ${val}`}
               />
               <Tooltip 
-                formatter={(value) => [`\u20B9 ${value}`, 'Value']}
+                formatter={(value) => [`INR ${value}`, 'Value']}
                 contentStyle={{ 
                   borderRadius: '16px', 
                   border: 'none', 
@@ -595,7 +595,7 @@ export function Portfolio() {
                         {(typeof change === 'string' ? parseFloat(change) : change).toFixed(2)}%
                       </span>
                     </div>
-                    <p className="text-sm font-black text-slate-900">{"\u20B9"}{currentPrice.toFixed(2)}</p>
+                    <p className="text-sm font-black text-slate-900">INR {currentPrice.toFixed(2)}</p>
                   </div>
                 </Link>
               );
@@ -654,3 +654,4 @@ export function Portfolio() {
     </div>
   );
 }
+

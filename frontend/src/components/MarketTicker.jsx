@@ -6,7 +6,7 @@ import { useAppData } from '../context/AppDataContext';
 export function MarketTicker() {
     const [stocks, setStocks] = useState([]);
     const { marketMovers, watchlist } = useAppData();
-    const maxItems = 36;
+    const maxItems = 60;
     const fallbackStocks = [
         { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
         { symbol: 'TCS', exchange: 'NSE', price: 3450, change: -0.5 },
@@ -64,6 +64,12 @@ export function MarketTicker() {
             default:
                 return 'text-slate-300 border-slate-600/40 bg-slate-700/40';
         }
+    };
+    const formatPrice = (value) => {
+        if (value === null || value === undefined) return 'INR --';
+        const num = typeof value === 'number' ? value : parseFloat(value);
+        if (!Number.isFinite(num) || num === 0) return 'INR --';
+        return `INR ${num.toLocaleString()}`;
     };
 
     useEffect(() => {
@@ -166,7 +172,7 @@ export function MarketTicker() {
                             <span className="text-[10px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
                         </div>
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-white">{"\u20B9"} {stock.price?.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-white">{formatPrice(stock.price)}</span>
                             <div className={`flex items-center gap-0.5 text-[8px] font-bold ${parseFloat(stock.change) >= 0 ? 'text-green-400' : 'text-red-400'
                                 }`}>
                                 {parseFloat(stock.change) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
