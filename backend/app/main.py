@@ -3,6 +3,7 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Response
 import socketio
 import asyncio
 import random
@@ -16,6 +17,19 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Global CORS headers (handles preflight even if middleware/config fails)
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    if request.method == "OPTIONS":
+        response = Response(status_code=204)
+    else:
+        response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "600"
+    return response
 
 # CORS
 raw_origins = (settings.CORS_ORIGINS or "").strip()
