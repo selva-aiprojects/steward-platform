@@ -18,15 +18,19 @@ app = FastAPI(
 )
 
 # CORS
-raw_origins = (settings.CORS_ORIGINS or "*").strip()
+raw_origins = (settings.CORS_ORIGINS or "").strip()
 allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 if not allowed_origins:
-    allowed_origins = ["*"]
-allow_credentials = "*" not in allowed_origins
+    allowed_origins = [
+        "https://steward-platform.onrender.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # In production, replace with specific origins
-    allow_credentials=allow_credentials,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.onrender\.com",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
