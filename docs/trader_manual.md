@@ -19,3 +19,10 @@ Welcome to the **Trading Hub**. Your role focuses on asset growth, execution eff
 
 > [!TIP]
 > Use the "Pro Steward" tier for unlimited AI trade execution and real-time websocket data synchronization.
+
+---
+## Demo Credentials (Seeded Accounts)
+- **Trader:** trader@stocksteward.ai / trader123
+
+## Create Users (RBAC)
+Traders do **not** have permission to create new users. Ask a Superadmin or Business Owner to provision access.

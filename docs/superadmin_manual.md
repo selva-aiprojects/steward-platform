@@ -19,3 +19,14 @@ Welcome to the **Command Center**. As a Superadmin, you hold the highest level o
 
 > [!IMPORTANT]
 > All Superadmin actions are logged cryptographically. Ensure your session is secured with 2FA where available.
+
+---
+## Demo Credentials (Seeded Accounts)
+- **Superadmin:** admin@stocksteward.ai / admin123
+
+## Create Users (RBAC)
+1. Log in as Superadmin.
+2. Go to **User Mgmt**.
+3. Click **Add User** and choose role: SUPERADMIN / BUSINESS_OWNER / TRADER / AUDITOR.
+4. Set password, trading mode, and risk tolerance.
+5. Save and share credentials securely.

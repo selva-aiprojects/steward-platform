@@ -17,3 +17,10 @@ Welcome to **Compliance Oversight**. Your interface is specialized for read-only
 
 > [!NOTE]
 > All audit logs are mirrored to a secure off-site repository for maximum reliability.
+
+---
+## Demo Credentials (Seeded Accounts)
+- **Auditor:** auditor@stocksteward.ai / audit123
+
+## Create Users (RBAC)
+Auditors are **read-only** and cannot create users. Ask a Superadmin or Business Owner to provision access.

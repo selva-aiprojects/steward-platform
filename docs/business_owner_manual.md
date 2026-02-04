@@ -17,3 +17,14 @@ Welcome to the **Executive Dashboard**. Your view provides high-level business i
 
 > [!IMPORTANT]
 > The Executive Dashboard is designed for decision support and capital allocation, not granular trade execution.
+
+---
+## Demo Credentials (Seeded Accounts)
+- **Business Owner:** owner@stocksteward.ai / owner123
+
+## Create Users (RBAC)
+1. Log in as Business Owner.
+2. Go to **User Mgmt**.
+3. Click **Add User** and choose role: BUSINESS_OWNER / TRADER / AUDITOR.
+4. Set password, trading mode, and risk tolerance.
+5. Save and share credentials securely.
