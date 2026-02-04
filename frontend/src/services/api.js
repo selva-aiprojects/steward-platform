@@ -1,8 +1,8 @@
 import io from 'socket.io-client';
 
 // Dynamic API URL for production support
-// Fallback to localhost for development
-const RAW_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// Fallback to hosted backend for production, localhost for local dev
+const RAW_API_URL = process.env.REACT_APP_API_URL || 'https://stocksteward-ai-backend.onrender.com';
 const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
 const BASE_URL = RAW_API_URL.replace(/\/$/, '');
 const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
