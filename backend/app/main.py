@@ -363,6 +363,46 @@ async def startup_event():
                 )
                 db.add(admin)
                 db.commit()
+            # Ensure baseline RBAC users exist
+            defaults = [
+                {
+                    "full_name": "Asha Iyer",
+                    "email": "owner@stocksteward.ai",
+                    "password": "owner123",
+                    "role": "BUSINESS_OWNER",
+                    "risk_tolerance": "MODERATE",
+                    "trading_mode": "AUTO"
+                },
+                {
+                    "full_name": "Rahul Mehta",
+                    "email": "trader@stocksteward.ai",
+                    "password": "trader123",
+                    "role": "TRADER",
+                    "risk_tolerance": "MODERATE",
+                    "trading_mode": "MANUAL"
+                },
+                {
+                    "full_name": "Kavya Nair",
+                    "email": "auditor@stocksteward.ai",
+                    "password": "audit123",
+                    "role": "AUDITOR",
+                    "risk_tolerance": "LOW",
+                    "trading_mode": "MANUAL"
+                }
+            ]
+            for u in defaults:
+                if not db.query(User).filter(User.email == u["email"]).first():
+                    db.add(User(
+                        full_name=u["full_name"],
+                        email=u["email"],
+                        hashed_password=get_password_hash(u["password"]),
+                        risk_tolerance=u["risk_tolerance"],
+                        is_active=True,
+                        role=u["role"],
+                        trading_mode=u["trading_mode"],
+                        is_superuser=True if u["role"] == "SUPERADMIN" else False
+                    ))
+            db.commit()
         finally:
             db.close()
     except Exception as e:

@@ -98,6 +98,21 @@ export const updateUser = async (userId, data) => {
     }
 };
 
+export const createUser = async (data) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Failed to create user');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const fetchAllPortfolios = async () => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/`);

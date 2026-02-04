@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from "../components/ui/card";
 import { User, Wallet, Shield, PieChart, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
-import { fetchUsers, fetchAllPortfolios, updateUser, createAuditLog } from "../services/api";
+import { fetchUsers, fetchAllPortfolios, updateUser, createAuditLog, createUser } from "../services/api";
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
 
@@ -9,6 +9,15 @@ export function Users() {
     const { allUsers: appUsers, refreshAllData } = useAppData();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newUser, setNewUser] = useState({
+        full_name: '',
+        email: '',
+        password: '',
+        role: 'TRADER',
+        trading_mode: 'AUTO',
+        risk_tolerance: 'MODERATE'
+    });
 
     useEffect(() => {
         const loadData = async () => {
@@ -132,6 +141,14 @@ export function Users() {
                 <h1 className="text-3xl font-black text-slate-900 font-heading">User Equity Management</h1>
                 <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] mt-1">Allocation Audit & Risk Tracking</p>
             </header>
+            <div className="flex justify-end">
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="px-4 py-2 rounded-xl bg-[#0A2A4D] text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/20"
+                >
+                    Add User
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 gap-6">
                 {users.map((user) => (
@@ -296,6 +313,111 @@ export function Users() {
                             >
                                 <Shield size={16} />
                                 Confirm Policy Update
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-lg bg-white border-0 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-0">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 font-heading">Create New User</h3>
+                                <p className="text-xs text-slate-500 font-medium">Provision RBAC account</p>
+                            </div>
+                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <ArrowDownRight className="rotate-[-45deg]" size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Full Name</label>
+                                <input
+                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                    value={newUser.full_name}
+                                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Email</label>
+                                <input
+                                    type="email"
+                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                    value={newUser.email}
+                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Password</label>
+                                <input
+                                    type="password"
+                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                    value={newUser.password}
+                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Role</label>
+                                    <select
+                                        className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                        value={newUser.role}
+                                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                    >
+                                        <option value="SUPERADMIN">SUPERADMIN</option>
+                                        <option value="BUSINESS_OWNER">BUSINESS_OWNER</option>
+                                        <option value="TRADER">TRADER</option>
+                                        <option value="AUDITOR">AUDITOR</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Trading Mode</label>
+                                    <select
+                                        className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                        value={newUser.trading_mode}
+                                        onChange={(e) => setNewUser({ ...newUser, trading_mode: e.target.value })}
+                                    >
+                                        <option value="AUTO">AUTO</option>
+                                        <option value="MANUAL">MANUAL</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Risk Tolerance</label>
+                                <select
+                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                    value={newUser.risk_tolerance}
+                                    onChange={(e) => setNewUser({ ...newUser, risk_tolerance: e.target.value })}
+                                >
+                                    <option value="LOW">LOW</option>
+                                    <option value="MODERATE">MODERATE</option>
+                                    <option value="HIGH">HIGH</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    const created = await createUser(newUser);
+                                    if (created) {
+                                        setShowCreateModal(false);
+                                        setNewUser({
+                                            full_name: '',
+                                            email: '',
+                                            password: '',
+                                            role: 'TRADER',
+                                            trading_mode: 'AUTO',
+                                            risk_tolerance: 'MODERATE'
+                                        });
+                                        await refreshAllData();
+                                    } else {
+                                        alert('Failed to create user.');
+                                    }
+                                }}
+                                disabled={!newUser.full_name || !newUser.email || !newUser.password}
+                                className="w-full py-4 bg-[#0A2A4D] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0A2A4D]/90 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20"
+                            >
+                                Create User
                             </button>
                         </div>
                     </Card>
