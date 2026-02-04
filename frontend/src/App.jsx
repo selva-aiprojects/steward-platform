@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "./components/theme-provider"
 import { Layout } from "./components/layout/layout"
 import { Dashboard } from "./pages/Dashboard"
-import Portfolio from "./pages/Portfolio"
+import { Portfolio } from "./pages/Portfolio"
 import { TradingHub } from "./pages/TradingHub"
 import { Reports } from "./pages/Reports"
 import { Users } from "./pages/Users"
