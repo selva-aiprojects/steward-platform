@@ -56,13 +56,13 @@ export function MarketTicker() {
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
             case 'NSE':
-                return 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10';
+                return 'text-emerald-100 border-emerald-300/80 bg-emerald-500/60';
             case 'BSE':
-                return 'text-sky-300 border-sky-500/40 bg-sky-500/10';
+                return 'text-sky-100 border-sky-300/80 bg-sky-500/60';
             case 'MCX':
-                return 'text-amber-300 border-amber-500/40 bg-amber-500/10';
+                return 'text-amber-100 border-amber-300/80 bg-amber-500/60';
             default:
-                return 'text-slate-300 border-slate-600/40 bg-slate-700/40';
+                return 'text-slate-100 border-slate-400/60 bg-slate-600/70';
         }
     };
     const formatPrice = (value) => {
@@ -164,16 +164,16 @@ export function MarketTicker() {
         <div className="w-full bg-slate-900 border-b border-slate-800 py-2 overflow-hidden relative h-12 flex items-center">
             <div className="flex animate-marquee whitespace-nowrap gap-8 pr-12">
                 {[...stocks, ...stocks].map((stock, i) => (
-                    <div key={i} className="flex items-center gap-4 bg-slate-800/50 px-4 py-1.5 rounded-lg border border-slate-700/50">
+                    <div key={i} className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
                         <div className="flex flex-col">
-                            <span className={`text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(stock.exchange)}`}>
+                            <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(stock.exchange)}`}>
                                 {stock.exchange || 'NSE'}
                             </span>
-                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
+                            <span className="text-[11px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
                         </div>
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-white">{formatPrice(stock.price)}</span>
-                            <div className={`flex items-center gap-0.5 text-[8px] font-bold ${parseFloat(stock.change) >= 0 ? 'text-green-400' : 'text-red-400'
+                            <span className="text-[11px] font-black text-white">{formatPrice(stock.price)}</span>
+                            <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(stock.change) >= 0 ? 'text-green-300' : 'text-red-300'
                                 }`}>
                                 {parseFloat(stock.change) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
                                 {parseFloat(stock.change) >= 0 ? '+' : ''}{stock.change}%
