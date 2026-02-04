@@ -13,15 +13,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install TA-Lib C library from source (required for python TA-Lib wheels)
-RUN wget -O ta-lib-0.4.0-src.tar.gz https://github.com/TA-Lib/ta-lib/releases/download/v0.4.0/ta-lib-0.4.0-src.tar.gz \
-    && tar -xzf ta-lib-0.4.0-src.tar.gz \
-    && cd ta-lib \
+RUN mkdir -p /tmp/ta-lib \
+    && wget -O /tmp/ta-lib/ta-lib-0.4.0-src.tar.gz https://github.com/TA-Lib/ta-lib/releases/download/v0.4.0/ta-lib-0.4.0-src.tar.gz \
+    && tar -xzf /tmp/ta-lib/ta-lib-0.4.0-src.tar.gz -C /tmp/ta-lib --strip-components=1 \
+    && cd /tmp/ta-lib \
     && ./configure --prefix=/usr/local \
     && make \
     && make install \
     && ldconfig \
-    && cd .. \
-    && rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
+    && rm -rf /tmp/ta-lib
 
 # Ensure TA-Lib is discoverable at runtime
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
