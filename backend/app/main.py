@@ -18,16 +18,22 @@ app = FastAPI(
 )
 
 # CORS
+raw_origins = (settings.CORS_ORIGINS or "*").strip()
+allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+if not allowed_origins:
+    allowed_origins = ["*"]
+allow_credentials = "*" not in allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with specific origins
-    allow_credentials=True,
+    allow_origins=allowed_origins,  # In production, replace with specific origins
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Socket.IO Setup
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+socket_cors = "*" if "*" in allowed_origins else allowed_origins
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=socket_cors)
 socket_app = socketio.ASGIApp(sio, app)
 
 # Global state for immediate feed on join
@@ -39,14 +45,24 @@ mock_gainers = [
     {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2450.00, 'change': '+1.20%'},
     {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': '+0.85%'},
     {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': '+2.10%'},
+    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': '+0.95%'},
+    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': '+1.05%'},
+    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': '+0.65%'},
+    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': '+0.70%'},
     {'symbol': 'SENSEX', 'exchange': 'BSE', 'price': 72420.00, 'change': '+0.55%'},
+    {'symbol': 'NIFTY', 'exchange': 'NSE', 'price': 22340.00, 'change': '+0.60%'},
     {'symbol': 'GOLD', 'exchange': 'MCX', 'price': 62450.00, 'change': '+0.70%'}
 ]
 mock_losers = [
     {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.00, 'change': '-1.10%'},
     {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.00, 'change': '-2.30%'},
     {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': '-1.50%'},
+    {'symbol': 'NTPC', 'exchange': 'NSE', 'price': 310.00, 'change': '-0.85%'},
+    {'symbol': 'POWERGRID', 'exchange': 'NSE', 'price': 275.00, 'change': '-0.70%'},
+    {'symbol': 'BAJAJFINSV', 'exchange': 'NSE', 'price': 1680.00, 'change': '-0.95%'},
+    {'symbol': 'SUNPHARMA', 'exchange': 'NSE', 'price': 1340.00, 'change': '-0.60%'},
     {'symbol': 'CRUDEOIL', 'exchange': 'MCX', 'price': 6940.00, 'change': '-0.90%'},
+    {'symbol': 'SILVER', 'exchange': 'MCX', 'price': 74200.00, 'change': '-0.55%'},
     {'symbol': 'BOM500002', 'exchange': 'BSE', 'price': 1790.00, 'change': '-0.45%'}
 ]
 
@@ -99,7 +115,13 @@ async def market_feed():
     watchlist = [
         # NSE (Nifty 50 highlights)
         'NSE:RELIANCE', 'NSE:TCS', 'NSE:HDFCBANK', 'NSE:INFY', 'NSE:ICICIBANK',
-        # BSE 
+        'NSE:SBIN', 'NSE:ITC', 'NSE:LT', 'NSE:AXISBANK', 'NSE:KOTAKBANK',
+        'NSE:BAJFINANCE', 'NSE:BAJAJFINSV', 'NSE:MARUTI', 'NSE:TATAMOTORS',
+        'NSE:BHARTIARTL', 'NSE:ADANIENT', 'NSE:ADANIPORTS', 'NSE:ASIANPAINT',
+        'NSE:ULTRACEMCO', 'NSE:WIPRO', 'NSE:TECHM', 'NSE:HCLTECH', 'NSE:ONGC',
+        'NSE:POWERGRID', 'NSE:NTPC', 'NSE:COALINDIA', 'NSE:SUNPHARMA',
+        'NSE:DRREDDY', 'NSE:CIPLA', 'NSE:HINDUNILVR',
+        # BSE
         'BSE:SENSEX', 'BSE:BOM500002', 'BSE:BOM500010',
         # Commodities (MCX)
         'MCX:GOLD', 'MCX:SILVER', 'MCX:CRUDEOIL', 'MCX:NATURALGAS'
@@ -111,7 +133,7 @@ async def market_feed():
     while True:
         # 30-60 second cycle for comprehensive analysis to avoid rate limits
         # Using 10s for demo responsiveness
-        await asyncio.sleep(10 if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
+        await asyncio.sleep(8 if settings.EXECUTION_MODE == "LIVE_TRADING" else 3)
         
         try:
             # Setup Groq once per cycle (if key exists)
@@ -143,8 +165,8 @@ async def market_feed():
                 valid_quotes = {s: q for s, q in quotes.items() if 'change' in q}
                 sorted_movers = sorted(valid_quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
                 
-                top_gainers = sorted_movers[:5] # Top 5
-                top_losers = sorted_movers[-5:] # Bottom 5
+                top_gainers = sorted_movers[:10] # Top 10
+                top_losers = sorted_movers[-10:] # Bottom 10
                 
                 # Format movers for frontend
                 gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
@@ -214,42 +236,45 @@ async def market_feed():
                         pass
             else:
                 # Mock Mode Fallback
-                symbol = random.choice(['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK'])
+                symbol = random.choice([
+                    'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN',
+                    'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
+                ])
                 # Update global state for REST compatibility
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
                 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
 
                 mock_watchlist = [
-                    ("NSE", "RELIANCE"), ("NSE", "TCS"), ("NSE", "INFY"),
-                    ("BSE", "SENSEX"), ("BSE", "BOM500002"),
-                    ("MCX", "GOLD"), ("MCX", "SILVER"), ("MCX", "CRUDEOIL")
+                    ("NSE", "RELIANCE"), ("NSE", "TCS"), ("NSE", "INFY"), ("NSE", "HDFCBANK"),
+                    ("NSE", "ICICIBANK"), ("NSE", "SBIN"), ("NSE", "ITC"), ("NSE", "AXISBANK"),
+                    ("NSE", "KOTAKBANK"), ("NSE", "BAJFINANCE"), ("NSE", "MARUTI"),
+                    ("BSE", "SENSEX"), ("BSE", "BOM500002"), ("BSE", "BOM500010"),
+                    ("MCX", "GOLD"), ("MCX", "SILVER"), ("MCX", "CRUDEOIL"), ("MCX", "NATURALGAS")
                 ]
-                exchange, symbol = random.choice(mock_watchlist)
-                update = {
-                    'symbol': symbol,
-                    'exchange': exchange,
-                    'price': round(random.uniform(100, 1000), 2),
-                    'change': round(random.uniform(-5, 5), 2)
-                }
-                projection = "AI Projection pending: System in MOCK mode."
-                
-                # Enable Groq Analysis even for Mock Data if available
-                if groq_client:
-                    try:
-                        prompt = f"Provide a concise 1-sentence market projection for Indian stock {symbol} (NSE) trading at {update['price']}."
-                        completion = groq_client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.1-8b-instant",
-                            max_tokens=60
-                        )
-                        projection = completion.choices[0].message.content.strip()
-                    except Exception:
-                        pass
-
-                update['projection'] = projection
-                update['type'] = 'up' # Mock change logic
-                await sio.emit('market_update', update, room='market_data')
+                updates = random.sample(mock_watchlist, k=min(6, len(mock_watchlist)))
+                for exchange, symbol in updates:
+                    update = {
+                        'symbol': symbol,
+                        'exchange': exchange,
+                        'price': round(random.uniform(100, 1000), 2),
+                        'change': round(random.uniform(-5, 5), 2)
+                    }
+                    projection = "AI Projection pending: System in MOCK mode."
+                    if groq_client:
+                        try:
+                            prompt = f"Provide a concise 1-sentence market projection for Indian stock {symbol} (NSE) trading at {update['price']}."
+                            completion = groq_client.chat.completions.create(
+                                messages=[{"role": "user", "content": prompt}],
+                                model="llama-3.1-8b-instant",
+                                max_tokens=60
+                            )
+                            projection = completion.choices[0].message.content.strip()
+                        except Exception:
+                            pass
+                    update['projection'] = projection
+                    update['type'] = 'up' if update['change'] >= 0 else 'down'
+                    await sio.emit('market_update', update, room='market_data')
                 
                 # Mock high-fidelity prediction for UI testing
                 last_steward_prediction = {

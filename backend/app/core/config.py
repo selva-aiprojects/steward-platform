@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     # Security & API Keys
     API_V1_STR: str = "/api/v1"
+    # CORS (comma-separated list or "*")
+    CORS_ORIGINS: str = "*"
     
     # Zerodha KiteConnect
     ZERODHA_API_KEY: Optional[str] = None

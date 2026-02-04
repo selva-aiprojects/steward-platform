@@ -6,6 +6,7 @@ import { useAppData } from '../context/AppDataContext';
 export function MarketTicker() {
     const [stocks, setStocks] = useState([]);
     const { marketMovers } = useAppData();
+    const maxItems = 30;
     const fallbackStocks = [
         { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
         { symbol: 'TCS', exchange: 'NSE', price: 3450, change: -0.5 },
@@ -33,7 +34,7 @@ export function MarketTicker() {
                 if (exists) {
                     return prev.map(s => s.symbol === data.symbol ? { ...s, ...data } : s);
                 }
-                return [data, ...prev].slice(0, 15);
+                return [data, ...prev].slice(0, maxItems);
             });
         };
 
@@ -44,7 +45,7 @@ export function MarketTicker() {
     useEffect(() => {
         if (stocks.length > 0) return;
         if (!marketMovers || marketMovers.length === 0) return;
-        const seed = marketMovers.slice(0, 10).map(m => ({
+        const seed = marketMovers.slice(0, maxItems).map(m => ({
             symbol: m.symbol,
             exchange: m.exchange || 'NSE',
             price: m.price || m.last_price || 0,
@@ -65,11 +66,11 @@ export function MarketTicker() {
                     change: m.change || 0
                 }));
                 if (seed.length) {
-                    setStocks(seed.slice(0, 15));
+                    setStocks(seed.slice(0, maxItems));
                 }
             }
         };
-        const interval = setInterval(poll, 10000);
+        const interval = setInterval(poll, 5000);
         poll();
         const fallbackTimer = setTimeout(() => {
             if (stocks.length === 0) {
