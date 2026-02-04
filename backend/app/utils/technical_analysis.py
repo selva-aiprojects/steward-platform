@@ -5,7 +5,17 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
 from scipy import stats
-import talib
+
+# Try to import TA-Lib, fall back to pure Python implementation if not available
+try:
+    import talib
+    TALIB_AVAILABLE = True
+except ImportError:
+    TALIB_AVAILABLE = False
+    from .technical_analysis_fallback import (
+        sma, ema, macd, rsi, bbands, stoch, atr, adx, sar,
+        willr, cci, roc, mom, obv
+    )
 
 
 def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -17,71 +27,119 @@ def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
     for col in required_cols:
         if col not in df.columns:
             raise ValueError(f"Missing required column: {col}")
-    
-    # Price-based indicators
-    df['sma_10'] = talib.SMA(df['close'], timeperiod=10)
-    df['sma_20'] = talib.SMA(df['close'], timeperiod=20)
-    df['sma_50'] = talib.SMA(df['close'], timeperiod=50)
-    df['sma_200'] = talib.SMA(df['close'], timeperiod=200)
-    
-    df['ema_12'] = talib.EMA(df['close'], timeperiod=12)
-    df['ema_26'] = talib.EMA(df['close'], timeperiod=26)
-    
-    # MACD
-    df['macd'], df['macd_signal'], df['macd_hist'] = talib.MACD(df['close'])
-    
-    # RSI
-    df['rsi_14'] = talib.RSI(df['close'], timeperiod=14)
-    df['rsi_7'] = talib.RSI(df['close'], timeperiod=7)
-    
-    # Bollinger Bands
-    df['bb_upper'], df['bb_middle'], df['bb_lower'] = talib.BBANDS(df['close'])
-    
-    # Stochastic Oscillator
-    df['stoch_k'], df['stoch_d'] = talib.STOCH(df['high'], df['low'], df['close'])
-    
-    # ATR (Average True Range)
-    df['atr_14'] = talib.ATR(df['high'], df['low'], df['close'], timeperiod=14)
-    
-    # ADX (Average Directional Index)
-    df['adx'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=14)
-    
-    # Parabolic SAR
-    df['sar'] = talib.SAR(df['high'], df['low'], acceleration=0.02, maximum=0.2)
-    
-    # Williams %R
-    df['williams_r'] = talib.WILLR(df['high'], df['low'], df['close'], timeperiod=14)
-    
-    # Commodity Channel Index
-    df['cci'] = talib.CCI(df['high'], df['low'], df['close'], timeperiod=14)
-    
-    # Rate of Change
-    df['roc_10'] = talib.ROC(df['close'], timeperiod=10)
-    
-    # Momentum
-    df['momentum_10'] = talib.MOM(df['close'], timeperiod=10)
-    
-    # Volume indicators
-    df['vwap'] = calculate_vwap(df)
-    df['obv'] = talib.OBV(df['close'], df['volume'])
-    
+
+    if TALIB_AVAILABLE:
+        # Use TA-Lib implementation when available
+        df['sma_10'] = talib.SMA(df['close'], timeperiod=10)
+        df['sma_20'] = talib.SMA(df['close'], timeperiod=20)
+        df['sma_50'] = talib.SMA(df['close'], timeperiod=50)
+        df['sma_200'] = talib.SMA(df['close'], timeperiod=200)
+
+        df['ema_12'] = talib.EMA(df['close'], timeperiod=12)
+        df['ema_26'] = talib.EMA(df['close'], timeperiod=26)
+
+        # MACD
+        df['macd'], df['macd_signal'], df['macd_hist'] = talib.MACD(df['close'])
+
+        # RSI
+        df['rsi_14'] = talib.RSI(df['close'], timeperiod=14)
+        df['rsi_7'] = talib.RSI(df['close'], timeperiod=7)
+
+        # Bollinger Bands
+        df['bb_upper'], df['bb_middle'], df['bb_lower'] = talib.BBANDS(df['close'])
+
+        # Stochastic Oscillator
+        df['stoch_k'], df['stoch_d'] = talib.STOCH(df['high'], df['low'], df['close'])
+
+        # ATR (Average True Range)
+        df['atr_14'] = talib.ATR(df['high'], df['low'], df['close'], timeperiod=14)
+
+        # ADX (Average Directional Index)
+        df['adx'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=14)
+
+        # Parabolic SAR
+        df['sar'] = talib.SAR(df['high'], df['low'], acceleration=0.02, maximum=0.2)
+
+        # Williams %R
+        df['williams_r'] = talib.WILLR(df['high'], df['low'], df['close'], timeperiod=14)
+
+        # Commodity Channel Index
+        df['cci'] = talib.CCI(df['high'], df['low'], df['close'], timeperiod=14)
+
+        # Rate of Change
+        df['roc_10'] = talib.ROC(df['close'], timeperiod=10)
+
+        # Momentum
+        df['momentum_10'] = talib.MOM(df['close'], timeperiod=10)
+
+        # Volume indicators
+        df['vwap'] = calculate_vwap(df)
+        df['obv'] = talib.OBV(df['close'], df['volume'])
+    else:
+        # Use pure Python fallback implementation
+        df['sma_10'] = sma(df['close'], 10)
+        df['sma_20'] = sma(df['close'], 20)
+        df['sma_50'] = sma(df['close'], 50)
+        df['sma_200'] = sma(df['close'], 200)
+
+        df['ema_12'] = ema(df['close'], 12)
+        df['ema_26'] = ema(df['close'], 26)
+
+        # MACD
+        df['macd'], df['macd_signal'], df['macd_hist'] = macd(df['close'])
+
+        # RSI
+        df['rsi_14'] = rsi(df['close'], 14)
+        df['rsi_7'] = rsi(df['close'], 7)
+
+        # Bollinger Bands
+        df['bb_upper'], df['bb_middle'], df['bb_lower'] = bbands(df['close'])
+
+        # Stochastic Oscillator
+        df['stoch_k'], df['stoch_d'] = stoch(df['high'], df['low'], df['close'])
+
+        # ATR (Average True Range)
+        df['atr_14'] = atr(df['high'], df['low'], df['close'], 14)
+
+        # ADX (Average Directional Index)
+        df['adx'] = adx(df['high'], df['low'], df['close'], 14)
+
+        # Parabolic SAR
+        df['sar'] = sar(df['high'], df['low'])
+
+        # Williams %R
+        df['williams_r'] = willr(df['high'], df['low'], df['close'], 14)
+
+        # Commodity Channel Index
+        df['cci'] = cci(df['high'], df['low'], df['close'], 14)
+
+        # Rate of Change
+        df['roc_10'] = roc(df['close'], 10)
+
+        # Momentum
+        df['momentum_10'] = mom(df['close'], 10)
+
+        # Volume indicators
+        df['vwap'] = calculate_vwap(df)
+        df['obv'] = obv(df['close'], df['volume'])
+
     # Volume-weighted indicators
     df['vwma_20'] = calculate_vwma(df['close'], df['volume'], 20)
-    
+
     # Volatility
     df['volatility_20'] = df['close'].rolling(20).std()
-    
+
     # Correlation with market index (if available)
     if 'nifty_close' in df.columns:
         df['corr_nifty_20'] = df['close'].rolling(20).corr(df['nifty_close'])
-    
+
     # Previous values for crossover detection
     df['sma_20_prev'] = df['sma_20'].shift(1)
     df['sma_50_prev'] = df['sma_50'].shift(1)
     df['rsi_14_prev'] = df['rsi_14'].shift(1)
     df['macd_prev'] = df['macd'].shift(1)
     df['macd_signal_prev'] = df['macd_signal'].shift(1)
-    
+
     return df
 
 

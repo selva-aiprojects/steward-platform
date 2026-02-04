@@ -2,16 +2,34 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-# gcc and libpq-dev are often needed for python packages
+# Install system dependencies needed for Python packages and TA-Lib
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
+    wget \
+    build-essential \
     libpq-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install TA-Lib C library from source (required for python TA-Lib wheels)
+RUN wget -O ta-lib-0.4.0-src.tar.gz https://github.com/TA-Lib/ta-lib/releases/download/v0.4.0/ta-lib-0.4.0-src.tar.gz \
+    && tar -xzf ta-lib-0.4.0-src.tar.gz \
+    && cd ta-lib-0.4.0 \
+    && ./configure --prefix=/usr/local \
+    && make \
+    && make install \
+    && ldconfig \
+    && cd .. \
+    && rm -rf ta-lib-0.4.0 ta-lib-0.4.0-src.tar.gz
+
+# Ensure TA-Lib is discoverable at runtime
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+# Copy and install Python dependencies separately for better caching
+COPY requirements-production.txt requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -24,5 +42,4 @@ USER appuser
 EXPOSE 8000
 
 # Run the application
-# Using generic uvicorn command, but entrypoint can be overridden
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -14,12 +14,14 @@ def login(
 ):
     user = db.query(models.user.User).filter(models.user.User.email == payload.email).first()
     # Auto-provision default superadmin if missing (fresh DB on hosted env)
-    if not user and payload.email == "admin@stocksteward.ai" and payload.password == "admin123":
+    # Support both email formats for compatibility
+    if not user and payload.email in ["admin@stocksteward.ai", "admin@stocksteward-ai"] and payload.password == "admin123":
         from app.core.security import get_password_hash
+        # Use the email format that the user is trying to log in with for consistency
         user = models.user.User(
             id=999,
             full_name="Super Admin",
-            email="admin@stocksteward.ai",
+            email=payload.email,  # Use the email the user provided
             hashed_password=get_password_hash("admin123"),
             risk_tolerance="LOW",
             is_active=True,

@@ -1,16 +1,27 @@
 import os
+import logging
 from groq import Groq
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
         self.client = None
+        self.available_models = [
+            "llama-3.3-70b-versatile",  # Updated model
+            "llama-3.1-8b-instant",
+            "llama3-groq-70b-8192-tool-use-preview",
+            "llama3-groq-8b-8192-tool-use-preview"
+        ]
+
         if self.api_key:
             try:
                 self.client = Groq(api_key=self.api_key)
+                logger.info("Groq client initialized successfully")
             except Exception as e:
-                print(f"Failed to initialize Groq client: {e}")
+                logger.error(f"Failed to initialize Groq client: {e}")
         else:
             # Fallback to direct os.getenv if pydantic-settings failed for some reason
             direct_key = os.getenv("GROQ_API_KEY")
@@ -18,13 +29,56 @@ class LLMService:
                 self.api_key = direct_key
                 try:
                     self.client = Groq(api_key=direct_key)
+                    logger.info("Groq client initialized successfully with direct key")
                 except Exception as e:
-                    print(f"Failed to initialize Groq client with direct key: {e}")
+                    logger.error(f"Failed to initialize Groq client with direct key: {e}")
+            else:
+                logger.warning("GROQ_API_KEY not configured. LLM service will operate in offline mode.")
 
     def get_chat_response(self, message: str, context: str = "") -> str:
         if not self.client:
             # Graceful Fallback for Demo/Audit without API Key
+            logger.warning("Groq client not available, using offline response")
             return self._generate_offline_response(message)
+
+        system_prompt = (
+            "You are StockSteward AI, a helpful financial assistant for the StockSteward platform. "
+            "You specialize in the Indian Stock Market (NSE/BSE). "
+            "Keep answers concise, professional, and helpful. "
+            "If the user asks about market trends, give a general safe answer or ask them to check the dashboard. "
+            "Do not give financial advice."
+        )
+
+        if context:
+            system_prompt += f"\nContext: {context}"
+
+        try:
+            # Try different models in order of preference
+            for model in self.available_models:
+                try:
+                    completion = self.client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": message}
+                        ],
+                        model=model,
+                        max_tokens=300,
+                        temperature=0.7
+                    )
+                    response = completion.choices[0].message.content.strip()
+                    logger.info(f"Successfully generated response using model: {model}")
+                    return response
+                except Exception as model_error:
+                    logger.warning(f"Model {model} failed: {model_error}")
+                    continue  # Try next model
+
+            # If all models fail, return offline response
+            logger.error("All Groq models failed, falling back to offline response")
+            return self._generate_offline_response(message)
+
+        except Exception as e:
+            logger.error(f"Groq API error: {e}")
+            return f"I encountered an error processing your request: {str(e)}. Using offline mode."
 
     def _generate_offline_response(self, message: str) -> str:
         """
@@ -36,7 +90,7 @@ class LLMService:
         from app.models.portfolio import Portfolio
         from app.models.strategy import Strategy
         from app.models.trade import Trade
-        
+
         db = SessionLocal()
         try:
             # 1. Portfolio Queries
@@ -91,32 +145,9 @@ class LLMService:
             )
 
         except Exception as e:
+            logger.error(f"Database error in offline response: {e}")
             return f"Internal Database Error: {str(e)}"
         finally:
             db.close()
-
-        system_prompt = (
-            "You are StockSteward AI, a helpful financial assistant for the StockSteward platform. "
-            "You specialize in the Indian Stock Market (NSE/BSE). "
-            "Keep answers concise, professional, and helpful. "
-            "If the user asks about market trends, give a general safe answer or ask them to check the dashboard. "
-            "Do not give financial advice."
-        )
-        
-        if context:
-            system_prompt += f"\nContext: {context}"
-
-        try:
-            completion = self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": message}
-                ],
-                model="llama-3.1-8b-instant",
-                max_tokens=300
-            )
-            return completion.choices[0].message.content.strip()
-        except Exception as e:
-            return f"I encountered an error processing your request: {str(e)}"
 
 llm_service = LLMService()

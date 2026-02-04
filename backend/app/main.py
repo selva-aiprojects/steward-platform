@@ -145,13 +145,16 @@ async def market_feed():
                     groq_client = Groq(api_key=groq_key)
                 except ImportError:
                     print("Groq library not installed")
+                except Exception as e:
+                    print(f"Error initializing Groq client: {e}")
 
             if settings.EXECUTION_MODE == "LIVE_TRADING":
                 # 1. Attempt real fetch
                 raw_quotes = kite_service.get_quotes(watchlist)
-                
+
                 # 2. Smart Simulator fallback
-                if not raw_quotes:
+                if not raw_quotes or not isinstance(raw_quotes, dict) or len(raw_quotes) == 0:
+                    print("Kite API failed, using smart simulator fallback")
                     raw_quotes = {s: {
                         'last_price': round((72000 if 'SENSEX' in s else 50000 if 'MCX' in s else 1500) + random.uniform(-100, 100), 2),
                         'change': round(random.uniform(-3, 3), 2),
@@ -162,78 +165,99 @@ async def market_feed():
 
                 # 2. Identify Gainers and Losers
                 # Filter out any that might have missing change data
-                valid_quotes = {s: q for s, q in quotes.items() if 'change' in q}
-                sorted_movers = sorted(valid_quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
-                
-                top_gainers = sorted_movers[:10] # Top 10
-                top_losers = sorted_movers[-10:] # Bottom 10
-                
-                # Format movers for frontend
-                gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
-                losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
-                
-                # Update global state
-                last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
-                
-                # Emit consolidated movers event
-                await sio.emit('market_movers', last_market_movers, room='market_data')
+                valid_quotes = {s: q for s, q in quotes.items() if 'change' in q and q.get('change') is not None}
+                if valid_quotes:
+                    sorted_movers = sorted(valid_quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
 
+                    top_gainers = sorted_movers[:10] # Top 10
+                    top_losers = sorted_movers[-10:] # Bottom 10
 
-                # 4. Ticker Broadcast (Multi-exchange)
-                for s in watchlist:
-                    symbol = s.split(":")[-1]
-                    quote = raw_quotes.get(s)
-                    if not quote: continue
-                    
-                    update = {
-                        'symbol': symbol,
-                        'exchange': s.split(":")[0],
-                        'price': quote['last_price'],
-                        'change': quote['change'],
-                        'type': 'up' if quote['change'] >= 0 else 'down'
-                    }
-                    await sio.emit('market_update', update, room='market_data')
+                    # Format movers for frontend
+                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
+                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
 
-                # 4. Global "Steward Prediction" (Dynamic real-time trend)
-                if groq_client:
-                    try:
-                        market_summary = ", ".join([f"{s}: {q.get('change', 0):.2f}%" for s, q in quotes.items()])
-                        prompt = f"""
-                        Analyze the current Nifty 50 trend based on these changes: {market_summary}.
-                        Provide a senior wealth steward analysis in JSON format:
-                        {{
-                            "prediction": "one punchy, expert sentence summary",
-                            "decision": "STRONG BUY | BUY | HOLD | SELL | STRONG SELL",
-                            "confidence": 0-100,
-                            "signal_mix": {{
-                                "technical": 0-100,
-                                "fundamental": 0-100,
-                                "news": 0-100
-                            }},
-                            "risk_radar": 0-100
-                        }}
-                        """
-                        completion = groq_client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model="llama-3.3-70b-versatile",
-                            response_format={"type": "json_object"}
-                        )
-                        import json
-                        analysis = json.loads(completion.choices[0].message.content.strip())
-                        
-                        # Update global state
-                        last_steward_prediction = {
-                            'prediction': analysis.get('prediction', "Market stability maintained."),
-                            'decision': analysis.get('decision', "HOLD"),
-                            'confidence': analysis.get('confidence', 85),
-                            'signal_mix': analysis.get('signal_mix', {"technical": 70, "fundamental": 80, "news": 60}),
-                            'risk_radar': analysis.get('risk_radar', 40),
-                            'history': prediction_history
+                    # Update global state
+                    last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
+
+                    # Emit consolidated movers event
+                    await sio.emit('market_movers', last_market_movers, room='market_data')
+
+                    # 4. Ticker Broadcast (Multi-exchange)
+                    for s in watchlist:
+                        symbol = s.split(":")[-1]
+                        quote = raw_quotes.get(s)
+                        if not quote: continue
+
+                        # Handle cases where quote data might be an error object
+                        if quote.get('error'):
+                            print(f"Quote error for {s}: {quote.get('error')}")
+                            continue
+
+                        update = {
+                            'symbol': symbol,
+                            'exchange': s.split(":")[0],
+                            'price': quote['last_price'],
+                            'change': quote['change'],
+                            'type': 'up' if quote['change'] >= 0 else 'down'
                         }
-                            
-                        await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
-                    except Exception:
-                        pass
+                        await sio.emit('market_update', update, room='market_data')
+
+                    # 4. Global "Steward Prediction" (Dynamic real-time trend)
+                    if groq_client:
+                        try:
+                            market_summary = ", ".join([f"{s}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
+                            prompt = f"""
+                            Analyze the current Nifty 50 trend based on these changes: {market_summary}.
+                            Provide a senior wealth steward analysis in JSON format:
+                            {{
+                                "prediction": "one punchy, expert sentence summary",
+                                "decision": "STRONG BUY | BUY | HOLD | SELL | STRONG SELL",
+                                "confidence": 0-100,
+                                "signal_mix": {{
+                                    "technical": 0-100,
+                                    "fundamental": 0-100,
+                                    "news": 0-100
+                                }},
+                                "risk_radar": 0-100
+                            }}
+                            """
+                            completion = groq_client.chat.completions.create(
+                                messages=[{"role": "user", "content": prompt}],
+                                model="llama-3.3-70b-versatile",
+                                response_format={"type": "json_object"},
+                                timeout=30  # Add timeout to prevent hanging
+                            )
+                            import json
+                            analysis = json.loads(completion.choices[0].message.content.strip())
+
+                            # Update global state
+                            last_steward_prediction = {
+                                'prediction': analysis.get('prediction', "Market stability maintained."),
+                                'decision': analysis.get('decision', "HOLD"),
+                                'confidence': analysis.get('confidence', 85),
+                                'signal_mix': analysis.get('signal_mix', {"technical": 70, "fundamental": 80, "news": 60}),
+                                'risk_radar': analysis.get('risk_radar', 40),
+                                'history': prediction_history
+                            }
+
+                            await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
+                        except Exception as e:
+                            print(f"Groq analysis error: {e}")
+                            # Use fallback prediction
+                            last_steward_prediction = {
+                                'prediction': "Market showing neutral momentum. Monitoring AI signals.",
+                                'decision': "HOLD",
+                                'confidence': 70,
+                                'signal_mix': {"technical": 60, "fundamental": 70, "news": 65},
+                                'risk_radar': 45,
+                                'history': prediction_history
+                            }
+                            await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
+                else:
+                    print("No valid quotes received, using mock data")
+                    # Use mock data as fallback
+                    last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
+                    await sio.emit('market_movers', last_market_movers, room='market_data')
             else:
                 # Mock Mode Fallback
                 symbol = random.choice([
@@ -242,7 +266,7 @@ async def market_feed():
                 ])
                 # Update global state for REST compatibility
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
-                
+
                 await sio.emit('market_movers', last_market_movers, room='market_data')
 
                 mock_watchlist = [
@@ -267,15 +291,16 @@ async def market_feed():
                             completion = groq_client.chat.completions.create(
                                 messages=[{"role": "user", "content": prompt}],
                                 model="llama-3.1-8b-instant",
-                                max_tokens=60
+                                max_tokens=60,
+                                timeout=30  # Add timeout to prevent hanging
                             )
                             projection = completion.choices[0].message.content.strip()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            print(f"Groq projection error: {e}")
                     update['projection'] = projection
                     update['type'] = 'up' if update['change'] >= 0 else 'down'
                     await sio.emit('market_update', update, room='market_data')
-                
+
                 # Mock high-fidelity prediction for UI testing
                 last_steward_prediction = {
                     'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
@@ -291,9 +316,11 @@ async def market_feed():
                 if last_steward_prediction['prediction'] == "Initializing...":
                     last_steward_prediction['prediction'] = "Market showing neutral momentum in mock session. Monitoring AI signals."
                     await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
-                
+
         except Exception as e:
             print(f"Market feed error: {e}")
+            import traceback
+            traceback.print_exc()
 
 # Background System Telemetry (Admin Only)
 async def admin_feed():
