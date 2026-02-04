@@ -435,4 +435,4 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "build": "cors-fix-2699d6f"}
