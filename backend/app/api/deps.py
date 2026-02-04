@@ -39,3 +39,10 @@ async def get_current_active_user(
         db.commit()
         db.refresh(user)
     return user
+
+
+# Backwards-compatible alias for endpoints expecting get_current_user
+async def get_current_user(
+    db: Session = Depends(get_db)
+) -> User:
+    return await get_current_active_user(db)
