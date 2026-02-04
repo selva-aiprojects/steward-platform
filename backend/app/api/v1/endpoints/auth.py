@@ -13,6 +13,22 @@ def login(
     db: Session = Depends(get_db),
 ):
     user = db.query(models.user.User).filter(models.user.User.email == payload.email).first()
+    # Auto-provision default superadmin if missing (fresh DB on hosted env)
+    if not user and payload.email == "admin@stocksteward.ai" and payload.password == "admin123":
+        from app.core.security import get_password_hash
+        user = models.user.User(
+            id=999,
+            full_name="Super Admin",
+            email="admin@stocksteward.ai",
+            hashed_password=get_password_hash("admin123"),
+            risk_tolerance="LOW",
+            is_active=True,
+            role="SUPERADMIN",
+            is_superuser=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {
