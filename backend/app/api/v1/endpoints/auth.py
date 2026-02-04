@@ -8,6 +8,7 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=schemas.LoginResponse)
+@router.post("/login/", response_model=schemas.LoginResponse)
 def login(
     payload: schemas.LoginRequest,
     db: Session = Depends(get_db),
