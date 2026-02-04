@@ -49,7 +49,7 @@ export function Dashboard() {
         trades: recentTrades,
         marketMovers: marketMoversState,
         exchangeStatus,
-        stewardPrediction,
+        stewardPrediction: stewardPredictionState,
         marketResearch,
         sectorHeatmap,
         marketNews,
@@ -78,13 +78,13 @@ export function Dashboard() {
             { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
         ]
     };
-    const [stewardPrediction, setStewardPrediction] = useState({
+    const stewardPrediction = stewardPredictionState || {
         prediction: "Initializing market intelligence...",
         decision: "HOLD",
         confidence: 0,
         signal_mix: { technical: 0, fundamental: 0, news: 0 },
         risk_radar: 0
-    });
+    };
 
     const navigate = useNavigate();
 
