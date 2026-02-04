@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password
@@ -57,3 +57,9 @@ def login(
         "trading_mode": user.trading_mode,
         "risk_tolerance": user.risk_tolerance,
     }
+
+
+@router.options("/login")
+@router.options("/login/")
+def login_options():
+    return Response(status_code=204)
