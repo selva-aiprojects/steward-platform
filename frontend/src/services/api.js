@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 // Fallback to hosted backend for production, localhost for local dev
 const RAW_API_URL = process.env.REACT_APP_API_URL || 'https://stocksteward-ai-backend.onrender.com';
 const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
-const BASE_URL = RAW_API_URL.replace(/\/$/, '');
+const BASE_URL = RAW_API_URL.replace(/[\/?]+$/, '');
 const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
 const SOCKET_URL = HAS_VERSIONED_PATH ? BASE_URL.replace(/\/api\/v1$/, '') : BASE_URL;
 
@@ -243,7 +243,7 @@ export const fetchWatchlist = async (userId) => {
 
 export const loginUser = async (email, password) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/auth/login`, {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/auth/login`.replace(/\?+$/, ''), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
