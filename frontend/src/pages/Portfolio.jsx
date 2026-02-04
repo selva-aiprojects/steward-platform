@@ -336,7 +336,7 @@ const Portfolio = () => {
                     <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
                     <div>
                       <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">? {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">? {(stock.current_price ?? stock.currentPrice ?? stock.price ?? 0).toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -392,7 +392,7 @@ const Portfolio = () => {
                     <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
                     {isManual && <GripVertical className="text-slate-300" size={12} />}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-mono">? {(stock.current_price ?? stock.currentPrice ?? 0).toFixed(2)}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">? {(stock.current_price ?? stock.currentPrice ?? stock.price ?? 0).toFixed(2)}</p>
                 </div>
               </Link>
             ))}

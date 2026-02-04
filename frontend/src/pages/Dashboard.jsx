@@ -575,21 +575,29 @@ export function Dashboard() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
-                                {orderBook?.bids?.map((b, i) => (
-                                    <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
-                                        <span>{b.price}</span>
-                                        <span>{b.qty}</span>
-                                    </div>
-                                ))}
+                                {orderBook?.bids?.length > 0 ? (
+                                    orderBook.bids.map((b, i) => (
+                                        <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
+                                            <span>? {b.price}</span>
+                                            <span>{b.qty}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-xs text-slate-500 italic">No bid data available</div>
+                                )}
                             </div>
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
-                                {orderBook?.asks?.map((a, i) => (
-                                    <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
-                                        <span>{a.price}</span>
-                                        <span>{a.qty}</span>
-                                    </div>
-                                ))}
+                                {orderBook?.asks?.length > 0 ? (
+                                    orderBook.asks.map((a, i) => (
+                                        <div key={i} className="flex justify-between text-xs font-bold text-slate-700">
+                                            <span>? {a.price}</span>
+                                            <span>{a.qty}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-xs text-slate-500 italic">No ask data available</div>
+                                )}
                             </div>
                         </div>
                     </Card>

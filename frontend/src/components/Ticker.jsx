@@ -27,8 +27,21 @@ export function Ticker() {
                 { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.50, change: 1.2, type: 'up' },
                 { symbol: 'TCS', exchange: 'NSE', price: 3450.00, change: -0.5, type: 'down' },
                 { symbol: 'HDFCBANK', exchange: 'NSE', price: 1450.00, change: 0.8, type: 'up' },
+                { symbol: 'INFY', exchange: 'NSE', price: 1540.00, change: 0.6, type: 'up' },
+                { symbol: 'ICICIBANK', exchange: 'NSE', price: 1042.00, change: -0.3, type: 'down' },
+                { symbol: 'SBIN', exchange: 'NSE', price: 580.00, change: 1.1, type: 'up' },
+                { symbol: 'ITC', exchange: 'NSE', price: 438.00, change: 0.4, type: 'up' },
+                { symbol: 'LT', exchange: 'NSE', price: 2200.00, change: -0.7, type: 'down' },
+                { symbol: 'AXISBANK', exchange: 'NSE', price: 1125.00, change: 0.9, type: 'up' },
+                { symbol: 'KOTAKBANK', exchange: 'NSE', price: 1800.00, change: -0.2, type: 'down' },
+                { symbol: 'BAJFINANCE', exchange: 'NSE', price: 7200.00, change: 1.5, type: 'up' },
+                { symbol: 'MARUTI', exchange: 'NSE', price: 8500.00, change: 0.8, type: 'up' },
                 { symbol: 'SENSEX', exchange: 'BSE', price: 72150.00, change: 0.6, type: 'up' },
-                { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985.00, change: -0.4, type: 'down' }
+                { symbol: 'NIFTY', exchange: 'NSE', price: 22340.00, change: 0.7, type: 'up' },
+                { symbol: 'GOLD', exchange: 'MCX', price: 62450.00, change: 0.3, type: 'up' },
+                { symbol: 'SILVER', exchange: 'MCX', price: 74200.00, change: -0.1, type: 'down' },
+                { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985.00, change: -0.4, type: 'down' },
+                { symbol: 'NATURALGAS', exchange: 'MCX', price: 280.00, change: 1.2, type: 'up' }
             ]);
         }
     }, []);
