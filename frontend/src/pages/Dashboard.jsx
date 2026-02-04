@@ -43,6 +43,11 @@ import { useAppData } from "../context/AppDataContext";
 import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 export function Dashboard() {
+    const formatNumber = (value, digits = 2) => {
+        const num = typeof value === 'number' ? value : parseFloat(value);
+        if (!Number.isFinite(num)) return '0.00';
+        return num.toFixed(digits);
+    };
     const { user, selectedUser, setSelectedUser, isAdmin } = useUser();
     const {
         summary,
@@ -524,7 +529,7 @@ export function Dashboard() {
                                             <p className="font-black text-slate-900">{mover.symbol}</p>
                                             <p className="text-[10px] text-slate-500">+{mover.change}%</p>
                                         </div>
-                                        <p className="font-black text-green-600">INR {mover.price?.toFixed(2)}</p>
+                                        <p className="font-black text-green-600">INR {formatNumber(mover.price, 2)}</p>
                                     </div>
                                 ))}
                                 {(marketMovers?.losers?.length ? marketMovers.losers : fallbackMovers.losers).slice(0, 2).map((mover, i) => (
@@ -533,7 +538,7 @@ export function Dashboard() {
                                             <p className="font-black text-slate-900">{mover.symbol}</p>
                                             <p className="text-[10px] text-slate-500">{mover.change}%</p>
                                         </div>
-                                        <p className="font-black text-red-500">INR {mover.price?.toFixed(2)}</p>
+                                        <p className="font-black text-red-500">INR {formatNumber(mover.price, 2)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -566,7 +571,7 @@ export function Dashboard() {
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
                                 {(orderBook?.bids || []).slice(0, 5).map((bid, i) => (
                                     <div key={i} className="flex justify-between text-xs font-bold text-slate-700 py-1">
-                                        <span>INR {bid.price?.toFixed(2)}</span>
+                                        <span>INR {formatNumber(bid.price, 2)}</span>
                                         <span>{bid.qty}</span>
                                     </div>
                                 ))}
@@ -578,7 +583,7 @@ export function Dashboard() {
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
                                 {(orderBook?.asks || []).slice(0, 5).map((ask, i) => (
                                     <div key={i} className="flex justify-between text-xs font-bold text-slate-700 py-1">
-                                        <span>INR {ask.price?.toFixed(2)}</span>
+                                        <span>INR {formatNumber(ask.price, 2)}</span>
                                         <span>{ask.qty}</span>
                                     </div>
                                 ))}
@@ -654,9 +659,9 @@ export function Dashboard() {
                                             {trade.side}
                                         </td>
                                         <td className="py-3 text-slate-700">{trade.quantity}</td>
-                                        <td className="py-3 font-black text-slate-900">INR {trade.entry_price?.toFixed(2)}</td>
+                                        <td className="py-3 font-black text-slate-900">INR {formatNumber(trade.entry_price, 2)}</td>
                                         <td className={`py-3 font-black ${trade.pnl > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            {trade.pnl > 0 ? '+' : ''}{trade.pnl?.toFixed(2) || 0}
+                                            {trade.pnl > 0 ? '+' : ''}{formatNumber(trade.pnl, 2)}
                                         </td>
                                         <td className="py-3 text-[10px] text-slate-500">
                                             {new Date(trade.timestamp || trade.created_at).toLocaleTimeString()}
