@@ -315,6 +315,31 @@ async def startup_event():
     if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
         return
     Base.metadata.create_all(bind=engine)
+    # Ensure a default superadmin exists for fresh databases
+    try:
+        from app.core.database import SessionLocal
+        from app.models.user import User
+        from app.core.security import get_password_hash
+        db = SessionLocal()
+        try:
+            existing = db.query(User).first()
+            if not existing:
+                admin = User(
+                    id=999,
+                    full_name="Super Admin",
+                    email="admin@stocksteward.ai",
+                    hashed_password=get_password_hash("admin123"),
+                    risk_tolerance="LOW",
+                    is_active=True,
+                    role="SUPERADMIN",
+                    is_superuser=True
+                )
+                db.add(admin)
+                db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Default admin seed failed: {e}")
     asyncio.create_task(market_feed())
     asyncio.create_task(admin_feed())
 
