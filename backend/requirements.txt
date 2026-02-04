@@ -9,3 +9,4 @@ requests==2.31.0
 python-socketio==5.11.0
 groq==0.4.2
 passlib==1.7.4
+TA-Lib==0.4.28
