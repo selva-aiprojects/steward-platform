@@ -60,7 +60,16 @@ export const AppDataProvider = ({ children }) => {
                 fetchMacroIndicators()
             ]);
 
-            setSummary(sumData);
+            const safeSummary = sumData && typeof sumData === 'object'
+                ? sumData
+                : {
+                    cash_balance: 0,
+                    invested_amount: 0,
+                    win_rate: 0,
+                    positions_count: 0,
+                    total_trades: 0
+                };
+            setSummary(safeSummary);
             if (!hasLoaded || (Array.isArray(holdingsData) && holdingsData.length > 0)) {
                 setHoldings(Array.isArray(holdingsData) ? holdingsData : []);
             }
@@ -78,16 +87,18 @@ export const AppDataProvider = ({ children }) => {
             }
 
             // Update User Context with fresh data from backend
-            if (viewId === user?.id) {
-                setContextUser({
-                    ...userData,
-                    name: userData?.full_name || userData?.name || userData?.email
-                });
-            } else if (viewId === selectedUser?.id) {
-                setSelectedUser({
-                    ...userData,
-                    name: userData?.full_name || userData?.name || userData?.email
-                });
+            if (userData && typeof userData === 'object') {
+                if (viewId === user?.id) {
+                    setContextUser({
+                        ...userData,
+                        name: userData?.full_name || userData?.name || userData?.email
+                    });
+                } else if (viewId === selectedUser?.id) {
+                    setSelectedUser({
+                        ...userData,
+                        name: userData?.full_name || userData?.name || userData?.email
+                    });
+                }
             }
 
             if (moversData) {
@@ -98,7 +109,7 @@ export const AppDataProvider = ({ children }) => {
                 }
             }
 
-            setExchangeStatus(statusData);
+            setExchangeStatus(statusData || { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
             setMarketResearch(researchData);
             if (!hasLoaded || (Array.isArray(heatmapData) && heatmapData.length > 0)) {
                 setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);

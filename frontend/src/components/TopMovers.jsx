@@ -69,7 +69,7 @@ export function TopMovers() {
                         </div>
                         <div>
                             <p className="font-black text-slate-900 text-xs">{item.symbol}</p>
-                            <p className="text-[10px] text-slate-400 font-bold">? {item.price}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">{"\u20B9"} {item.price}</p>
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{item.exchange || 'NSE'}</p>
                         </div>
                     </div>

@@ -25,6 +25,17 @@ const getAuthHeaders = () => {
     }
 };
 
+const getCurrentUserId = () => {
+    try {
+        const raw = localStorage.getItem('stocksteward_user');
+        if (!raw) return null;
+        const user = JSON.parse(raw);
+        return user?.id || null;
+    } catch (error) {
+        return null;
+    }
+};
+
 export const socket = io(SOCKET_URL, {
     transports: ['websocket'],
     autoConnect: true,
@@ -264,12 +275,21 @@ export const fetchExchangeStatus = async () => {
 
 export const executeTrade = async (userId, tradeData) => {
     try {
+        const resolvedUserId = typeof userId === 'object' && userId !== null
+            ? (userId.user_id || getCurrentUserId())
+            : userId;
+        const resolvedTrade = typeof userId === 'object' && userId !== null
+            ? userId
+            : tradeData;
+        if (!resolvedTrade || !resolvedUserId) {
+            throw new Error('Missing user id or trade data');
+        }
         const response = await fetch(`${BASE_URL}${API_PREFIX}/trades/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                user_id: userId,
-                ...tradeData,
+                user_id: resolvedUserId,
+                ...resolvedTrade,
                 timestamp: new Date().toISOString()
             })
         });

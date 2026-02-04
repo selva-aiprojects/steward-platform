@@ -1,11 +1,42 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from "../components/ui/card";
-import { Play, Pause, RefreshCcw, Zap, Target, TrendingUp, TrendingDown, ArrowUpRight, Shield, Loader2, Lock, Unlock, Settings2, X, ArrowRight, Activity } from 'lucide-react';
-import { fetchStrategies, fetchProjections, fetchUser, updateUser, fetchPortfolioHistory, fetchPortfolioSummary, fetchExchangeStatus, executeTrade, fetchHoldings, launchStrategy, socket, depositFunds } from "../services/api";
+import { 
+  Play, 
+  Pause, 
+  RefreshCcw, 
+  Zap, 
+  Target, 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowUpRight, 
+  Shield, 
+  Loader2, 
+  Lock, 
+  Unlock, 
+  Settings2, 
+  X, 
+  ArrowRight, 
+  Activity,
+  ShoppingBag,
+  Unlock as UnlockIcon,
+  Lock as LockIcon
+} from 'lucide-react';
+import { 
+  fetchStrategies, 
+  fetchProjections, 
+  fetchUser, 
+  updateUser, 
+  fetchPortfolioHistory, 
+  fetchPortfolioSummary, 
+  fetchExchangeStatus, 
+  executeTrade, 
+  fetchHoldings, 
+  launchStrategy, 
+  depositFunds 
+} from "../services/api";
 
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export function TradingHub() {
     const { user: contextUser } = useUser();
@@ -19,8 +50,8 @@ export function TradingHub() {
         marketMovers,
         watchlist,
         loading,
-        toggleTradingMode: appToggleTradingMode,
-        refreshAllData
+        refreshAllData,
+        toggleTradingMode: toggleUserTradingMode
     } = useAppData();
 
     const [strategies, setStrategies] = useState([]);
@@ -42,7 +73,7 @@ export function TradingHub() {
     const [topupAmount, setTopupAmount] = useState(0);
     const [activeHoldings, setActiveHoldings] = useState([]);
     const [tradeStatus, setTradeStatus] = useState(null);
-
+    const [executingBasket, setExecutingBasket] = useState(false);
     const user = contextUser;
 
     useEffect(() => {
@@ -86,15 +117,14 @@ export function TradingHub() {
     const toggleTradingMode = async () => {
         setToggling(true);
         try {
-            await appToggleTradingMode();
+            await toggleUserTradingMode();
         } finally {
             setToggling(false);
         }
     };
 
     const handleManualTrade = async (action) => {
-        if (!user || user.trading_mode !== 'MANUAL') return;
-        if (!orderTicker || orderQty <= 0) {
+        if (!user || !orderTicker || orderQty <= 0) {
             setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
             setTimeout(() => setTradeStatus(null), 4000);
             return;
@@ -103,13 +133,13 @@ export function TradingHub() {
         setExecuting(true);
         try {
             const normalizedSymbol = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
-            const priceFromMarket = (marketMovers || []).find(m => m.symbol === normalizedSymbol)?.price;
             const tradeData = {
                 symbol: normalizedSymbol,
-                action: action, // BUY or SELL
-                price: priceFromMarket || 2450.00, // Mock live price fallback
+                side: action, // BUY or SELL
                 quantity: orderQty,
-                type: 'MANUAL',
+                price: 2450.00, // Mock live price fallback
+                order_type: 'MARKET',
+                user_id: user.id,
                 decision_logic: `User manual override: Explicit ${action} command executed via Trading Hub.`
             };
 
@@ -137,12 +167,6 @@ export function TradingHub() {
         }
     };
 
-    const getPriceForSymbol = (symbol) => {
-        const normalized = symbol.includes(':') ? symbol.split(':').pop() : symbol;
-        const priceFromMarket = (marketMovers || []).find(m => m.symbol === normalized)?.price;
-        return priceFromMarket || 2450.00;
-    };
-
     const addToBasket = () => {
         if (!orderTicker || orderQty <= 0) {
             setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
@@ -150,12 +174,12 @@ export function TradingHub() {
             return;
         }
         const normalized = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
-        const price = getPriceForSymbol(normalized);
+        const price = 2450.00; // Mock price - would come from market data in real implementation
         setBasket(prev => ([...prev, {
             id: Date.now(),
             symbol: normalized,
             quantity: orderQty,
-            price,
+            price: price,
             side: 'BUY'
         }]));
         setTradeStatus({ type: 'success', msg: `Added ${orderQty} ${normalized} to basket.` });
@@ -169,26 +193,17 @@ export function TradingHub() {
     const basketTotal = basket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     const executeBasket = async () => {
-        if (!user || user.trading_mode !== 'MANUAL') return;
-        if (basket.length === 0) return;
+        if (!user || basket.length === 0) return;
 
-        const cashBalance = summary?.cash_balance || 0;
-        if (basketTotal > cashBalance) {
-            const shortfall = basketTotal - cashBalance;
-            setTopupAmount(Math.ceil(shortfall));
-            setShowTopupModal(true);
-            return;
-        }
-
-        setExecuting(true);
+        setExecutingBasket(true);
         try {
             for (const item of basket) {
                 await executeTrade(user.id, {
                     symbol: item.symbol,
-                    action: item.side,
-                    price: item.price,
+                    side: item.side,
                     quantity: item.quantity,
-                    type: 'MANUAL',
+                    price: item.price,
+                    order_type: 'MARKET',
                     decision_logic: `Basket order: ${item.side} ${item.quantity} ${item.symbol}`
                 });
             }
@@ -198,12 +213,13 @@ export function TradingHub() {
             setBasket([]);
             setTradeStatus({ type: 'success', msg: 'Basket executed successfully.' });
             setTimeout(() => setTradeStatus(null), 4000);
+            setShowBasketModal(false);
         } catch (err) {
             console.error('Basket trade failed:', err);
             setTradeStatus({ type: 'error', msg: 'Basket execution failed.' });
             setTimeout(() => setTradeStatus(null), 4000);
         } finally {
-            setExecuting(false);
+            setExecutingBasket(false);
         }
     };
 
@@ -215,13 +231,15 @@ export function TradingHub() {
                 name: newStratName,
                 symbol: newStratSymbol,
                 status: 'RUNNING',
-                pnl: '+? 0.00',
+                pnl: 0,
                 trades: '0'
             };
             const result = await launchStrategy(contextUser.id, stratData);
             if (result) {
                 setStrategies(prev => [...prev, result]);
                 setShowLaunchModal(false);
+                setNewStratName('');
+                setNewStratSymbol('');
                 alert(`Strategy ${newStratName} (${newStratSymbol}) successfully provisioned and deployed.`);
             }
         } catch (err) {
@@ -240,7 +258,6 @@ export function TradingHub() {
         );
     }
 
-
     const symbolOptions = useMemo(() => {
         const base = [
             { symbol: 'RELIANCE', exchange: 'NSE' },
@@ -257,10 +274,22 @@ export function TradingHub() {
             { symbol: 'NATURALGAS', exchange: 'MCX' }
         ];
 
-        const fromHoldings = (activeHoldings || []).map(h => ({ symbol: h.symbol, exchange: h.exchange || 'NSE' }));
-        const fromWatchlist = (watchlist || []).map(w => ({ symbol: w.symbol, exchange: w.exchange || 'NSE' }));
-        const fromMovers = (marketMovers || []).map(m => ({ symbol: m.symbol, exchange: m.exchange || 'NSE' }));
-        const fromProjections = (projections || []).map(p => ({ symbol: p.ticker, exchange: 'NSE' }));
+        const fromHoldings = (activeHoldings || []).map(h => ({ 
+          symbol: h.symbol, 
+          exchange: h.exchange || 'NSE' 
+        }));
+        const fromWatchlist = (watchlist || []).map(w => ({ 
+          symbol: w.symbol, 
+          exchange: w.exchange || 'NSE' 
+        }));
+        const fromMovers = (marketMovers || []).map(m => ({ 
+          symbol: m.symbol, 
+          exchange: m.exchange || 'NSE' 
+        }));
+        const fromProjections = (projections || []).map(p => ({ 
+          symbol: p.ticker, 
+          exchange: 'NSE' 
+        }));
 
         const combined = [...base, ...fromHoldings, ...fromWatchlist, ...fromMovers, ...fromProjections];
         const seen = new Set();
@@ -300,7 +329,7 @@ export function TradingHub() {
                             : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
                             }`}
                     >
-                        {user?.trading_mode === 'AUTO' ? <Shield size={14} className="animate-pulse" /> : <Lock size={14} />}
+                        {user?.trading_mode === 'AUTO' ? <Shield size={14} className="animate-pulse" /> : <LockIcon size={14} />}
                         Steward Auto
                     </button>
                     <button
@@ -312,7 +341,7 @@ export function TradingHub() {
                             : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
                             }`}
                     >
-                        {user?.trading_mode === 'MANUAL' ? <Unlock size={14} className="animate-bounce" /> : <Shield size={14} />}
+                        {user?.trading_mode === 'MANUAL' ? <UnlockIcon size={14} className="animate-bounce" /> : <Shield size={14} />}
                         Manual Mode
                     </button>
                 </div>
@@ -323,7 +352,7 @@ export function TradingHub() {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exchange Status</span>
                     <div className="flex items-center gap-2">
                         <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus.exchange || 'NSE'} {exchangeStatus.latency}</span>
+                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus?.exchange || 'NSE'} {exchangeStatus?.latency || 'ONLINE'}</span>
                     </div>
                 </div>
 
@@ -339,7 +368,7 @@ export function TradingHub() {
             {/* Strategy Provisioning Modal */}
             {showLaunchModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                    <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-green-500" />
                         <button
                             onClick={() => !provisioning && setShowLaunchModal(false)}
@@ -364,6 +393,7 @@ export function TradingHub() {
                                     value={newStratName}
                                     onChange={(e) => setNewStratName(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                    placeholder="Enter strategy name"
                                 />
                             </div>
 
@@ -375,6 +405,7 @@ export function TradingHub() {
                                     value={newStratSymbol}
                                     onChange={(e) => setNewStratSymbol(e.target.value.toUpperCase())}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                    placeholder="Select or type symbol"
                                 />
                                 <datalist id="strategy-ticker-options">
                                     {symbolOptions.map((item) => (
@@ -405,7 +436,7 @@ export function TradingHub() {
                                 {provisioning ? 'Initializing Node...' : 'Confirm Deployment'}
                             </button>
                         </div>
-                    </Card>
+                    </div>
                 </div>
             )}
 
@@ -467,373 +498,227 @@ export function TradingHub() {
                             <input
                                 type="number"
                                 value={orderQty}
-                                onChange={(e) => setOrderQty(parseInt(e.target.value))}
+                                onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                placeholder="Qty"
                             />
                         </div>
-                        <div className="flex gap-2 w-full md:w-auto">
+                        <div className="flex gap-3 w-full md:w-auto">
                             <button
-                                data-testid="manual-buy-button"
                                 onClick={() => handleManualTrade('BUY')}
                                 disabled={executing}
-                                className="flex-1 md:flex-none bg-green-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2"
+                                className="px-6 py-3.5 bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
                                 Buy
                             </button>
                             <button
-                                type="button"
-                                onClick={addToBasket}
-                                disabled={executing}
-                                className="flex-1 md:flex-none bg-slate-900 text-white px-6 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95"
-                            >
-                                Add to Basket
-                            </button>
-                            <button
-                                data-testid="manual-sell-button"
                                 onClick={() => handleManualTrade('SELL')}
                                 disabled={executing}
-                                className="flex-1 md:flex-none bg-red-600 text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2"
+                                className="px-6 py-3.5 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingDown size={16} />}
                                 Sell
                             </button>
-                        </div>
-                        {tradeStatus && (
-                            <div className={`w-full mt-4 p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2 ${tradeStatus.type === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'
-                                }`}>
-                                {tradeStatus.msg}
-                            </div>
-                        )}
-                    </div>
-                    {user?.trading_mode === 'AUTO' && (
-                        <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            Manual trading is disabled in AUTO mode. Switch to MANUAL to place orders.
-                        </div>
-                    )}
-                    {user?.trading_mode === 'MANUAL' && (
-                        <div className="mt-4 w-full">
                             <button
-                                type="button"
-                                onClick={() => setShowBasketModal(true)}
-                                className="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
+                                onClick={addToBasket}
+                                className="px-4 py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all"
                             >
-                                Basket ({basket.length}) - ? {basketTotal.toLocaleString()}
+                                <Target size={16} />
                             </button>
                         </div>
-                    )}
-                </Card>
-
-                <Card className="p-6 border-slate-200 shadow-sm flex flex-col justify-center items-center text-center bg-slate-50 border-dashed">
-                    <div className="h-12 w-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 mb-3">
-                        <ArrowRight size={20} />
                     </div>
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Hold Status</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-tight">No active orders pending manual confirmation.</p>
+                </Card>
+                
+                <Card className="p-6 border-slate-200 shadow-sm">
+                    <div className="flex flex-col h-full">
+                        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Quick Actions</h3>
+                        
+                        <div className="space-y-3 flex-1">
+                            <button
+                                onClick={() => setShowBasketModal(true)}
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="font-black text-slate-900">Order Basket</span>
+                                    <span className="text-xs font-black bg-primary text-white px-2 py-1 rounded-full">
+                                        {basket.length}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Batch execute multiple orders</p>
+                            </button>
+                            
+                            <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <Target size={16} className="text-primary" />
+                                    <span className="font-black text-slate-900">Risk Controls</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Portfolio risk management</p>
+                            </button>
+                            
+                            <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <Activity size={16} className="text-primary" />
+                                    <span className="font-black text-slate-900">Live Feed</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Real-time market data</p>
+                            </button>
+                        </div>
+                    </div>
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Active Automated Strategies */}
-                <div className="lg:col-span-8 flex flex-col gap-8">
-                    <div className="space-y-6 relative group">
-                        <h2 data-testid="strategies-heading" className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Active Automated Strategies</h2>
-
-                        {user?.trading_mode === 'AUTO' && (
-                            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <Shield size={12} className="animate-pulse" />
-                                Steward AI autopilot active. Strategy controls are read-only.
-                            </div>
-                        )}
-
-                        <div data-testid="automated-strategies-list" className="grid grid-cols-1 gap-4">
-                            {Array.isArray(strategies) && strategies.length > 0 ? strategies.map((strat) => (
-                                <Card key={strat.id} className="p-6 border-slate-100 shadow-sm hover:border-primary/30 transition-all group bg-white">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-900">{strat.name}</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                                {strat.symbol || 'NSE'} - {strat.execution_mode || 'PAPER_TRADING'}
-                                            </p>
-                                        </div>
-                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${strat.status === 'RUNNING' ? 'bg-green-100 text-green-700' : strat.status === 'PAUSED' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                                            {strat.status || 'IDLE'}
+            {/* Active Strategies */}
+            <Card className="p-6 border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">Active Strategies</h3>
+                    <span className="text-sm font-black bg-primary/10 text-primary px-3 py-1 rounded-full">
+                        {strategies.length} running
+                    </span>
+                </div>
+                
+                {strategies.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {strategies.map((strategy) => (
+                            <div key={strategy.id} className="p-4 border border-slate-200 rounded-xl bg-white">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h4 className="font-black text-slate-900">{strategy.name}</h4>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-black uppercase ${
+                                        strategy.status === 'RUNNING' 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                        {strategy.status}
+                                    </span>
+                                </div>
+                                
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">Symbol:</span>
+                                        <span className="font-black">{strategy.symbol}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">PnL:</span>
+                                        <span className={`font-black ${strategy.pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                            {strategy.pnl >= 0 ? '+' : ''}{strategy.pnl.toFixed(2)}%
                                         </span>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4 mt-4">
-                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PnL</p>
-                                            <p className="text-sm font-black text-slate-900">{strat.pnl || '? 0.00'}</p>
-                                        </div>
-                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Drawdown</p>
-                                            <p className="text-sm font-black text-slate-900">{strat.drawdown ?? 0}%</p>
-                                        </div>
-                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mode</p>
-                                            <p className="text-sm font-black text-slate-900">{strat.execution_mode || 'PAPER'}</p>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">Trades:</span>
+                                        <span className="font-black">{strategy.total_trades}</span>
                                     </div>
-                                    <div className="flex items-center justify-between mt-4">
-                                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <Activity size={12} className="text-primary" />
-                                            Live status feed
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={user?.trading_mode === 'AUTO'}
-                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${user?.trading_mode === 'AUTO' ? 'bg-slate-100 text-slate-400' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
-                                            >
-                                                <Play size={12} className="inline mr-1" />
-                                                Run
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={user?.trading_mode === 'AUTO'}
-                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${user?.trading_mode === 'AUTO' ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
-                                            >
-                                                <Pause size={12} className="inline mr-1" />
-                                                Pause
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            )) : (
-                                <div className="p-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Active Strategies Provisioned</p>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Agent Thought Stream */}
-                    <Card className="border-slate-200 shadow-sm overflow-hidden bg-white">
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-2">
-                                <Activity size={14} className="text-primary animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Agent Thought Stream</span>
+                                
+                                <div className="mt-4 flex gap-2">
+                                    <button className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">
+                                        Pause
+                                    </button>
+                                    <button className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity">
+                                        Stats
+                                    </button>
+                                </div>
                             </div>
-                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Live Telemetry</span>
-                        </div>
-                        <div className="p-4 space-y-3 h-[240px] overflow-y-auto font-mono scrollbar-hide">
-                            {logs.map((log) => (
-                                <div key={log.id} className="flex gap-3 text-[10px] animate-in slide-in-from-left-2 duration-300">
-                                    <span className="text-slate-400 shrink-0">[{log.time}]</span>
-                                    <span className={`font-bold ${log.type === 'logic' ? 'text-indigo-600' : log.type === 'system' ? 'text-slate-500' : 'text-primary'
-                                        }`}>
-                                        {log.type.toUpperCase()}:
-                                    </span>
-                                    <span className="text-slate-700">{log.msg}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-                </div>
-
-                {/* AI Next Day Projections */}
-                <div className="lg:col-span-4 space-y-6">
-                    <h2 className="text-xl font-black text-slate-900 px-1 font-heading uppercase tracking-widest text-sm">Next-Day Projections</h2>
-                    <Card className="p-6 border-primary/20 bg-green-50/30 shadow-xl shadow-primary/5">
-                        <div className="flex items-center gap-2 mb-6">
-                            <TrendingUp size={18} className="text-primary" />
-                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Alpha Recommendation</span>
-                        </div>
-
-                        <div className="space-y-4">
-                            {projections.map((proj, i) => (
-                                <div key={i} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm group hover:border-primary/50 transition-all cursor-pointer">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-black text-slate-900">{proj.ticker}</span>
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${proj.move_prediction.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                            }`}>{proj.move_prediction}</span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-500 font-bold leading-relaxed">{proj.logic}</p>
-                                    <div className="mt-3 flex items-center justify-between">
-                                        <span className="text-[9px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md">{proj.action}</span>
-                                        <ArrowUpRight size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-6 p-4 rounded-2xl bg-slate-900 text-white border-none">
-                            <h4 className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Shield size={14} className="text-primary" />
-                                Logic Validation
-                            </h4>
-                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                Recommendations are based on 14-day trailing sentiment analysis and real-time order flow data.
-                                <span className="text-primary font-black ml-1">Live data feed active.</span>
-                            </p>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-
-            <Card className="p-10 bg-[#0A2A4D] text-white border-none shadow-2xl overflow-hidden relative">
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div className="max-w-xl">
-                        <div className="flex items-center gap-2 mb-6">
-                            <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest">Global Watcher Alpha</span>
-                            <span className="text-white/40 text-[10px] font-bold leading-none uppercase tracking-widest">Cluster Node: AP-SOUTH-1 (Mumbai)</span>
-                        </div>
-                        <h3 className="text-3xl font-black mb-4 font-heading leading-tight italic">"{appStewardPrediction?.prediction || "Market intelligence syncing..."}"</h3>
-                        <p className="text-slate-300 text-[10px] font-black leading-relaxed mb-8 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span className="h-2 w-2 bg-green-500 rounded-full animate-ping" />
-                            Live Steward Forecast Stream
-                        </p>
-                        <div className="flex flex-wrap gap-4">
-                            <button className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black text-xs hover:scale-105 transition-transform uppercase tracking-widest shadow-lg">Emergency Stop All</button>
-                            <button className="px-8 py-3 bg-white/10 text-white rounded-xl font-black text-xs border border-white/20 hover:bg-white/20 transition-all uppercase tracking-widest">View Decision Tree</button>
-                        </div>
+                        ))}
                     </div>
-
-                    <div className="hidden lg:grid grid-cols-2 gap-4 flex-shrink-0">
-                        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                            <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1">HFT Latency</p>
-                            <p className="text-2xl font-black text-white">42ms</p>
-                        </div>
-                        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                            <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1">Confidence</p>
-                            <p className="text-2xl font-black text-green-400">92%</p>
-                        </div>
+                ) : (
+                    <div className="text-center py-12">
+                        <Activity size={48} className="mx-auto text-slate-300 mb-4" />
+                        <h4 className="font-black text-slate-500 mb-2">No Active Strategies</h4>
+                        <p className="text-sm text-slate-400">Launch a strategy to begin automated trading</p>
                     </div>
-                </div>
-                {/* Visual accents */}
-                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
-                <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
+                )}
             </Card>
 
+            {/* Order Basket Modal */}
             {showBasketModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <Card className="w-full max-w-xl bg-white p-6 rounded-3xl shadow-2xl relative">
-                        <button
-                            onClick={() => setShowBasketModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Order Basket</h3>
-                        {basket.length === 0 ? (
-                            <div className="text-xs text-slate-500">No orders in basket.</div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black text-slate-900">Order Basket</h3>
+                            <button 
+                                onClick={() => setShowBasketModal(false)}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        {basket.length > 0 ? (
+                            <>
+                                <div className="space-y-3 mb-6">
+                                    {basket.map((order, index) => (
+                                        <div key={order.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+                                            <div>
+                                                <span className="font-black text-slate-900">{order.symbol}</span>
+                                                <span className="text-sm text-slate-500 ml-2">{order.side}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-black">{order.quantity} @ {"\u20B9"} {order.price}</span>
+                                                <button 
+                                                    onClick={() => setBasket(prev => prev.filter((_, i) => i !== index))}
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="flex justify-between items-center mb-6 p-4 bg-slate-50 rounded-xl">
+                                    <span className="font-black text-slate-900">Total Value:</span>
+                                    <span className="text-xl font-black text-slate-900">{"\u20B9"} {basketTotal.toFixed(2)}</span>
+                                </div>
+                                
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowBasketModal(false)}
+                                        className="px-6 py-3 border border-slate-200 text-slate-700 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={executeBasket}
+                                        disabled={executingBasket}
+                                        className="px-6 py-3 bg-primary text-white rounded-xl font-black text-sm uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {executingBasket ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                        Execute Basket
+                                    </button>
+                                </div>
+                            </>
                         ) : (
-                            <div className="space-y-3">
-                                {basket.map(item => (
-                                    <div key={item.id} className="flex items-center justify-between text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                                        <span>{item.symbol}</span>
-                                        <span>{item.quantity} @ ? {item.price}</span>
-                                        <span className="text-primary">{item.side}</span>
-                                        <button
-                                            onClick={() => removeFromBasket(item.id)}
-                                            className="text-[9px] font-black uppercase tracking-widest text-red-500"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ))}
+                            <div className="text-center py-8">
+                                <ShoppingBag size={48} className="mx-auto text-slate-300 mb-4" />
+                                <h4 className="font-black text-slate-500 mb-2">Basket is Empty</h4>
+                                <p className="text-sm text-slate-400">Add orders to your basket to execute them together</p>
                             </div>
                         )}
-                        <div className="mt-4 flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total</span>
-                            <span className="text-sm font-black text-slate-900">? {basketTotal.toLocaleString()}</span>
-                        </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowBasketModal(false)}
-                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 rounded-lg"
-                            >
-                                Close
-                            </button>
-                            <button
-                                onClick={() => { setShowBasketModal(false); executeBasket(); }}
-                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-primary text-white rounded-lg"
-                            >
-                                Execute Basket
-                            </button>
-                        </div>
-                    </Card>
+                    </div>
                 </div>
             )}
 
-            {showTopupModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <Card className="w-full max-w-md bg-white p-6 rounded-3xl shadow-2xl relative">
-                        <button
-                            onClick={() => setShowTopupModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Insufficient Funds</h3>
-                        <p className="text-xs text-slate-600">You need additional ? {topupAmount.toLocaleString()} to execute this basket.</p>
-                        <div className="mt-4">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top-up Amount (₹)</label>
-                            <input
-                                type="number"
-                                value={topupAmount}
-                                onChange={(e) => setTopupAmount(parseInt(e.target.value || '0'))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-black"
-                            />
+            {/* Trading Logic Console */}
+            <Card className="p-6 border-slate-200 shadow-sm">
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest mb-6">Intelligence Log</h3>
+                
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {logs.map((log) => (
+                        <div key={log.id} className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <span className="text-slate-400 font-mono">[{log.time}]</span>
+                            <span className={`font-black uppercase tracking-widest ${
+                                log.type === 'system' ? 'text-indigo-600' : 
+                                log.type === 'logic' ? 'text-primary' : 
+                                'text-green-600'
+                            }`}>
+                                {log.type.toUpperCase()}:
+                            </span>
+                            <span className="text-slate-700">{log.msg}</span>
                         </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowTopupModal(false)}
-                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 rounded-lg"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    await refreshAllData();
-                                    await fetchPortfolioSummary(user.id);
-                                    await depositFunds(user.id, topupAmount);
-                                    setShowTopupModal(false);
-                                    executeBasket();
-                                }}
-                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-primary text-white rounded-lg"
-                            >
-                                Add Funds & Execute
-                            </button>
-                        </div>
-                    </Card>
+                    ))}
                 </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 p-6 border-slate-200 shadow-sm bg-white">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Live Research Stream</h3>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Macro + sector notes</p>
-                        </div>
-                        <span className="text-[10px] font-black text-primary uppercase">Streaming</span>
-                    </div>
-                    <div className="space-y-3">
-                        {(marketResearch?.headlines || []).map((h, i) => (
-                            <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold text-slate-800">
-                                {h}
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-
-                <Card className="p-6 border-slate-200 shadow-sm bg-white">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">Signal Bias</h3>
-                    <div className="space-y-3">
-                        {(marketResearch?.watchlist || []).map((w, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                                <span className="font-black text-slate-800">{w.symbol}</span>
-                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${w.bias === 'BUY' ? 'bg-green-100 text-green-700' : w.bias === 'SELL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
-                                    {w.bias}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-            </div>
+            </Card>
         </div>
     );
 }
-
 

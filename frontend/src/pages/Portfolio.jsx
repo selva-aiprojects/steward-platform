@@ -1,19 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown,
-  DollarSign, Activity, PieChart as PieChartIcon, Target,
-  Shield, Zap, RefreshCcw, Loader2, Plus, GripVertical, X
+  ArrowUpRight, 
+  ArrowDownRight, 
+  TrendingUp, 
+  TrendingDown,
+  DollarSign, 
+  Activity, 
+  PieChart as PieChartIcon, 
+  Target,
+  Shield, 
+  Zap, 
+  RefreshCcw, 
+  Loader2, 
+  Plus, 
+  X,
+  ArrowDownRight as ArrowDownRightIcon,
+  GripVertical
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend 
+} from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { fetchPortfolioHistory, depositFunds, withdrawFunds, addToWatchlist, removeFromWatchlist } from "../services/api";
+import { 
+  fetchPortfolioSummary, 
+  fetchTrades, 
+  fetchPortfolioHistory, 
+  fetchExchangeStatus, 
+  fetchUsers, 
+  fetchAllPortfolios, 
+  depositFunds, 
+  fetchMarketMovers,
+  fetchHoldings,
+  fetchWatchlist,
+  executeTrade
+} from "../services/api";
 import { useUser } from '../context/UserContext';
 import { useAppData } from '../context/AppDataContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-const Portfolio = () => {
+export function Portfolio() {
   const { user, selectedUser } = useUser();
   const {
     summary,
@@ -35,117 +72,173 @@ const Portfolio = () => {
   const [withdrawAmount, setWithdrawAmount] = useState(2000);
   const [fundStatus, setFundStatus] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [activeHoldingsState, setActiveHoldingsState] = useState([]);
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState(0);
+  const [basket, setBasket] = useState([]);
+  const [executing, setExecuting] = useState(false);
+  const [basketTotal, setBasketTotal] = useState(0);
+  const [showBasketModal, setShowBasketModal] = useState(false);
+  const [orderTicker, setOrderTicker] = useState('');
+  const [orderQty, setOrderQty] = useState(1);
+  const [orderPrice, setOrderPrice] = useState(0);
+  const [orderSide, setOrderSide] = useState('BUY');
+  const [tradeStatus, setTradeStatus] = useState(null);
 
-  const viewId = selectedUser?.id || user?.id;
-  const isManual = user?.trading_mode === 'MANUAL';
+  const navigate = useNavigate();
 
+  // Load initial data
   useEffect(() => {
-    if (appWatchlist) setWatchlist(appWatchlist);
-  }, [appWatchlist]);
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (!viewId) return;
+    const loadData = async () => {
       try {
-        const historyData = await fetchPortfolioHistory(viewId);
-        setHistory(Array.isArray(historyData) ? historyData : []);
-      } catch (err) {
-        console.error("History Load Error:", err);
+        // Load portfolio summary
+        const summaryData = await fetchPortfolioSummary(selectedUser?.id || user?.id);
+        
+        // Load holdings
+        const holdingsData = await fetchHoldings(selectedUser?.id || user?.id);
+        setActiveHoldingsState(holdingsData || []);
+        
+        // Load watchlist
+        const watchlistData = await fetchWatchlist(selectedUser?.id || user?.id);
+        setWatchlist(watchlistData || []);
+        
+        // Load portfolio history
+        const historyData = await fetchPortfolioHistory(selectedUser?.id || user?.id);
+        setHistory(historyData || []);
+      } catch (error) {
+        console.error('Error loading portfolio data:', error);
+        // Set default data if fetch fails
+        setActiveHoldingsState([]);
+        setWatchlist([]);
+        setHistory([]);
       }
     };
-    loadHistory();
-  }, [viewId]);
+    
+    loadData();
+  }, [selectedUser, user]);
 
-  const handleDeposit = async () => {
-    if (!viewId || depositAmount <= 0) return;
-    setDepositing(true);
+  // Handle manual trade
+  const handleManualTrade = async (side) => {
+    if (!orderTicker || orderQty <= 0) {
+      setTradeStatus({ type: 'error', message: 'Please select a ticker and quantity' });
+      return;
+    }
+
+    setExecuting(true);
     try {
-      const result = await depositFunds(viewId, depositAmount);
-      if (result) {
+      const tradeData = {
+        symbol: orderTicker,
+        side: side,
+        quantity: orderQty,
+        price: orderPrice || null,
+        order_type: 'MARKET',
+        user_id: user.id
+      };
+
+      const result = await executeTrade(user.id, tradeData);
+      
+      if (result.success) {
+        setTradeStatus({ 
+          type: 'success', 
+          message: `${side} order placed successfully for ${orderQty} shares of ${orderTicker}` 
+        });
+        
+        // Refresh data
         await refreshAllData();
-        setShowDepositModal(false);
-        setFundStatus({ type: 'success', msg: `Deposit completed: ? ${depositAmount.toLocaleString()}` });
-        alert(`Successfully deposited ? ${depositAmount.toLocaleString()} into your vault.`);
+        
+        // Clear form
+        setOrderQty(1);
+        setOrderPrice(0);
+      } else {
+        setTradeStatus({ 
+          type: 'error', 
+          message: result.error || 'Trade execution failed' 
+        });
       }
-    } catch (err) {
-      console.error("Deposit failed:", err);
-      setFundStatus({ type: 'error', msg: 'Deposit failed. Please retry.' });
+    } catch (error) {
+      setTradeStatus({ 
+        type: 'error', 
+        message: error.message || 'An error occurred during trade execution' 
+      });
     } finally {
-      setDepositing(false);
+      setExecuting(false);
     }
   };
 
-  const handleWithdraw = async () => {
-    if (!viewId || withdrawAmount <= 0) return;
-    setWithdrawing(true);
-    try {
-      const result = await withdrawFunds(viewId, withdrawAmount);
-      if (result) {
-        await refreshAllData();
-        setShowWithdrawModal(false);
-        setFundStatus({ type: 'success', msg: `Withdraw completed: ? ${withdrawAmount.toLocaleString()}` });
-        alert(`Successfully withdrew ? ${withdrawAmount.toLocaleString()} from your vault.`);
-      }
-    } catch (err) {
-      console.error("Withdraw failed:", err);
-      setFundStatus({ type: 'error', msg: 'Withdraw failed. Please retry.' });
-    } finally {
-      setWithdrawing(false);
+  // Add to basket
+  const addToBasket = () => {
+    if (!orderTicker || orderQty <= 0) {
+      setTradeStatus({ type: 'error', message: 'Invalid order details' });
+      return;
     }
+
+    const newOrder = {
+      id: Date.now(),
+      symbol: orderTicker,
+      side: orderSide,
+      quantity: orderQty,
+      price: orderPrice,
+      type: 'MARKET'
+    };
+
+    setBasket(prev => [...prev, newOrder]);
+    setTradeStatus({ type: 'success', message: `Added ${orderQty} ${orderTicker} to basket` });
   };
 
-  const handleDragStart = (e, item) => {
-    if (!isManual) return;
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-    // Visual drag image enhancement could go here
-  };
+  // Execute basket
+  const executeBasket = async () => {
+    if (basket.length === 0) return;
 
-  const handleDragOver = (e) => {
-    if (!isManual) return;
-    e.preventDefault();
-  };
-
-  const handleDrop = async (e, targetSection) => {
-    if (!isManual || !draggedItem) return;
-    e.preventDefault();
-
+    setExecuting(true);
     try {
-      if (targetSection === 'active' && draggedItem.type === 'watch') {
-        // For demo: remove from watchlist and let refresh hydrate holdings
-        setWatchlist(watchlist.filter(i => i.id !== draggedItem.id));
-        await removeFromWatchlist(viewId, draggedItem.symbol);
-      } else if (targetSection === 'watch' && draggedItem.type === 'active') {
-        setWatchlist([...watchlist, { ...draggedItem, type: 'watch', change: '0.0%' }]);
-        await addToWatchlist(viewId, draggedItem.symbol);
+      for (const order of basket) {
+        await executeTrade(user.id, {
+          symbol: order.symbol,
+          side: order.side,
+          quantity: order.quantity,
+          price: order.price,
+          order_type: order.type,
+        });
       }
+      
+      setTradeStatus({ 
+        type: 'success', 
+        message: `Executed ${basket.length} orders from basket` 
+      });
+      
+      setBasket([]);
+      setShowBasketModal(false);
       await refreshAllData();
-    } catch (err) {
-      console.error("Drop persistence failed:", err);
+    } catch (error) {
+      setTradeStatus({ 
+        type: 'error', 
+        message: 'Basket execution failed: ' + error.message 
+      });
+    } finally {
+      setExecuting(false);
     }
-    setDraggedItem(null);
   };
-
-  const allocationData = activeHoldings.length > 0 ? activeHoldings.map(h => {
-    const price = h.current_price ?? h.currentPrice ?? 0;
-    return {
-      name: h.symbol,
-      value: h.quantity * price
-    };
-  }) : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
 
   if (loading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-black uppercase text-[10px] tracking-[0.3em] text-[#0A2A4D]">Loading wealth vault...</p>
+        <p className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-500">Loading wealth vault...</p>
       </div>
     );
   }
 
+  // Calculate allocation data for pie chart
+  const allocationData = activeHoldingsState.length > 0 
+    ? activeHoldingsState.map(h => ({
+        name: h.symbol,
+        value: (h.quantity || 0) * (h.current_price || h.currentPrice || h.price || 0)
+      }))
+    : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
+
   return (
-    <div className="portfolio-container pb-4 space-y-8 animate-in fade-in duration-500">
-      <header className="page-header flex justify-between items-end">
+    <div className="pb-4 space-y-8 animate-in fade-in duration-500">
+      <header className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Wealth Vault</h1>
           <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
@@ -157,7 +250,7 @@ const Portfolio = () => {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Vault Value</p>
             <h2 className="text-3xl font-black text-slate-900 leading-none">
-              ? {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
+              {"\u20B9"} {((summary?.invested_amount || 0) + (summary?.cash_balance || 0)).toLocaleString()}
             </h2>
           </div>
           <button
@@ -171,7 +264,7 @@ const Portfolio = () => {
             onClick={() => setShowWithdrawModal(true)}
             className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-lg shadow-slate-200/40"
           >
-            <ArrowDownRight size={18} />
+            <ArrowDownRightIcon size={18} />
             Withdraw
           </button>
           <Link to="/trading" className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-slate-900/20">
@@ -180,282 +273,197 @@ const Portfolio = () => {
           </Link>
         </div>
       </header>
-      {fundStatus && (
-        <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${fundStatus.type === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'}`}>
-          {fundStatus.msg}
+
+      {tradeStatus && (
+        <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${
+          tradeStatus.type === 'success' 
+            ? 'bg-green-50 border-green-100 text-green-600' 
+            : 'bg-red-50 border-red-100 text-red-600'
+        }`}>
+          {tradeStatus.message}
         </div>
       )}
 
-      {/* Deposit Modal */}
-      {showDepositModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-indigo-600" />
-            <button
-              onClick={() => !depositing && setShowDepositModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="text-center mb-8">
-              <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary shadow-inner">
-                <DollarSign size={32} />
+      {/* Manual Trading Panel */}
+      <Card className="p-6 border-slate-100 shadow-sm bg-white">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex-1">
+            <h3 className="text-lg font-black text-slate-900 mb-4">Manual Order Ticket</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">Symbol</label>
+                <input
+                  type="text"
+                  value={orderTicker}
+                  onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  placeholder="Enter symbol (e.g., RELIANCE)"
+                />
               </div>
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Inject Capital</h3>
-              <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Connect to Virtual Liquidity Pool</p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deposit Amount (₹)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">? </span>
-                  <input
-                    type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(parseInt(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-8 pr-4 py-4 text-xl font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                  />
-                </div>
+              
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">Quantity</label>
+                <input
+                  type="number"
+                  value={orderQty}
+                  onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  placeholder="Enter quantity"
+                />
               </div>
-
-              <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="opacity-60">Network Fee</span>
-                  <span className="text-green-400">0.00% (PRO)</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="opacity-60">Processing Time</span>
-                  <span className="text-primary font-bold">Instant</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleDeposit}
-                disabled={depositing}
-                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
-              >
-                {depositing ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />}
-                {depositing ? 'Securing Funds...' : 'Execute Deposit'}
-              </button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Withdraw Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <Card className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-900 to-slate-600" />
-            <button
-              onClick={() => !withdrawing && setShowWithdrawModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="text-center mb-8">
-              <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-900 shadow-inner">
-                <ArrowDownRight size={32} />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Withdraw Capital</h3>
-              <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Cash-out from Virtual Vault</p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Withdraw Amount (₹)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                  <input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(parseInt(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-xl font-black text-slate-900 focus:ring-4 focus:ring-slate-200 transition-all outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="opacity-60">Processing Time</span>
-                  <span className="text-primary font-bold">Instant</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="opacity-60">Compliance Check</span>
-                  <span className="text-green-400">PASS</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleWithdraw}
-                disabled={withdrawing}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
-              >
-                {withdrawing ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />}
-                {withdrawing ? 'Securing Withdrawal...' : 'Execute Withdraw'}
-              </button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Interactive Workbench */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* Active Allocation Zone */}
-        <Card
-          className={`p-6 border-2 border-dashed transition-all ${isManual ? 'border-primary/20 bg-primary/5' : 'border-slate-100 bg-slate-50 opacity-80'}`}
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, 'active')}
-        >
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm flex items-center gap-2">
-                <Target size={16} /> Active Allocation
-              </h3>
-              <p className="text-[10px] text-slate-500 font-bold mt-1">
-                {isManual ? "Drag stocks here to allocate capital." : "Managed by Steward AI"}
-              </p>
-            </div>
-            {!isManual && <Shield className="text-slate-400" size={20} />}
-          </div>
-
-          <div className="space-y-3 min-h-[200px]">
-            {activeHoldings.map((stock) => (
-              <Link to="/trading" key={stock.id} className="block">
-                <div
-                  draggable={isManual}
-                  onDragStart={(e) => handleDragStart(e, stock)}
-                  className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-primary/40 hover:shadow-md transition-all ${isManual ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+              
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">Side</label>
+                <select
+                  value={orderSide}
+                  onChange={(e) => setOrderSide(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                 >
-                  <div className="flex items-center gap-3">
-                    {isManual && <GripVertical className="text-slate-300" size={16} />}
-                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">{stock.symbol.substring(0, 1)}</div>
-                    <div>
-                      <p className="font-black text-slate-900 text-sm group-hover:text-primary transition-colors">{stock.symbol}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">? {(stock.current_price ?? stock.currentPrice ?? stock.price ?? 0).toFixed(2)}</p>
+                  <option value="BUY">Buy</option>
+                  <option value="SELL">Sell</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">Price</label>
+                <input
+                  type="number"
+                  value={orderPrice}
+                  onChange={(e) => setOrderPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  placeholder="Enter price (leave blank for market)"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => handleManualTrade('BUY')}
+                disabled={executing}
+                className="flex-1 bg-green-600 text-white px-6 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {executing ? <RefreshCcw className="animate-spin" size={18} /> : <TrendingUp size={18} />}
+                Buy
+              </button>
+              
+              <button
+                onClick={() => handleManualTrade('SELL')}
+                disabled={executing}
+                className="flex-1 bg-red-600 text-white px-6 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {executing ? <RefreshCcw className="animate-spin" size={18} /> : <TrendingDown size={18} />}
+                Sell
+              </button>
+              
+              <button
+                onClick={addToBasket}
+                className="px-6 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 transition-all"
+              >
+                Add to Basket
+              </button>
+            </div>
+          </div>
+          
+          <div className="lg:w-80">
+            <h3 className="text-lg font-black text-slate-900 mb-4">Quick Actions</h3>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowBasketModal(true)}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-slate-900">Order Basket</span>
+                  <span className="text-xs font-black bg-primary text-white px-2 py-1 rounded-full">
+                    {basket.length}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Batch execute multiple orders</p>
+              </button>
+              
+              <button
+                onClick={() => setShowTopupModal(true)}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign size={16} className="text-primary" />
+                  <span className="font-black text-slate-900">Quick Top-up</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Add funds instantly</p>
+              </button>
+              
+              <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="text-primary" />
+                  <span className="font-black text-slate-900">Risk Analyzer</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Portfolio risk assessment</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Active Holdings */}
+        <Card className="lg:col-span-8 p-6 border-slate-100 shadow-sm bg-white">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-slate-900">Active Holdings</h3>
+            <span className="text-sm font-black bg-primary/10 text-primary px-3 py-1 rounded-full">
+              {activeHoldingsState.length} positions
+            </span>
+          </div>
+          
+          <div className="space-y-4">
+            {activeHoldingsState.length > 0 ? (
+              activeHoldingsState.map((holding, i) => {
+                const currentPrice = holding.current_price || holding.currentPrice || holding.price || 0;
+                const avgPrice = holding.avg_price || holding.avgPrice || 0;
+                const pnl = (currentPrice - avgPrice) * (holding.quantity || 0);
+                const pnlPercent = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0;
+                
+                return (
+                  <div key={i} className="p-4 border border-slate-100 rounded-xl bg-slate-50 hover:bg-white transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-700">
+                          {holding.symbol?.substring(0, 2)}
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900">{holding.symbol}</h4>
+                          <p className="text-xs text-slate-500">{holding.quantity || 0} shares @ {"\u20B9"}{(avgPrice || 0).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="font-black text-slate-900">{"\u20B9"}{currentPrice.toFixed(2)}</p>
+                        <p className={`text-sm font-black ${pnlPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                        </p>
+                        <p className={`text-xs font-bold ${pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {pnl >= 0 ? '+' : ''}{"\u20B9"}{pnl.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    {(() => {
-                      const avgPrice = stock.avg_price ?? stock.avgPrice ?? 0;
-                      const currentPrice = stock.current_price ?? stock.currentPrice ?? 0;
-                      const derivedPnlPct = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0;
-                      const pnlPctRaw = stock.pnl_pct ?? stock.pnlPct ?? derivedPnlPct;
-                      const pnlPct = typeof pnlPctRaw === 'number' ? pnlPctRaw : parseFloat(pnlPctRaw) || 0;
-                      return (
-                        <p className={`text-sm font-black ${pnlPct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
-                        </p>
-                      );
-                    })()}
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">PnL</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-            {activeHoldings.length === 0 && (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 rounded-xl p-8">
-                No active assets. Drag from watchlist to fund.
+                );
+              })
+            ) : (
+              <div className="text-center py-12 text-slate-400">
+                <Activity size={48} className="mx-auto mb-4 opacity-50" />
+                <h4 className="font-black text-slate-500 mb-2">No Active Holdings</h4>
+                <p className="text-sm">Place your first trade to see active positions here</p>
               </div>
             )}
           </div>
         </Card>
 
-        {/* Watchlist / Market Zone */}
-        <Card
-          className="p-6 border-slate-100 bg-white"
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, 'watch')}
-        >
-          <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm mb-6 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Activity size={16} /> Market Opportunities
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="h-1 w-1 bg-green-500 rounded-full animate-ping" />
-              <span className="text-[8px] font-black text-slate-400">LIVE FEED</span>
-            </div>
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {watchlist.map((stock) => (
-              <Link to="/trading" key={stock.id}>
-                <div
-                  draggable={isManual}
-                  onDragStart={(e) => handleDragStart(e, stock)}
-                  className={`p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between h-24 group hover:bg-white hover:border-primary/30 hover:shadow-md transition-all ${isManual ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-slate-900 group-hover:text-primary transition-colors">{stock.symbol}</span>
-                    {isManual && <GripVertical className="text-slate-300" size={12} />}
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-mono">? {(stock.current_price ?? stock.currentPrice ?? stock.price ?? 0).toFixed(2)}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <h4 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center justify-between">
-              <span>Steward Insight</span>
-              <span className="flex items-center gap-1">
-                <span className="h-1 w-1 bg-indigo-400 rounded-full animate-ping" />
-                <span className="text-[8px] opacity-60">LIVE</span>
-              </span>
-            </h4>
-            <p className="text-[11px] text-indigo-700 leading-relaxed font-medium italic">
-              "{appStewardPrediction?.prediction || "Market intelligence syncing..."}"
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Wealth Projection Chart */}
-        <Card className="lg:col-span-8 p-8 border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest">Retirement Wealth Projection</h2>
-              <p className="text-xs text-slate-400 font-medium mt-1">Estimated compound growth triggers based on current allocation.</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-bold text-slate-600 uppercase">Aggressive</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-indigo-500" />
-                <span className="text-[10px] font-bold text-slate-600 uppercase">Conservative</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={history.length > 0 ? history : projections}>
-                <defs>
-                  <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey={history.length > 0 ? "name" : "year"} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                />
-                <Area type="monotone" dataKey={history.length > 0 ? "value" : "aggressive"} stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorCons)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Allocation Pie Chart */}
-        <Card className="lg:col-span-4 p-8 border-slate-100 shadow-sm flex flex-col justify-center">
-          <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Portfolio Allocation</h2>
-          <div className="h-[250px] w-full">
+        {/* Portfolio Allocation */}
+        <Card className="lg:col-span-4 p-6 border-slate-100 shadow-sm bg-white">
+          <h3 className="text-lg font-black text-slate-900 mb-6">Portfolio Allocation</h3>
+          
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -463,74 +471,186 @@ const Portfolio = () => {
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={85}
+                  outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
-                  stroke="none"
+                  nameKey="name"
                 >
                   {allocationData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '700' }} />
+                <Tooltip formatter={(value) => [`\u20B9 ${value.toLocaleString()}`, 'Value']} />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          
+          <div className="mt-6 space-y-2">
+            {allocationData.map((item, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span className="font-bold text-slate-700">{item.name}</span>
+                <span className="font-black text-slate-900">{"\u20B9"}{item.value.toLocaleString()}</span>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
 
-      {/* Trust & Security Footer - Enterprise Grade */}
-      <footer className="mt-12 p-8 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/5 rounded-lg text-emerald-400">
-              <Shield size={24} />
-            </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest">SOC2 Type II</h4>
-              <p className="text-[10px] opacity-70">Audited Compliance</p>
-            </div>
+      {/* Wealth Projection Chart */}
+      <Card className="p-8 border-slate-100 shadow-sm bg-white">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest">Wealth Projection</h2>
+            <p className="text-xs text-slate-400 font-medium mt-1">Estimated growth based on current allocation</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/5 rounded-lg text-blue-400">
-              <Shield size={24} />
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-bold text-slate-600 uppercase">Aggressive</span>
             </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest">AES-256</h4>
-              <p className="text-[10px] opacity-70">Bank-Grade Encryption</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/5 rounded-lg text-amber-400">
-              <PieChartIcon size={24} />
-            </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest">Redundant Data</h4>
-              <p className="text-[10px] opacity-70">Multi-Region Backup</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/5 rounded-lg text-purple-400">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <h4 className="text-white font-black text-xs uppercase tracking-widest">SEBI Regulated</h4>
-              <p className="text-[10px] opacity-70">Registered Advisor</p>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-indigo-500" />
+              <span className="text-[10px] font-bold text-slate-600 uppercase">Conservative</span>
             </div>
           </div>
         </div>
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] leading-relaxed font-medium">
-            <strong className="text-white font-black uppercase tracking-widest mr-2">Disclaimer:</strong>
-            StockSteward AI is a registered investment advisor. Past performance is not indicative of future results. All investments involve risk, including the loss of principal.
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={history.length > 0 ? history : [
+              { name: 'Jan', value: 100000 },
+              { name: 'Feb', value: 102000 },
+              { name: 'Mar', value: 98000 },
+              { name: 'Apr', value: 105000 },
+              { name: 'May', value: 107000 },
+              { name: 'Jun', value: 110000 }
+            ]}>
+              <defs>
+                <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} 
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} 
+                tickFormatter={(val) => `\u20B9 ${val}`}
+              />
+              <Tooltip 
+                formatter={(value) => [`\u20B9 ${value}`, 'Value']}
+                contentStyle={{ 
+                  borderRadius: '16px', 
+                  border: 'none', 
+                  boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', 
+                  padding: '12px' 
+                }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#10b981" 
+                strokeWidth={4} 
+                fillOpacity={1} 
+                fill="url(#colorCons)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* Watchlist */}
+      <Card className="p-6 border-slate-100 shadow-sm bg-white">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-black text-slate-900">Watchlist</h3>
+          <span className="text-sm font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
+            {watchlist.length} stocks
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {watchlist.length > 0 ? (
+            watchlist.map((stock, i) => {
+              const currentPrice = stock.current_price || stock.currentPrice || stock.price || 0;
+              const change = stock.change || stock.change_pct || 0;
+              
+              return (
+                <Link to="/trading" key={i} className="block">
+                  <div className="p-4 border border-slate-100 rounded-xl bg-slate-50 hover:bg-white hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-black text-slate-900 text-sm">{stock.symbol}</h4>
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                        (typeof change === 'string' ? parseFloat(change) : change) >= 0 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-red-100 text-red-500'
+                      }`}>
+                        {(typeof change === 'string' ? parseFloat(change) : change) >= 0 ? '+' : ''}
+                        {(typeof change === 'string' ? parseFloat(change) : change).toFixed(2)}%
+                      </span>
+                    </div>
+                    <p className="text-sm font-black text-slate-900">{"\u20B9"}{currentPrice.toFixed(2)}</p>
+                  </div>
+                </Link>
+              );
+            })
+          ) : (
+            <div className="col-span-full text-center py-12 text-slate-400">
+              <Activity size={48} className="mx-auto mb-4 opacity-50" />
+              <h4 className="font-black text-slate-500 mb-2">Empty Watchlist</h4>
+              <p className="text-sm">Add stocks to your watchlist to track them here</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* AI Steward Prediction */}
+      <Card className="p-6 border-slate-100 shadow-sm bg-gradient-to-br from-indigo-50 to-slate-50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+            <Zap size={20} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-black text-slate-900">AI Steward Prediction</h3>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Intelligent Market Analysis</p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl border border-indigo-100">
+          <p className="text-slate-700 italic leading-relaxed">
+            "{appStewardPrediction?.prediction || "AI is analyzing market conditions and generating insights..."}"
           </p>
-          <p className="text-[10px] font-mono opacity-50">v2.4.0-Enterprise</p>
+          
+          <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-slate-100">
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Recommendation</p>
+              <p className={`font-black text-lg ${appStewardPrediction?.decision === 'BUY' ? 'text-green-600' : appStewardPrediction?.decision === 'SELL' ? 'text-red-500' : 'text-slate-600'}`}>
+                {appStewardPrediction?.decision || 'HOLD'}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Confidence</p>
+              <p className="font-black text-lg text-slate-900">
+                {appStewardPrediction?.confidence || 0}%
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Risk Level</p>
+              <p className="font-black text-lg text-slate-900">
+                {appStewardPrediction?.risk_level || 'MODERATE'}
+              </p>
+            </div>
+          </div>
         </div>
-      </footer>
+      </Card>
     </div>
   );
-};
-
-export default Portfolio;
-
+}

@@ -189,7 +189,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">? 18.4K</p>
+                            <p className="text-2xl font-black text-slate-900">{"\u20B9"} 18.4K</p>
                             <p className="text-[10px] text-green-600 font-black uppercase tracking-tighter">+12.4% THIS PERIOD</p>
                         </div>
                     </div>
@@ -222,7 +222,7 @@ export function Reports() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-black text-slate-900">? 64.2K</p>
+                            <p className="text-2xl font-black text-slate-900">{"\u20B9"} 64.2K</p>
                             <p className="text-[10px] text-primary font-black uppercase tracking-tighter">+24.8% THIS PERIOD</p>
                         </div>
                     </div>

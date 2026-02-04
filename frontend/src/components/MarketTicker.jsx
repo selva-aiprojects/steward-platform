@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { socket, fetchMarketMovers } from '../services/api';
 import { useAppData } from '../context/AppDataContext';
 
 export function MarketTicker() {
     const [stocks, setStocks] = useState([]);
-    const { marketMovers } = useAppData();
-    const maxItems = 30;
+    const { marketMovers, watchlist } = useAppData();
+    const maxItems = 36;
     const fallbackStocks = [
         { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
         { symbol: 'TCS', exchange: 'NSE', price: 3450, change: -0.5 },
@@ -14,6 +14,45 @@ export function MarketTicker() {
         { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 },
         { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
     ];
+    const fallbackUniverse = useMemo(() => ([
+        { symbol: 'RELIANCE', exchange: 'NSE' },
+        { symbol: 'TCS', exchange: 'NSE' },
+        { symbol: 'HDFCBANK', exchange: 'NSE' },
+        { symbol: 'INFY', exchange: 'NSE' },
+        { symbol: 'ICICIBANK', exchange: 'NSE' },
+        { symbol: 'SBIN', exchange: 'NSE' },
+        { symbol: 'ITC', exchange: 'NSE' },
+        { symbol: 'LT', exchange: 'NSE' },
+        { symbol: 'AXISBANK', exchange: 'NSE' },
+        { symbol: 'KOTAKBANK', exchange: 'NSE' },
+        { symbol: 'BAJFINANCE', exchange: 'NSE' },
+        { symbol: 'BAJAJFINSV', exchange: 'NSE' },
+        { symbol: 'MARUTI', exchange: 'NSE' },
+        { symbol: 'TATAMOTORS', exchange: 'NSE' },
+        { symbol: 'BHARTIARTL', exchange: 'NSE' },
+        { symbol: 'ADANIENT', exchange: 'NSE' },
+        { symbol: 'ADANIPORTS', exchange: 'NSE' },
+        { symbol: 'ASIANPAINT', exchange: 'NSE' },
+        { symbol: 'ULTRACEMCO', exchange: 'NSE' },
+        { symbol: 'WIPRO', exchange: 'NSE' },
+        { symbol: 'TECHM', exchange: 'NSE' },
+        { symbol: 'HCLTECH', exchange: 'NSE' },
+        { symbol: 'ONGC', exchange: 'NSE' },
+        { symbol: 'POWERGRID', exchange: 'NSE' },
+        { symbol: 'NTPC', exchange: 'NSE' },
+        { symbol: 'COALINDIA', exchange: 'NSE' },
+        { symbol: 'SUNPHARMA', exchange: 'NSE' },
+        { symbol: 'DRREDDY', exchange: 'NSE' },
+        { symbol: 'CIPLA', exchange: 'NSE' },
+        { symbol: 'HINDUNILVR', exchange: 'NSE' },
+        { symbol: 'SENSEX', exchange: 'BSE' },
+        { symbol: 'BOM500002', exchange: 'BSE' },
+        { symbol: 'BOM500010', exchange: 'BSE' },
+        { symbol: 'GOLD', exchange: 'MCX' },
+        { symbol: 'SILVER', exchange: 'MCX' },
+        { symbol: 'CRUDEOIL', exchange: 'MCX' },
+        { symbol: 'NATURALGAS', exchange: 'MCX' }
+    ]), []);
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
             case 'NSE':
@@ -30,11 +69,13 @@ export function MarketTicker() {
     useEffect(() => {
         const handleUpdate = (data) => {
             setStocks(prev => {
-                const exists = prev.find(s => s.symbol === data.symbol);
+                const key = `${data.exchange || 'NSE'}:${data.symbol}`;
+                const exists = prev.find(s => `${s.exchange || 'NSE'}:${s.symbol}` === key);
                 if (exists) {
-                    return prev.map(s => s.symbol === data.symbol ? { ...s, ...data } : s);
+                    return prev.map(s => `${s.exchange || 'NSE'}:${s.symbol}` === key ? { ...s, ...data } : s);
                 }
-                return [data, ...prev].slice(0, maxItems);
+                if (prev.length >= maxItems) return prev;
+                return [...prev, data];
             });
         };
 
@@ -44,19 +85,47 @@ export function MarketTicker() {
 
     useEffect(() => {
         if (stocks.length > 0) return;
-        if (!marketMovers || marketMovers.length === 0) return;
-        const seed = marketMovers.slice(0, maxItems).map(m => ({
-            symbol: m.symbol,
-            exchange: m.exchange || 'NSE',
-            price: m.price || m.last_price || 0,
-            change: m.change || 0
+
+        const fromMovers = (Array.isArray(marketMovers) ? marketMovers : [])
+            .map(m => ({
+                symbol: m.symbol,
+                exchange: m.exchange || 'NSE',
+                price: m.price || m.last_price || 0,
+                change: m.change || 0
+            }));
+
+        const fromWatchlist = (Array.isArray(watchlist) ? watchlist : [])
+            .map(w => ({
+                symbol: w.symbol,
+                exchange: w.exchange || 'NSE',
+                price: w.price || w.current_price || w.last_price || 0,
+                change: w.change || w.change_pct || 0
+            }));
+
+        const fromUniverse = fallbackUniverse.map(item => ({
+            ...item,
+            price: 0,
+            change: 0
         }));
-        setStocks(seed);
-    }, [marketMovers, stocks.length]);
+
+        const combined = [...fromMovers, ...fromWatchlist, ...fromUniverse];
+        const seen = new Set();
+        const seed = combined.filter(item => {
+            if (!item.symbol) return false;
+            const key = `${item.exchange || 'NSE'}:${item.symbol}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        }).slice(0, maxItems);
+
+        if (seed.length > 0) {
+            setStocks(seed);
+        }
+    }, [marketMovers, watchlist, fallbackUniverse, stocks.length]);
 
     useEffect(() => {
         const poll = async () => {
-            if (stocks.length > 0) return;
+            if (stocks.length >= maxItems) return;
             const data = await fetchMarketMovers();
             if (data?.gainers) {
                 const seed = [...data.gainers, ...data.losers].map(m => ({
@@ -97,7 +166,7 @@ export function MarketTicker() {
                             <span className="text-[10px] font-black text-white uppercase tracking-tight">{stock.symbol}</span>
                         </div>
                         <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-white">? {stock.price?.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-white">{"\u20B9"} {stock.price?.toLocaleString()}</span>
                             <div className={`flex items-center gap-0.5 text-[8px] font-bold ${parseFloat(stock.change) >= 0 ? 'text-green-400' : 'text-red-400'
                                 }`}>
                                 {parseFloat(stock.change) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
