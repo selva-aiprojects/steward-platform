@@ -6,15 +6,20 @@ import { useNavigate } from 'react-router-dom';
 import { fetchUsers, loginUser } from '../services/api';
 
 export function Login() {
-    const { login } = useUser();
+    const { login, user } = useUser();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState([]);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [rememberMe, setRememberMe] = useState(true);
 
     useEffect(() => {
+        if (user) {
+            navigate('/');
+            return;
+        }
         const loadUsers = async () => {
             const data = await fetchUsers();
             setUsers(Array.isArray(data) ? data : []);
@@ -41,13 +46,17 @@ export function Login() {
                 setLoading(false);
                 return;
             }
-            login({
+            const session = {
                 id: userData.id,
                 name: userData.full_name || userData.email,
                 email: userData.email,
                 role: userData.role || 'TRADER',
                 avatar: (userData.full_name || userData.email).slice(0, 2).toUpperCase()
-            });
+            };
+            login(session);
+            if (!rememberMe) {
+                localStorage.removeItem('stocksteward_user');
+            }
             navigate('/');
         } catch (err) {
             setError('Login failed. Please try again.');
@@ -107,6 +116,16 @@ export function Login() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
                         />
                     </div>
+
+                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300"
+                        />
+                        Remember Me
+                    </label>
 
                     {error && (
                         <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 border border-red-100 rounded-lg px-3 py-2">
