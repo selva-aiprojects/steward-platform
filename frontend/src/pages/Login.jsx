@@ -12,6 +12,7 @@ export function Login() {
     const [users, setUsers] = useState([]);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const loadUsers = async () => {
@@ -25,10 +26,18 @@ export function Login() {
     }, []);
 
     const handleLogin = async () => {
+        setError('');
+        const trimmedEmail = (email || '').trim();
+        const trimmedPassword = (password || '').trim();
+        if (!trimmedEmail || !trimmedPassword) {
+            setError('Enter email and password.');
+            return;
+        }
         setLoading(true);
         try {
-            const userData = await loginUser(email, password);
+            const userData = await loginUser(trimmedEmail, trimmedPassword);
             if (!userData) {
+                setError('Invalid credentials or server unavailable.');
                 setLoading(false);
                 return;
             }
@@ -40,6 +49,8 @@ export function Login() {
                 avatar: (userData.full_name || userData.email).slice(0, 2).toUpperCase()
             });
             navigate('/');
+        } catch (err) {
+            setError('Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -96,6 +107,12 @@ export function Login() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
                         />
                     </div>
+
+                    {error && (
+                        <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                            {error}
+                        </div>
+                    )}
 
                     <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all flex items-center gap-3 text-left">
                         <div className="h-8 w-8 bg-white/10 rounded-lg flex items-center justify-center text-white"><Lock size={16} /></div>
