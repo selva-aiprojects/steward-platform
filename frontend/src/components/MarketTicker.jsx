@@ -56,13 +56,13 @@ export function MarketTicker() {
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
             case 'NSE':
-                return 'text-emerald-100 border-emerald-300/80 bg-emerald-500/60';
+                return 'text-emerald-300 border-emerald-500/60';
             case 'BSE':
-                return 'text-sky-100 border-sky-300/80 bg-sky-500/60';
+                return 'text-sky-300 border-sky-500/60';
             case 'MCX':
-                return 'text-amber-100 border-amber-300/80 bg-amber-500/60';
+                return 'text-amber-300 border-amber-500/60';
             default:
-                return 'text-slate-100 border-slate-400/60 bg-slate-600/70';
+                return 'text-slate-300 border-slate-500/60';
         }
     };
     const formatPrice = (value) => {

@@ -57,16 +57,17 @@ export function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 relative overflow-hidden">
             {/* Background elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px]" />
+                <div className="absolute top-[-12%] left-[-12%] w-[55%] h-[55%] bg-emerald-300/30 rounded-full blur-[140px]" />
+                <div className="absolute bottom-[-12%] right-[-12%] w-[55%] h-[55%] bg-emerald-500/20 rounded-full blur-[160px]" />
+                <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(16,185,129,0.2) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
             </div>
 
-            <Card className="w-full max-w-md bg-white/95 backdrop-blur-xl border-slate-200 shadow-2xl z-10 p-8 rounded-2xl">
+            <Card className="w-full max-w-md bg-white border-slate-200 shadow-2xl z-10 p-8 rounded-2xl">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="h-16 w-16 bg-[#0A2A4D] rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-900/20">
+                    <div className="h-16 w-16 bg-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30">
                         <ShieldCheck className="text-white" size={32} />
                     </div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">StockSteward AI</h1>
@@ -116,8 +117,8 @@ export function Login() {
                         </div>
                     )}
 
-                    <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all flex items-center gap-3 text-left">
-                        <div className="h-8 w-8 bg-white/10 rounded-lg flex items-center justify-center text-white"><Lock size={16} /></div>
+                    <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all flex items-center gap-3 text-left shadow-lg shadow-emerald-600/20">
+                        <div className="h-8 w-8 bg-white/20 rounded-lg flex items-center justify-center text-white"><Lock size={16} /></div>
                         <div className="flex-1"><h3 className="text-xs font-black text-white">Secure Login</h3><p className="text-[10px] text-white/60">Role-based access</p></div>
                         <ArrowRight size={14} className="text-white/70 group-hover:text-white transition-colors" />
                     </button>
