@@ -59,8 +59,12 @@ export const checkApiHealth = async () => {
 
 export const fetchUsers = async () => {
     try {
+        const headers = getAuthHeaders();
+        if (!Object.keys(headers).length) {
+            return [];
+        }
         const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`, {
-            headers: getAuthHeaders()
+            headers
         });
         if (!response.ok) throw new Error('Failed to fetch users');
         return await response.json();
@@ -72,8 +76,12 @@ export const fetchUsers = async () => {
 
 export const fetchUser = async (userId) => {
     try {
+        const headers = getAuthHeaders();
+        if (!Object.keys(headers).length) {
+            return null;
+        }
         const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
-            headers: getAuthHeaders()
+            headers
         });
         if (!response.ok) throw new Error('Failed to fetch user');
         return await response.json();

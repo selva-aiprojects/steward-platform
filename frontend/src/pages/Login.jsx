@@ -3,13 +3,12 @@ import { useUser } from '../context/UserContext';
 import { Card } from "../components/ui/card";
 import { ShieldCheck, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUsers, loginUser } from '../services/api';
+import { loginUser } from '../services/api';
 
 export function Login() {
     const { login, user } = useUser();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [users, setUsers] = useState([]);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -20,15 +19,7 @@ export function Login() {
             navigate('/');
             return;
         }
-        const loadUsers = async () => {
-            const data = await fetchUsers();
-            setUsers(Array.isArray(data) ? data : []);
-            if (data && data.length > 0) {
-                setEmail(data[0].email);
-            }
-        };
-        loadUsers();
-    }, []);
+    }, [user, navigate]);
 
     const handleLogin = async () => {
         setError('');
@@ -85,25 +76,13 @@ export function Login() {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">User</label>
-                        {users.length > 0 ? (
-                            <select
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-                            >
-                                {users.map((u) => (
-                                    <option key={u.id} value={u.email}>{u.full_name || u.email} ({u.role || 'TRADER'})</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="user@stocksteward.ai"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-                            />
-                        )}
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="user@stocksteward.ai"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                        />
                     </div>
 
                     <div className="space-y-2">
@@ -126,6 +105,10 @@ export function Login() {
                         />
                         Remember Me
                     </label>
+
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                        Demo Logins: admin@stocksteward.ai / admin123 · owner@stocksteward.ai / owner123 · trader@stocksteward.ai / trader123 · auditor@stocksteward.ai / audit123
+                    </div>
 
                     {error && (
                         <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 border border-red-100 rounded-lg px-3 py-2">
