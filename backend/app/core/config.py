@@ -26,14 +26,32 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             # Strip common copy-paste artifacts from Neon/Postgres shells
             v = v.strip()
-            if v.startswith("psql "):
-                v = v.replace("psql ", "", 1).strip("'").strip('"')
-            if v.startswith("'") and v.endswith("'"):
-                v = v.strip("'")
+            print(f"DEBUG: Raw DATABASE_URL: '{v}'")  # Debug print
+
+            # Remove 'psql ' prefix if present (multiple variations)
+            while v.startswith("psql "):
+                v = v[5:].strip()
+
+            # Remove other common prefixes that might be accidentally copied
+            if v.startswith("postgresql://") or v.startswith("postgres://"):
+                pass  # Already correct format
+            elif v.startswith("psql ") or v.startswith("PG ") or v.startswith("DB "):
+                # Extract the actual URL part
+                parts = v.split()
+                for part in parts:
+                    if part.startswith("postgresql://") or part.startswith("postgres://"):
+                        v = part
+                        break
+
+            # Remove surrounding quotes if present
+            v = v.strip("'\"")
+
             # Ensure it starts with postgresql:// or postgres://
             # SQLAlchemy 1.4+ requires postgresql://
             if v.startswith("postgres://"):
                 v = v.replace("postgres://", "postgresql://", 1)
+
+            print(f"DEBUG: Processed DATABASE_URL: '{v}'")  # Debug print
         return v
 
     # Security & API Keys

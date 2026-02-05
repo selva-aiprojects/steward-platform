@@ -19,6 +19,7 @@ def _build_engine(db_url: str):
 def _ensure_engine():
     global engine, SessionLocal, _current_database_url
     db_url = os.getenv("DATABASE_URL") or settings.DATABASE_URL
+    print(f"DEBUG: About to create engine with URL: '{db_url}'")  # Debug print
     if engine is None or db_url != _current_database_url:
         engine = _build_engine(db_url)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
