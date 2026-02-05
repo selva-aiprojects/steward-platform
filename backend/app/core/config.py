@@ -28,6 +28,20 @@ class Settings(BaseSettings):
             v = v.strip()
             print(f"DEBUG: Raw DATABASE_URL: '{v}'")  # Debug print
 
+            # Handle the specific case from the error: 'psql postgresql://...'
+            # The error shows the string is: 'psql postgresql://...' (with quotes included)
+            # So the actual string starts with 'psql and ends with '
+            if v.startswith("'psql postgresql://"):
+                # Extract the URL part after 'psql
+                start_pos = len("'psql ")
+                # Find the closing quote
+                end_pos = v.rfind("'")
+                if end_pos != -1:
+                    v = v[start_pos:end_pos]
+                else:
+                    # If no closing quote, take everything after 'psql
+                    v = v[start_pos:]
+
             # Remove 'psql ' prefix if present (multiple variations)
             while v.startswith("psql "):
                 v = v[5:].strip()
