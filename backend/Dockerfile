@@ -31,6 +31,9 @@ COPY requirements-production.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
+# Install additional dependencies for database schema management
+RUN pip install --no-cache-dir psycopg2-binary
+
 # Copy application code
 COPY . .
 

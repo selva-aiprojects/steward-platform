@@ -354,7 +354,63 @@ async def admin_feed():
 async def startup_event():
     if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
         return
+    # Create all tables and ensure schema is up to date
+    from app.core.database import engine
     Base.metadata.create_all(bind=engine)
+
+    # For PostgreSQL, we might need to handle schema updates manually
+    # Check if the role column exists, and if not, try to add it
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            # Check if role column exists
+            result = conn.execute(text("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'role'
+            """))
+            if not result.fetchone():
+                # Add role column if it doesn't exist
+                try:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'TRADER'"))
+                    conn.commit()
+                    print("Added 'role' column to users table")
+                except Exception as e:
+                    print(f"Could not add 'role' column: {e}")
+                    conn.rollback()
+
+            # Also check for other potentially missing columns
+            columns_to_check = [
+                ('trading_mode', 'VARCHAR(20)', 'AUTO'),
+                ('risk_tolerance', 'VARCHAR(20)', 'MODERATE'),
+                ('is_superuser', 'BOOLEAN', 'FALSE'),
+                ('trading_suspended', 'BOOLEAN', 'FALSE'),
+                ('allowed_sectors', 'VARCHAR(100)', 'ALL'),
+                ('approval_threshold', 'FLOAT', None),
+                ('confidence_threshold', 'FLOAT', None)
+            ]
+
+            for col_name, col_type, default_val in columns_to_check:
+                result = conn.execute(text(f"""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'users' AND column_name = '{col_name}'
+                """))
+                if not result.fetchone():
+                    try:
+                        if default_val is None:
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                        else:
+                            default_value = default_val if default_val in ['TRUE', 'FALSE'] else f"'{default_val}'"
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default_value}"))
+                        conn.commit()
+                        print(f"Added '{col_name}' column to users table")
+                    except Exception as e:
+                        print(f"Could not add '{col_name}' column: {e}")
+                        conn.rollback()
+    except Exception as e:
+        print(f"Schema check/update failed: {e}")
+
     # Ensure a default superadmin exists for fresh databases
     try:
         from app.core.database import SessionLocal
