@@ -3,6 +3,8 @@ import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import aiService from '../services/aiService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const ChatWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -60,7 +62,41 @@ const ChatWidget = () => {
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-tr-none' : 'bg-muted rounded-tl-none'}`}>
-                                    {msg.content}
+                                    {msg.role === 'user' ? (
+                                        msg.content
+                                    ) : (
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                // Custom rendering for different markdown elements
+                                                p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                                                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
+                                                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+                                                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                                strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
+                                                em: ({node, ...props}) => <em className="italic" {...props} />,
+                                                code: ({node, inline, ...props}) => {
+                                                    if (inline) {
+                                                        return <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs" {...props} />;
+                                                    } else {
+                                                        return (
+                                                            <pre className="bg-gray-800 text-gray-100 p-3 rounded mt-2 overflow-x-auto">
+                                                                <code className="text-sm" {...props} />
+                                                            </pre>
+                                                        );
+                                                    }
+                                                },
+                                                h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2" {...props} />,
+                                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2" {...props} />,
+                                                h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2" {...props} />,
+                                                blockquote: ({node, ...props}) => (
+                                                    <blockquote className="border-l-4 border-primary pl-4 italic text-gray-600" {...props} />
+                                                ),
+                                            }}
+                                        >
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    )}
                                 </div>
                             </div>
                         ))}
