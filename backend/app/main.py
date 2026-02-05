@@ -365,7 +365,7 @@ async def startup_event():
             existing = db.query(User).first()
             if not existing:
                 admin = User(
-                    id=999,
+                    id=1,
                     full_name="Super Admin",
                     email="admin@stocksteward.ai",
                     hashed_password=get_password_hash("admin123"),
@@ -375,6 +375,18 @@ async def startup_event():
                     is_superuser=True
                 )
                 db.add(admin)
+                db.commit()
+            elif not db.query(User).filter(User.id == 1).first():
+                db.add(User(
+                    id=1,
+                    full_name="Super Admin",
+                    email="admin@stocksteward.ai",
+                    hashed_password=get_password_hash("admin123"),
+                    risk_tolerance="LOW",
+                    is_active=True,
+                    role="SUPERADMIN",
+                    is_superuser=True
+                ))
                 db.commit()
             # Ensure baseline RBAC users exist
             defaults = [

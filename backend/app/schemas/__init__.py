@@ -15,3 +15,11 @@ from . import watchlist
 from .audit_log import AuditLogCreate, AuditLogResponse
 from .approval import ApprovalCreate, ApprovalResponse
 from .auth import LoginRequest, LoginResponse
+from .kyc import (
+    KYCApplicationBase,
+    KYCApplicationCreate,
+    KYCApplicationUpdate,
+    KYCReviewAction,
+    KYCApplicationResponse,
+    KYCApprovalResponse,
+)

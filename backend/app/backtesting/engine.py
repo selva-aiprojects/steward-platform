@@ -46,6 +46,20 @@ class Position:
     unrealized_pnl: float = 0.0
     realized_pnl: float = 0.0
 
+    @property
+    def market_value(self) -> float:
+        return self.quantity * self.avg_price
+
+    def __getitem__(self, item: str):
+        if item == "market_value":
+            return self.market_value
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None):
+        if item == "market_value":
+            return self.market_value
+        return getattr(self, item, default)
+
 
 @dataclass
 class PortfolioState:
@@ -521,3 +535,71 @@ def macd_strategy(row: pd.Series, positions: Dict[str, Position], cash: float) -
             }
     
     return None
+
+
+def calculate_performance_metrics(portfolio_history: pd.DataFrame) -> Dict[str, float]:
+    """
+    Calculate performance metrics from a portfolio history DataFrame.
+    Expected columns: total_value and date (optional).
+    """
+    if portfolio_history is None or len(portfolio_history) == 0:
+        return {
+            'total_return': 0.0,
+            'annualized_return': 0.0,
+            'volatility': 0.0,
+            'sharpe_ratio': 0.0,
+            'max_drawdown': 0.0,
+            'win_rate': 0.0,
+            'profit_factor': 0.0
+        }
+
+    values = portfolio_history['total_value'].astype(float).tolist()
+    if len(values) < 2:
+        return {
+            'total_return': 0.0,
+            'annualized_return': 0.0,
+            'volatility': 0.0,
+            'sharpe_ratio': 0.0,
+            'max_drawdown': 0.0,
+            'win_rate': 0.0,
+            'profit_factor': 0.0
+        }
+
+    returns = np.diff(values) / values[:-1]
+    total_return = (values[-1] - values[0]) / values[0]
+
+    years = 0
+    if 'date' in portfolio_history.columns:
+        start = portfolio_history['date'].iloc[0]
+        end = portfolio_history['date'].iloc[-1]
+        if isinstance(start, pd.Timestamp) and isinstance(end, pd.Timestamp):
+            years = (end - start).days / 365.25
+    if years and years > 0:
+        annualized_return = (values[-1] / values[0]) ** (1 / years) - 1
+    else:
+        annualized_return = 0.0
+
+    volatility = float(np.std(returns) * np.sqrt(252)) if len(returns) > 1 else 0.0
+    risk_free_rate = 0.02 / 252
+    sharpe_ratio = 0.0
+    if volatility > 0:
+        sharpe_ratio = float((np.mean(returns) - risk_free_rate) / (volatility / np.sqrt(252)))
+
+    peak = values[0]
+    max_dd = 0.0
+    for value in values:
+        if value > peak:
+            peak = value
+        dd = (peak - value) / peak
+        if dd > max_dd:
+            max_dd = dd
+
+    return {
+        'total_return': float(total_return),
+        'annualized_return': float(annualized_return),
+        'volatility': float(volatility),
+        'sharpe_ratio': float(sharpe_ratio),
+        'max_drawdown': float(max_dd),
+        'win_rate': 0.0,
+        'profit_factor': 0.0
+    }

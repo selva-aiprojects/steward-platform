@@ -112,7 +112,7 @@ class RiskManagementAgent(BaseAgent):
 
         # Calculate Mandatory Levels
         stop_loss_price = price * (1 - stop_loss_pct) if proposal.get("action") == "BUY" else price * (1 + stop_loss_pct)
-        take_profit_price = price * (1 + take_profit_pct) if proposal.get("action") == "BUY" else price * (1 - take_profit_price)
+        take_profit_price = price * (1 + take_profit_pct) if proposal.get("action") == "BUY" else price * (1 - take_profit_pct)
 
         return {
             "risk_assessment": {
@@ -133,7 +133,7 @@ class RiskManagementAgent(BaseAgent):
         Verifies if a symbol belongs to an allowed sector.
         FR-15 enforcement using a database-oriented lookup or internal mapping.
         """
-        if allowed_sectors == "ALL":
+        if not allowed_sectors or allowed_sectors.strip().upper() == "ALL":
             return True
             
         # Internal Sector Mapping (Source of Truth for internal-only/demonstration)
@@ -146,6 +146,6 @@ class RiskManagementAgent(BaseAgent):
         }
         
         symbol_sector = SECTOR_MAP.get(symbol, "Unknown")
-        allowed_list = [s.strip() for s in allowed_sectors.split(",")]
+        allowed_list = [s.strip() for s in allowed_sectors.split(",") if s.strip()]
         
         return symbol_sector in allowed_list

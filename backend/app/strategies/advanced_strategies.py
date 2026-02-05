@@ -18,9 +18,16 @@ class Signal:
     confidence: float  # 0.0 to 1.0
     strength: float  # -1.0 to 1.0, negative for SELL
     rationale: str
+    quantity: Optional[int] = None
     price_target: Optional[float] = None
     stop_loss: Optional[float] = None
     take_profit: Optional[float] = None
+
+    def __getitem__(self, item: str):
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None):
+        return getattr(self, item, default)
 
 
 class AdvancedStrategies:
@@ -28,6 +35,100 @@ class AdvancedStrategies:
     Collection of advanced algorithmic trading strategies
     """
     
+    @staticmethod
+    def sma_crossover_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
+        """
+        SMA crossover strategy (short-term vs long-term)
+        """
+        if pd.isna(data.get('sma_20')) or pd.isna(data.get('sma_50')):
+            return None
+
+        symbol = data.get('symbol', 'UNKNOWN')
+        current_pos = positions.get(symbol, {})
+        current_qty = current_pos.get('quantity', 0)
+        price = data.get('close', 0)
+
+        if price <= 0:
+            return None
+
+        quantity = max(int(cash * 0.1 / price), 0)
+
+        # Bullish crossover
+        if (data['sma_20'] > data['sma_50'] and
+                data.get('sma_20_prev', 0) <= data.get('sma_50_prev', 0)):
+            if current_qty <= 0 and quantity > 0:
+                return Signal(
+                    symbol=symbol,
+                    side='BUY',
+                    quantity=quantity,
+                    confidence=0.7,
+                    strength=0.6,
+                    rationale='SMA bullish crossover',
+                    price_target=price * 1.05,
+                    stop_loss=price * 0.98
+                )
+
+        # Bearish crossover
+        if (data['sma_20'] < data['sma_50'] and
+                data.get('sma_20_prev', 0) >= data.get('sma_50_prev', 0)):
+            if current_qty > 0:
+                return Signal(
+                    symbol=symbol,
+                    side='SELL',
+                    quantity=current_qty,
+                    confidence=0.7,
+                    strength=-0.6,
+                    rationale='SMA bearish crossover',
+                    price_target=price * 0.95,
+                    stop_loss=price * 1.02
+                )
+
+        return None
+
+    @staticmethod
+    def rsi_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
+        """
+        RSI mean reversion strategy (uses rsi_14 if available)
+        """
+        rsi = data.get('rsi_14', data.get('rsi'))
+        if pd.isna(rsi):
+            return None
+
+        symbol = data.get('symbol', 'UNKNOWN')
+        current_pos = positions.get(symbol, {})
+        current_qty = current_pos.get('quantity', 0)
+        price = data.get('close', 0)
+
+        if price <= 0:
+            return None
+
+        quantity = max(int(cash * 0.05 / price), 0)
+
+        if rsi < 30 and current_qty <= 0 and quantity > 0:
+            return Signal(
+                symbol=symbol,
+                side='BUY',
+                quantity=quantity,
+                confidence=0.6,
+                strength=0.5,
+                rationale='RSI oversold mean reversion',
+                price_target=price * 1.04,
+                stop_loss=price * 0.97
+            )
+        if rsi > 70 and current_qty > 0:
+            return Signal(
+                symbol=symbol,
+                side='SELL',
+                quantity=current_qty,
+                confidence=0.6,
+                strength=-0.5,
+                rationale='RSI overbought mean reversion',
+                price_target=price * 0.96,
+                stop_loss=price * 1.03
+            )
+
+        return None
+
     @staticmethod
     def macd_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
         """
@@ -47,6 +148,8 @@ class AdvancedStrategies:
         symbol = data.get('symbol', 'UNKNOWN')
         current_pos = positions.get(symbol, {})
         current_qty = current_pos.get('quantity', 0)
+        price = data.get('close', 0)
+        quantity = max(int(cash * 0.08 / price), 0) if price > 0 else 0
         
         # Bullish crossover: MACD line crosses above signal line
         if macd > signal and prev_macd <= prev_signal:
@@ -55,6 +158,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='BUY',
+                    quantity=quantity,
                     confidence=confidence,
                     strength=abs(histogram),
                     rationale=f'MACD bullish crossover: MACD({macd:.3f}) crossed above Signal({signal:.3f})',
@@ -69,6 +173,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='SELL',
+                    quantity=current_qty,
                     confidence=confidence,
                     strength=-abs(histogram),
                     rationale=f'MACD bearish crossover: MACD({macd:.3f}) crossed below Signal({signal:.3f})',
@@ -92,6 +197,8 @@ class AdvancedStrategies:
         symbol = data.get('symbol', 'UNKNOWN')
         current_pos = positions.get(symbol, {})
         current_qty = current_pos.get('quantity', 0)
+        price = data.get('close', 0)
+        quantity = max(int(cash * 0.05 / price), 0) if price > 0 else 0
         
         # Oversold condition: Look for long
         if k < 20 and d < 20 and k > d:  # K crosses above D in oversold zone
@@ -100,6 +207,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='BUY',
+                    quantity=quantity,
                     confidence=confidence,
                     strength=(30 - k) / 30,
                     rationale=f'Stochastic oversold bounce: K({k:.2f}) crossed above D({d:.2f}) in oversold zone',
@@ -114,6 +222,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='SELL',
+                    quantity=current_qty,
                     confidence=confidence,
                     strength=-(k - 70) / 30,
                     rationale=f'Stochastic overbought reversal: K({k:.2f}) crossed below D({d:.2f}) in overbought zone',
@@ -142,6 +251,7 @@ class AdvancedStrategies:
         symbol = data.get('symbol', 'UNKNOWN')
         current_pos = positions.get(symbol, {})
         current_qty = current_pos.get('quantity', 0)
+        quantity = max(int(cash * 0.08 / price), 0) if price > 0 else 0
         
         # Breakout above upper band (bullish)
         if price > upper_band and data.get('close_prev', 0) <= data.get('bb_upper_prev', 0):
@@ -151,6 +261,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='BUY',
+                    quantity=quantity,
                     confidence=confidence,
                     strength=0.8,
                     rationale=f'Bollinger Bands breakout: Price({price:.2f}) broke above upper band({upper_band:.2f})',
@@ -165,6 +276,7 @@ class AdvancedStrategies:
                 return Signal(
                     symbol=symbol,
                     side='SELL',
+                    quantity=current_qty,
                     confidence=confidence,
                     strength=-0.8,
                     rationale=f'Bollinger Bands breakdown: Price({price:.2f}) broke below lower band({lower_band:.2f})',
@@ -173,7 +285,50 @@ class AdvancedStrategies:
                 )
         
         return None
-    
+
+    @staticmethod
+    def bollinger_bands_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
+        """
+        Bollinger Bands mean reversion strategy
+        """
+        if pd.isna(data.get('bb_upper')) or pd.isna(data.get('bb_lower')):
+            return None
+
+        price = data.get('close', 0)
+        upper_band = data.get('bb_upper')
+        lower_band = data.get('bb_lower')
+        middle_band = data.get('bb_middle', (upper_band + lower_band) / 2)
+
+        symbol = data.get('symbol', 'UNKNOWN')
+        current_pos = positions.get(symbol, {})
+        current_qty = current_pos.get('quantity', 0)
+        quantity = max(int(cash * 0.05 / price), 0) if price > 0 else 0
+
+        if price < lower_band and current_qty <= 0 and quantity > 0:
+            return Signal(
+                symbol=symbol,
+                side='BUY',
+                quantity=quantity,
+                confidence=0.6,
+                strength=0.5,
+                rationale='Bollinger mean reversion: price below lower band',
+                price_target=middle_band,
+                stop_loss=price * 0.97
+            )
+        if price > upper_band and current_qty > 0:
+            return Signal(
+                symbol=symbol,
+                side='SELL',
+                quantity=current_qty,
+                confidence=0.6,
+                strength=-0.5,
+                rationale='Bollinger mean reversion: price above upper band',
+                price_target=middle_band,
+                stop_loss=price * 1.03
+            )
+
+        return None
+
     @staticmethod
     def atr_trailing_stop_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
         """
@@ -515,3 +670,97 @@ def calculate_macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int
     histogram = macd_line - signal_line
     
     return macd_line, signal_line, histogram
+
+
+def sma_crossover_strategy(row: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Dict[str, Any]]:
+    """
+    Backtesting-friendly SMA crossover strategy returning an order dict.
+    """
+    signal = AdvancedStrategies.sma_crossover_strategy(row, positions, cash)
+    if not signal:
+        return None
+
+    @staticmethod
+    def bollinger_bands_strategy(data: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Signal]:
+        """
+        Bollinger Bands mean reversion strategy
+        """
+        if pd.isna(data.get('bb_upper')) or pd.isna(data.get('bb_lower')):
+            return None
+
+        price = data.get('close', 0)
+        upper_band = data.get('bb_upper')
+        lower_band = data.get('bb_lower')
+        middle_band = data.get('bb_middle', (upper_band + lower_band) / 2)
+
+        symbol = data.get('symbol', 'UNKNOWN')
+        current_pos = positions.get(symbol, {})
+        current_qty = current_pos.get('quantity', 0)
+        quantity = max(int(cash * 0.05 / price), 0) if price > 0 else 0
+
+        if price < lower_band and current_qty <= 0 and quantity > 0:
+            return Signal(
+                symbol=symbol,
+                side='BUY',
+                quantity=quantity,
+                confidence=0.6,
+                strength=0.5,
+                rationale='Bollinger mean reversion: price below lower band',
+                price_target=middle_band,
+                stop_loss=price * 0.97
+            )
+        if price > upper_band and current_qty > 0:
+            return Signal(
+                symbol=symbol,
+                side='SELL',
+                quantity=current_qty,
+                confidence=0.6,
+                strength=-0.5,
+                rationale='Bollinger mean reversion: price above upper band',
+                price_target=middle_band,
+                stop_loss=price * 1.03
+            )
+
+        return None
+    if signal.quantity is None or signal.quantity <= 0:
+        return None
+    return {
+        'side': signal.side,
+        'quantity': signal.quantity,
+        'symbol': signal.symbol,
+        'order_type': 'MARKET'
+    }
+
+
+def rsi_mean_reversion_strategy(row: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Dict[str, Any]]:
+    """
+    Backtesting-friendly RSI mean reversion strategy.
+    """
+    signal = AdvancedStrategies.rsi_strategy(row, positions, cash)
+    if not signal:
+        return None
+    if signal.quantity is None or signal.quantity <= 0:
+        return None
+    return {
+        'side': signal.side,
+        'quantity': signal.quantity,
+        'symbol': signal.symbol,
+        'order_type': 'MARKET'
+    }
+
+
+def macd_strategy(row: pd.Series, positions: Dict[str, Any], cash: float) -> Optional[Dict[str, Any]]:
+    """
+    Backtesting-friendly MACD strategy.
+    """
+    signal = AdvancedStrategies.macd_strategy(row, positions, cash)
+    if not signal:
+        return None
+    if signal.quantity is None or signal.quantity <= 0:
+        return None
+    return {
+        'side': signal.side,
+        'quantity': signal.quantity,
+        'symbol': signal.symbol,
+        'order_type': 'MARKET'
+    }

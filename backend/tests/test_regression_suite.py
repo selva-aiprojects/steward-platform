@@ -19,7 +19,8 @@ os.environ["DISABLE_BACKGROUND_TASKS"] = "1"
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from app.core.database import Base, engine, SessionLocal  # noqa: E402
+from app.core import database as db_module  # noqa: E402
+from app.core.database import Base, _ensure_engine  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.portfolio import Portfolio  # noqa: E402
 from app.core.security import get_password_hash  # noqa: E402
@@ -27,8 +28,10 @@ from app.main import app  # noqa: E402
 
 
 def seed_user():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    os.environ["DATABASE_URL"] = f"sqlite:///{DB_PATH.as_posix()}"
+    _ensure_engine()
+    Base.metadata.create_all(bind=db_module.engine)
+    db = db_module.SessionLocal()
     try:
         admin = db.query(User).filter(User.id == 1).first()
         if not admin:

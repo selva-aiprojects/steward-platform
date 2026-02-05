@@ -119,6 +119,16 @@ def update_user(
         setattr(user, field, update_data[field])
 
     db.add(user)
+    if update_data:
+        import json
+        audit = models.AuditLog(
+            action="UPDATE_USER",
+            admin_id=current_user.id,
+            target_user_id=user.id,
+            details=json.dumps(update_data),
+            reason="User profile update"
+        )
+        db.add(audit)
     db.commit()
     db.refresh(user)
     return user

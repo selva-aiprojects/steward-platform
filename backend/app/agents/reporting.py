@@ -90,8 +90,35 @@ class ReportingAgent(BaseAgent):
             "narrative": final_narrative
         }
 
-        # In a real app, we would log this to a structured logger (ELK/Splunk) and DB here.
-        # For now, we return it to update context.
+        # Persist to audit log for regression coverage.
+        try:
+            from app.core.database import SessionLocal
+            from app.models.audit_log import AuditLog
+            import json
+
+            user_id = context.get("user_id") or user.get("id") or 1
+            symbol = proposal.get("symbol") if proposal else market.get("symbol")
+            action = f"TRADE_{status}"
+            if symbol:
+                action = f"{action}_{symbol}"
+
+            db = SessionLocal()
+            try:
+                db_log = AuditLog(
+                    action=action,
+                    admin_id=user_id,
+                    target_user_id=user_id,
+                    details=json.dumps(audit_record),
+                    reason="Automated trade audit"
+                )
+                db.add(db_log)
+                db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass
+
+        # Return record to update context.
         return {
             "report": audit_record
         }

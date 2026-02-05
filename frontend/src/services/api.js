@@ -437,3 +437,75 @@ export const fetchMarketResearch = async () => {
         return null;
     }
 };
+
+export const submitKycApplication = async (payload) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Failed to submit KYC');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const fetchKycApplications = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
+            headers: { ...getAuthHeaders() }
+        });
+        if (!response.ok) throw new Error('Failed to fetch KYC applications');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};
+
+export const reviewKycApplication = async (kycId, status, review_notes) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({ status, review_notes })
+        });
+        if (!response.ok) throw new Error('Failed to review KYC application');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const approveKycApplication = async (kycId) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/approve`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders() }
+        });
+        if (!response.ok) throw new Error('Failed to approve KYC application');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const rejectKycApplication = async (kycId, review_notes) => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({ status: 'REJECTED', review_notes })
+        });
+        if (!response.ok) throw new Error('Failed to reject KYC application');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};

@@ -95,10 +95,16 @@ export function Layout({ children }) {
                     )}
 
                     {isAdmin && (
-                        <NavLink to="/users" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                            <UsersIcon size={18} className={`${location.pathname === '/users' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
-                            <span>User Mgmt</span>
-                        </NavLink>
+                        <>
+                            <NavLink to="/users" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <UsersIcon size={18} className={`${location.pathname === '/users' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
+                                <span>User Mgmt</span>
+                            </NavLink>
+                            <NavLink to="/kyc" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <FileText size={18} className={`${location.pathname === '/kyc' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
+                                <span>KYC Desk</span>
+                            </NavLink>
+                        </>
                     )}
                 </nav>
 

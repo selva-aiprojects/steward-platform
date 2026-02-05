@@ -14,7 +14,6 @@ from app.execution.engine import ExecutionEngine
 from app.strategies.advanced_strategies import AdvancedStrategies
 
 
-@pytest.fixture
 def sample_data():
     """
     Create sample market data for testing

@@ -8,6 +8,7 @@ import { TradingHub } from "./pages/TradingHub"
 import { Reports } from "./pages/Reports"
 import { Users } from "./pages/Users"
 import { Login } from "./pages/Login"
+import { KYC } from "./pages/KYC"
 import Subscription from "./pages/Subscription"
 import { Help } from "./pages/Help";
 import Support from "./pages/Support";
@@ -43,6 +44,7 @@ function App() {
           <AppDataProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/kyc" element={<KYC />} />
               <Route path="/" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
               <Route path="/trading" element={<RequireAuth><Layout><TradingHub /></Layout></RequireAuth>} />
               <Route path="/portfolio" element={

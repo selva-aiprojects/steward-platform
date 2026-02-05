@@ -148,7 +148,7 @@ class OrchestratorAgent(BaseAgent):
                         "trace": trace
                     }
                 return {
-                    "status": "REJECTED",
+                    "status": "REJECTED_RISK",
                     "reason": f"Risk Veto: {risk_assessment.get('reason')}",
                     "trace_id": trace_id,
                     "risk_score": risk_assessment.get("risk_score"),

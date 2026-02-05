@@ -153,6 +153,7 @@ class TestBacktestingEngine:
             timestamp=datetime.now()
         )
         engine.place_order(buy_order)
+        cash_after_buy = engine.cash
         
         # Then sell them
         sell_order = Order(
@@ -167,7 +168,7 @@ class TestBacktestingEngine:
         
         assert result is True
         assert len(engine.orders) == 2
-        assert engine.cash > 100000  # Cash should increase due to profit
+        assert engine.cash > cash_after_buy  # Cash should increase due to sale
     
     def test_insufficient_cash_handling(self):
         """

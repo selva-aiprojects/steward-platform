@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { Card } from "../components/ui/card";
 import { ShieldCheck, Lock, ArrowRight, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../services/api';
 
 export function Login() {
@@ -21,10 +21,10 @@ export function Login() {
         }
     }, [user, navigate]);
 
-    const handleLogin = async () => {
+    const performLogin = async (emailValue, passwordValue, rememberOverride = rememberMe) => {
         setError('');
-        const trimmedEmail = (email || '').trim();
-        const trimmedPassword = (password || '').trim();
+        const trimmedEmail = (emailValue || '').trim();
+        const trimmedPassword = (passwordValue || '').trim();
         if (!trimmedEmail || !trimmedPassword) {
             setError('Enter email and password.');
             return;
@@ -45,7 +45,7 @@ export function Login() {
                 avatar: (userData.full_name || userData.email).slice(0, 2).toUpperCase()
             };
             login(session);
-            if (!rememberMe) {
+            if (!rememberOverride) {
                 localStorage.removeItem('stocksteward_user');
             }
             navigate('/');
@@ -54,6 +54,26 @@ export function Login() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleLogin = async () => {
+        await performLogin(email, password);
+    };
+
+    const quickLogin = async (role) => {
+        const credentials = {
+            admin: { email: 'admin@stocksteward.ai', password: 'admin123' },
+            trader: { email: 'trader@stocksteward.ai', password: 'trader123' },
+            auditor: { email: 'auditor@stocksteward.ai', password: 'audit123' },
+            'business-owner': { email: 'owner@stocksteward.ai', password: 'owner123' }
+        };
+        const creds = credentials[role];
+        if (!creds) {
+            return;
+        }
+        setEmail(creds.email);
+        setPassword(creds.password);
+        await performLogin(creds.email, creds.password);
     };
 
     return (
@@ -110,6 +130,20 @@ export function Login() {
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
                         Demo Logins: admin@stocksteward.ai / admin123 · owner@stocksteward.ai / owner123 · trader@stocksteward.ai / trader123 · auditor@stocksteward.ai / audit123
                     </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-widest">
+                        <button type="button" data-testid="login-admin" onClick={() => quickLogin('admin')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                            Admin
+                        </button>
+                        <button type="button" data-testid="login-business-owner" onClick={() => quickLogin('business-owner')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                            Business Owner
+                        </button>
+                        <button type="button" data-testid="login-trader" onClick={() => quickLogin('trader')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                            Trader
+                        </button>
+                        <button type="button" data-testid="login-auditor" onClick={() => quickLogin('auditor')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                            Auditor
+                        </button>
+                    </div>
 
                     {error && (
                         <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 border border-red-100 rounded-lg px-3 py-2">
@@ -122,6 +156,14 @@ export function Login() {
                         <div className="flex-1"><h3 className="text-xs font-black text-white">Secure Login</h3><p className="text-[10px] text-white/60">Role-based access</p></div>
                         <ArrowRight size={14} className="text-white/70 group-hover:text-white transition-colors" />
                     </button>
+                    <Link
+                        to="/kyc"
+                        className="w-full group relative p-3 bg-white border border-emerald-200 text-emerald-700 rounded-xl transition-all flex items-center gap-3 text-left shadow-sm hover:shadow-md"
+                    >
+                        <div className="h-8 w-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600"><ShieldCheck size={16} /></div>
+                        <div className="flex-1"><h3 className="text-xs font-black">Start KYC Application</h3><p className="text-[10px] text-emerald-600/70">New investor onboarding</p></div>
+                        <ArrowRight size={14} className="text-emerald-500/70 group-hover:text-emerald-700 transition-colors" />
+                    </Link>
                 </div>
 
                 {loading && (
