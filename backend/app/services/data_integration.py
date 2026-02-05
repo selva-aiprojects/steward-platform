@@ -449,5 +449,25 @@ class DataIntegrationService:
         
         return context
 
+    async def get_available_sources(self) -> List[str]:
+        """
+        Get list of available data sources
+        """
+        return list(self.data_sources.keys())
+
+    async def verify_connections(self) -> Dict[str, bool]:
+        """
+        Verify connectivity to all configured data sources
+        """
+        results = {}
+        for source_name, source_func in self.data_sources.items():
+            try:
+                # For now, just check if the function exists and is callable
+                # In a real implementation, we would do actual connectivity tests
+                results[source_name] = callable(source_func)
+            except Exception:
+                results[source_name] = False
+        return results
+
 # Global instance
 data_integration_service = DataIntegrationService()

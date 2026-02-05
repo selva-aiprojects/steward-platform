@@ -87,6 +87,9 @@ class Settings(BaseSettings):
     
     # AI Keys
     GROQ_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
+    HUGGINGFACE_API_KEY: Optional[str] = None
     
     model_config = SettingsConfigDict(
         env_file=".env",

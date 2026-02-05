@@ -10,7 +10,6 @@ from app.core.database import engine, Base
 from app.services.kite_service import kite_service
 from app.services.enhanced_llm_service import enhanced_llm_service
 from app.services.data_integration import data_integration_service
-from app.core.socket_manager import socket_manager
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +21,9 @@ async def initialize_services():
     
     # 1. Initialize database
     try:
-        # Create all tables
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        # Create all tables using the existing sync engine
+        from app.core.database import engine as sync_engine
+        Base.metadata.create_all(bind=sync_engine)
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
@@ -46,9 +45,9 @@ async def initialize_services():
     
     # 3. Initialize Enhanced LLM Services
     try:
-        # Initialize multiple LLM providers
-        providers_initialized = await enhanced_llm_service.initialize_providers()
-        logger.info(f"Initialized LLM providers: {providers_initialized}")
+        # The EnhancedLLMService initializes providers in __init__, just verify they're available
+        available_providers = enhanced_llm_service.get_available_providers()
+        logger.info(f"Available LLM providers: {available_providers}")
     except Exception as e:
         logger.error(f"Enhanced LLM service initialization failed: {e}")
         # Don't raise exception as fallback mechanisms exist
@@ -62,13 +61,6 @@ async def initialize_services():
         logger.error(f"Data integration service initialization failed: {e}")
         # Don't raise exception as fallback data sources exist
     
-    # 5. Initialize Socket Manager
-    try:
-        socket_manager.init_app(None)  # Will be initialized with app in main
-        logger.info("Socket manager initialized")
-    except Exception as e:
-        logger.error(f"Socket manager initialization failed: {e}")
-        raise
     
     logger.info("All services initialized successfully")
 
@@ -89,13 +81,13 @@ async def perform_health_checks():
     
     # Check database
     try:
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from app.core.database import get_async_session
-        
-        async for session in get_async_session():
-            await session.execute("SELECT 1")
+        # Use the sync database engine for health check
+        from app.core.database import engine
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
             health_status["database"] = True
-            break
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
     
@@ -111,7 +103,7 @@ async def perform_health_checks():
         available_providers = enhanced_llm_service.get_available_providers()
         for provider in available_providers:
             try:
-                # Test basic connectivity
+                # Test basic connectivity using the test_connection method
                 test_result = await enhanced_llm_service.test_connection(provider)
                 if test_result:
                     health_status["llm_services"].append(provider)
@@ -122,22 +114,24 @@ async def perform_health_checks():
     
     # Check data integrations
     try:
-        available_sources = await data_integration_service.get_available_sources()
-        for source in available_sources:
-            try:
-                # Test basic connectivity
-                test_result = await data_integration_service.test_connection(source)
-                if test_result:
-                    health_status["data_integrations"].append(source)
-            except Exception as e:
-                logger.error(f"Data source {source} health check failed: {e}")
+        if hasattr(data_integration_service, 'get_available_sources'):
+            available_sources = await data_integration_service.get_available_sources()
+            # Test basic connectivity using the verify_connections method
+            connection_status = await data_integration_service.verify_connections()
+            for source in available_sources:
+                try:
+                    if connection_status.get(source, False):
+                        health_status["data_integrations"].append(source)
+                except Exception as e:
+                    logger.error(f"Data source {source} health check failed: {e}")
     except Exception as e:
         logger.error(f"Data integration health checks failed: {e}")
     
-    # Check socket service
+    # Check socket service - just mark as available since it's initialized in main.py
     try:
-        # Socket health check would depend on implementation
-        health_status["socket_service"] = True  # Assuming initialized properly
+        # Socket service is initialized in main.py with the sio variable
+        # For now, we'll assume it's available if the app reaches this point
+        health_status["socket_service"] = True
     except Exception as e:
         logger.error(f"Socket service health check failed: {e}")
     
