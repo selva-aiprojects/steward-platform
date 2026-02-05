@@ -32,8 +32,9 @@ async def initialize_services():
     # 2. Initialize Kite/Zerodha service
     try:
         if settings.ZERODHA_API_KEY and settings.ZERODHA_ACCESS_TOKEN:
-            kite_initialized = kite_service.initialize_client()
-            if kite_initialized:
+            # Just get the client to initialize it, no need for a separate initialize_client method
+            kite_client = kite_service.get_client()
+            if kite_client:
                 logger.info("KiteConnect service initialized successfully")
             else:
                 logger.warning("KiteConnect service failed to initialize - paper trading mode will be used")
