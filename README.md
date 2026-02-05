@@ -1,49 +1,71 @@
-# StockSteward AI - Advanced Algorithmic Trading Platform
+# StockSteward AI - Advanced Agentic AI-Driven Stock Stewardship Platform
 
 ## Overview
 
-StockSteward AI is a sophisticated algorithmic trading platform that combines artificial intelligence with advanced trading strategies to provide automated investment stewardship. The platform enables users to develop, backtest, and execute trading strategies with comprehensive risk management and real-time market analysis.
+StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform that combines multiple LLM providers (Groq/Llama/OpenAI/Anthropic/HuggingFace) with comprehensive financial data integration (NSE Historical + Kaggle + Public datasets). The platform enables users to develop, backtest, and execute trading strategies with comprehensive risk management and real-time market analysis.
 
 ## Key Features
 
-### 1. Advanced Backtesting Engine
+### 1. Multi-LLM Provider Integration
+- **Groq (Llama models)**: Fast inference for real-time analysis
+- **OpenAI (GPT models)**: Advanced reasoning and complex analysis
+- **Anthropic (Claude models)**: Safety-focused financial insights
+- **Hugging Face (FinGPT/DeepSeek)**: Specialized financial models
+- Automatic fallback between providers for reliability
+
+### 2. Multi-Source Data Integration
+- **NSE Live Data**: Real-time market feeds via Zerodha KiteConnect
+- **Historical Datasets**: NSE historical data for backtesting
+- **Kaggle Datasets**: Financial and market datasets
+- **Public APIs**: Alpha Vantage, Yahoo Finance, and more
+- **Custom Data Sources**: CSV, Excel, Parquet file support
+
+### 3. Advanced Backtesting Engine
 - Realistic market simulation with slippage and commission modeling
 - Support for multiple order types (MARKET, LIMIT, STOP, etc.)
 - Performance metrics (Sharpe ratio, max drawdown, win rate, etc.)
 - Parameter optimization capabilities
 
-### 2. Comprehensive Risk Management
+### 4. Comprehensive Risk Management
 - Position size limits
 - Value at Risk (VaR) calculations
 - Concentration risk monitoring
 - Real-time risk alerts
 - Stop-loss and take-profit controls
 
-### 3. Multiple Trading Strategies
+### 5. Multiple Trading Strategies
 - SMA Crossover Strategy
 - RSI Mean Reversion
 - MACD Crossover
 - Bollinger Bands Strategy
 - Advanced technical analysis strategies
 
-### 4. Real-time Market Data
-- Live market feeds from multiple exchanges
-- Historical data analysis
+### 6. Real-time Market Intelligence
+- Live market feeds from multiple exchanges (NSE, BSE, MCX)
 - Technical indicator calculations
 - Market sentiment analysis
+- Sector rotation signals
+- AI-powered market predictions
 
-### 5. Portfolio Intelligence
+### 7. Portfolio Intelligence
 - AI-powered market analysis
 - Performance tracking
 - Risk analytics
 - Allocation optimization
+- Multi-asset portfolio management
 
 ## Architecture
 
-### Tech Stack
+### Enhanced Tech Stack
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Socket.io
 - **Backend**: Python 3.11, FastAPI, SQLAlchemy, PostgreSQL
-- **ML/AI**: TensorFlow/PyTorch, scikit-learn, TA-Lib, Groq API
+- **AI/ML Stack**:
+  - LLM Providers: Groq (Llama), OpenAI (GPT), Anthropic (Claude), Hugging Face (FinGPT/DeepSeek)
+  - Libraries: Transformers, PyTorch, scikit-learn, TA-Lib, yfinance
+- **Data Integration**:
+  - Live: Zerodha KiteConnect (NSE/BSE)
+  - Historical: NSE datasets, Kaggle financial datasets
+  - Public: Alpha Vantage, Yahoo Finance APIs
 - **Database**: PostgreSQL, Redis (caching)
 - **Infrastructure**: Docker, Docker Compose
 
@@ -85,8 +107,9 @@ StockSteward AI is a sophisticated algorithmic trading platform that combines ar
 
 ### External Dependencies
 - Zerodha Kite Connect API key (for live trading)
-- Groq API key (for AI features)
+- Multiple LLM API keys (Groq, OpenAI, Anthropic, Hugging Face) for AI features
 - TA-Lib C library (for technical analysis)
+- Alpha Vantage/Yahoo Finance API keys (for additional data sources)
 
 ## Installation
 
@@ -218,6 +241,14 @@ docker-compose up -d
 ### Market Data
 - `GET /api/v1/market/tickers` - Get market tickers
 - `GET /api/v1/market/history` - Get historical data
+
+### Enhanced AI Endpoints
+- `POST /api/v1/enhanced-ai/market-analysis` - Comprehensive market analysis with multi-LLM support
+- `GET /api/v1/enhanced-ai/market-research` - Sector and market research analysis
+- `POST /api/v1/enhanced-ai/chat` - Financial chat with contextual awareness
+- `POST /api/v1/enhanced-ai/multi-source-analysis` - Cross-referenced analysis from multiple data sources
+- `GET /api/v1/enhanced-ai/available-models` - Get available LLM models
+- `GET /api/v1/enhanced-ai/available-providers` - Get available LLM providers
 
 ## Configuration
 

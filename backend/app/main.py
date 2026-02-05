@@ -8,6 +8,10 @@ import socketio
 import asyncio
 import random
 import os
+import logging
+
+# Import startup services
+from app.startup import startup_sequence
 
 # Initialize FastAPI
 app = FastAPI(
@@ -500,6 +504,19 @@ async def root():
         "mode": settings.EXECUTION_MODE,
         "risk_policy": "STRICT"
     }
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Application startup event - initialize all services
+    """
+    try:
+        await startup_sequence()
+        logging.info("Application startup sequence completed successfully")
+    except Exception as e:
+        logging.error(f"Application startup failed: {e}")
+        raise
+
 
 @app.get("/health")
 async def health_check():
