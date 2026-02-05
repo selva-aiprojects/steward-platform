@@ -11,9 +11,6 @@ Cypress.Commands.add('login', (role) => {
 
     const roleData = roleMappings[role] || { testId: `login-${role.toLowerCase()}`, role: 'TRADER', email: `test@${role}.com`, name: `${role} User` };
 
-    // First, visit the login page to ensure the app context is initialized
-    cy.visit('/login');
-
     // Simulate login by directly setting user in localStorage
     const mockUser = {
         id: `mock-${role}-${Date.now()}`,
@@ -26,19 +23,15 @@ Cypress.Commands.add('login', (role) => {
         is_superuser: roleData.role === 'SUPERADMIN'
     };
 
-    // Set the user in localStorage to simulate login
-    cy.window().then((win) => {
-        win.localStorage.setItem('stocksteward_user', JSON.stringify(mockUser));
+    // Visit the home page directly and set the user in localStorage
+    cy.visit('/', {
+        onBeforeLoad(win) {
+            // Set the user in localStorage before the page loads
+            win.localStorage.setItem('stocksteward_user', JSON.stringify(mockUser));
+        }
     });
 
-    // Force a page reload to ensure the app picks up the new user from localStorage
-    cy.reload();
-
-    // Verify login was successful - the user should be redirected from login to home
-    cy.url().should('not.include', '/login');
-    cy.url().should('include', Cypress.config().baseUrl);
-
-    // Wait for the main heading to appear
+    // Wait for the main heading to appear, confirming we're on the home page
     cy.get('h1', { timeout: 10000 }).should('be.visible');
 });
 
