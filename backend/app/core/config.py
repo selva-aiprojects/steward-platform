@@ -25,22 +25,29 @@ class Settings(BaseSettings):
     def assemble_db_url(cls, v: str) -> str:
         if isinstance(v, str):
             # Strip common copy-paste artifacts from Neon/Postgres shells
+            original_v = v
             v = v.strip()
             print(f"DEBUG: Raw DATABASE_URL: '{v}'")  # Debug print
 
             # Handle the specific case from the error: 'psql postgresql://...'
             # The error shows the string is: 'psql postgresql://...' (with quotes included)
             # So the actual string starts with 'psql and ends with '
-            if v.startswith("'psql postgresql://"):
-                # Extract the URL part after 'psql
-                start_pos = len("'psql ")
-                # Find the closing quote
-                end_pos = v.rfind("'")
-                if end_pos != -1:
-                    v = v[start_pos:end_pos]
-                else:
-                    # If no closing quote, take everything after 'psql
-                    v = v[start_pos:]
+            if "'psql postgresql://" in v:
+                # Handle the case where the entire string is like: 'psql postgresql://...'
+                # This means the string starts with 'psql postgresql:// and ends with '
+                if v.startswith("'psql postgresql://") and v.endswith("'"):
+                    # Extract the URL part between 'psql and the final '
+                    # Format: 'psql postgresql://...user:pass@host/db?params'
+                    start_pos = len("'psql ")
+                    end_pos = len(v) - 1  # Remove the final quote
+                    v = v[start_pos:end_pos].strip()
+                elif v.startswith("'psql ") and "postgresql://" in v:
+                    # Handle case where it's like: 'psql postgresql://user:pass@host/db?params'
+                    start_pos = len("'psql ")
+                    v = v[start_pos:].strip()
+                    # Remove trailing quote if present
+                    if v.endswith("'"):
+                        v = v[:-1].strip()
 
             # Remove 'psql ' prefix if present (multiple variations)
             while v.startswith("psql "):
