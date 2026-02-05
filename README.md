@@ -12,6 +12,7 @@ StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform 
 - **Anthropic (Claude models)**: Safety-focused financial insights
 - **Hugging Face (FinGPT/DeepSeek)**: Specialized financial models
 - Automatic fallback between providers for reliability
+- Configurable model selection per use case
 
 ### 2. Multi-Source Data Integration
 - **NSE Live Data**: Real-time market feeds via Zerodha KiteConnect
@@ -19,6 +20,8 @@ StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform 
 - **Kaggle Datasets**: Financial and market datasets
 - **Public APIs**: Alpha Vantage, Yahoo Finance, and more
 - **Custom Data Sources**: CSV, Excel, Parquet file support
+- **Sector & Industry Data**: Comprehensive industry classification
+- **Alternative Data**: News sentiment, economic indicators, social media
 
 ### 3. Advanced Backtesting Engine
 - Realistic market simulation with slippage and commission modeling
@@ -63,11 +66,14 @@ StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform 
   - LLM Providers: Groq (Llama), OpenAI (GPT), Anthropic (Claude), Hugging Face (FinGPT/DeepSeek)
   - Libraries: Transformers, PyTorch, scikit-learn, TA-Lib, yfinance
 - **Data Integration**:
-  - Live: Zerodha KiteConnect (NSE/BSE)
-  - Historical: NSE datasets, Kaggle financial datasets
-  - Public: Alpha Vantage, Yahoo Finance APIs
+  - Live: Zerodha KiteConnect (NSE/BSE/MCX)
+  - Historical: NSE historical datasets, Kaggle financial datasets
+  - Public: Alpha Vantage, Yahoo Finance, Quandl APIs
+  - Alternative: News feeds, economic indicators, sentiment data
 - **Database**: PostgreSQL, Redis (caching)
 - **Infrastructure**: Docker, Docker Compose
+- **Analytics**: Pandas, NumPy, SciPy for quantitative analysis
+- **Visualization**: Plotly, Recharts for financial charts
 
 ### System Components
 ```
@@ -109,7 +115,10 @@ StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform 
 - Zerodha Kite Connect API key (for live trading)
 - Multiple LLM API keys (Groq, OpenAI, Anthropic, Hugging Face) for AI features
 - TA-Lib C library (for technical analysis)
-- Alpha Vantage/Yahoo Finance API keys (for additional data sources)
+- Alpha Vantage/Yahoo Finance/Quandl API keys (for additional data sources)
+- Kaggle API key (for Kaggle datasets access)
+- Redis server (for caching and session management)
+- PostgreSQL database (for persistent storage)
 
 ## Installation
 
@@ -249,6 +258,9 @@ docker-compose up -d
 - `POST /api/v1/enhanced-ai/multi-source-analysis` - Cross-referenced analysis from multiple data sources
 - `GET /api/v1/enhanced-ai/available-models` - Get available LLM models
 - `GET /api/v1/enhanced-ai/available-providers` - Get available LLM providers
+- `POST /api/v1/enhanced-ai/generate-strategy` - Generate AI-powered trading strategies
+- `POST /api/v1/enhanced-ai/portfolio-optimizer` - AI-driven portfolio optimization
+- `GET /api/v1/enhanced-ai/risk-assessment` - Comprehensive risk analysis
 
 ## Configuration
 
