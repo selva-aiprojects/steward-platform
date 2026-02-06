@@ -355,145 +355,144 @@ async def admin_feed():
              print(f"Admin feed error: {e}")
 
 @app.on_event("startup")
-async def startup_event():
-    if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
-        return
-    # Create all tables and ensure schema is up to date
-    from app.core.database import engine
-    Base.metadata.create_all(bind=engine)
+async def database_startup_event():
+    if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
+        # Create all tables and ensure schema is up to date
+        from app.core.database import engine
+        Base.metadata.create_all(bind=engine)
 
-    # For PostgreSQL, we might need to handle schema updates manually
-    # Check if the role column exists, and if not, try to add it
-    try:
-        from sqlalchemy import text
-        with engine.connect() as conn:
-            # Check if role column exists
-            result = conn.execute(text("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'users' AND column_name = 'role'
-            """))
-            if not result.fetchone():
-                # Add role column if it doesn't exist
-                try:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'TRADER'"))
-                    conn.commit()
-                    print("Added 'role' column to users table")
-                except Exception as e:
-                    print(f"Could not add 'role' column: {e}")
-                    conn.rollback()
-
-            # Also check for other potentially missing columns
-            columns_to_check = [
-                ('trading_mode', 'VARCHAR(20)', 'AUTO'),
-                ('risk_tolerance', 'VARCHAR(20)', 'MODERATE'),
-                ('is_superuser', 'BOOLEAN', 'FALSE'),
-                ('trading_suspended', 'BOOLEAN', 'FALSE'),
-                ('allowed_sectors', 'VARCHAR(100)', 'ALL'),
-                ('approval_threshold', 'FLOAT', None),
-                ('confidence_threshold', 'FLOAT', None)
-            ]
-
-            for col_name, col_type, default_val in columns_to_check:
-                result = conn.execute(text(f"""
+        # For PostgreSQL, we might need to handle schema updates manually
+        # Check if the role column exists, and if not, try to add it
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                # Check if role column exists
+                result = conn.execute(text("""
                     SELECT column_name
                     FROM information_schema.columns
-                    WHERE table_name = 'users' AND column_name = '{col_name}'
+                    WHERE table_name = 'users' AND column_name = 'role'
                 """))
                 if not result.fetchone():
+                    # Add role column if it doesn't exist
                     try:
-                        if default_val is None:
-                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
-                        else:
-                            default_value = default_val if default_val in ['TRUE', 'FALSE'] else f"'{default_val}'"
-                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default_value}"))
+                        conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'TRADER'"))
                         conn.commit()
-                        print(f"Added '{col_name}' column to users table")
+                        print("Added 'role' column to users table")
                     except Exception as e:
-                        print(f"Could not add '{col_name}' column: {e}")
+                        print(f"Could not add 'role' column: {e}")
                         conn.rollback()
-    except Exception as e:
-        print(f"Schema check/update failed: {e}")
 
-    # Ensure a default superadmin exists for fresh databases
-    try:
-        from app.core.database import SessionLocal
-        from app.models.user import User
-        from app.core.security import get_password_hash
-        db = SessionLocal()
+                # Also check for other potentially missing columns
+                columns_to_check = [
+                    ('trading_mode', 'VARCHAR(20)', 'AUTO'),
+                    ('risk_tolerance', 'VARCHAR(20)', 'MODERATE'),
+                    ('is_superuser', 'BOOLEAN', 'FALSE'),
+                    ('trading_suspended', 'BOOLEAN', 'FALSE'),
+                    ('allowed_sectors', 'VARCHAR(100)', 'ALL'),
+                    ('approval_threshold', 'FLOAT', None),
+                    ('confidence_threshold', 'FLOAT', None)
+                ]
+
+                for col_name, col_type, default_val in columns_to_check:
+                    result = conn.execute(text(f"""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = '{col_name}'
+                    """))
+                    if not result.fetchone():
+                        try:
+                            if default_val is None:
+                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                            else:
+                                default_value = default_val if default_val in ['TRUE', 'FALSE'] else f"'{default_val}'"
+                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default_value}"))
+                            conn.commit()
+                            print(f"Added '{col_name}' column to users table")
+                        except Exception as e:
+                            print(f"Could not add '{col_name}' column: {e}")
+                            conn.rollback()
+        except Exception as e:
+            print(f"Schema check/update failed: {e}")
+
+        # Ensure a default superadmin exists for fresh databases
         try:
-            existing = db.query(User).first()
-            if not existing:
-                admin = User(
-                    id=1,
-                    full_name="Super Admin",
-                    email="admin@stocksteward.ai",
-                    hashed_password=get_password_hash("admin123"),
-                    risk_tolerance="LOW",
-                    is_active=True,
-                    role="SUPERADMIN",
-                    is_superuser=True
-                )
-                db.add(admin)
-                db.commit()
-            elif not db.query(User).filter(User.id == 1).first():
-                db.add(User(
-                    id=1,
-                    full_name="Super Admin",
-                    email="admin@stocksteward.ai",
-                    hashed_password=get_password_hash("admin123"),
-                    risk_tolerance="LOW",
-                    is_active=True,
-                    role="SUPERADMIN",
-                    is_superuser=True
-                ))
-                db.commit()
-            # Ensure baseline RBAC users exist
-            defaults = [
-                {
-                    "full_name": "Asha Iyer",
-                    "email": "owner@stocksteward.ai",
-                    "password": "owner123",
-                    "role": "BUSINESS_OWNER",
-                    "risk_tolerance": "MODERATE",
-                    "trading_mode": "AUTO"
-                },
-                {
-                    "full_name": "Rahul Mehta",
-                    "email": "trader@stocksteward.ai",
-                    "password": "trader123",
-                    "role": "TRADER",
-                    "risk_tolerance": "MODERATE",
-                    "trading_mode": "MANUAL"
-                },
-                {
-                    "full_name": "Kavya Nair",
-                    "email": "auditor@stocksteward.ai",
-                    "password": "audit123",
-                    "role": "AUDITOR",
-                    "risk_tolerance": "LOW",
-                    "trading_mode": "MANUAL"
-                }
-            ]
-            for u in defaults:
-                if not db.query(User).filter(User.email == u["email"]).first():
-                    db.add(User(
-                        full_name=u["full_name"],
-                        email=u["email"],
-                        hashed_password=get_password_hash(u["password"]),
-                        risk_tolerance=u["risk_tolerance"],
+            from app.core.database import SessionLocal
+            from app.models.user import User
+            from app.core.security import get_password_hash
+            db = SessionLocal()
+            try:
+                existing = db.query(User).first()
+                if not existing:
+                    admin = User(
+                        id=1,
+                        full_name="Super Admin",
+                        email="admin@stocksteward.ai",
+                        hashed_password=get_password_hash("admin123"),
+                        risk_tolerance="LOW",
                         is_active=True,
-                        role=u["role"],
-                        trading_mode=u["trading_mode"],
-                        is_superuser=True if u["role"] == "SUPERADMIN" else False
+                        role="SUPERADMIN",
+                        is_superuser=True
+                    )
+                    db.add(admin)
+                    db.commit()
+                elif not db.query(User).filter(User.id == 1).first():
+                    db.add(User(
+                        id=1,
+                        full_name="Super Admin",
+                        email="admin@stocksteward.ai",
+                        hashed_password=get_password_hash("admin123"),
+                        risk_tolerance="LOW",
+                        is_active=True,
+                        role="SUPERADMIN",
+                        is_superuser=True
                     ))
-            db.commit()
-        finally:
-            db.close()
-    except Exception as e:
-        print(f"Default admin seed failed: {e}")
-    asyncio.create_task(market_feed())
-    asyncio.create_task(admin_feed())
+                    db.commit()
+                # Ensure baseline RBAC users exist
+                defaults = [
+                    {
+                        "full_name": "Asha Iyer",
+                        "email": "owner@stocksteward.ai",
+                        "password": "owner123",
+                        "role": "BUSINESS_OWNER",
+                        "risk_tolerance": "MODERATE",
+                        "trading_mode": "AUTO"
+                    },
+                    {
+                        "full_name": "Rahul Mehta",
+                        "email": "trader@stocksteward.ai",
+                        "password": "trader123",
+                        "role": "TRADER",
+                        "risk_tolerance": "MODERATE",
+                        "trading_mode": "MANUAL"
+                    },
+                    {
+                        "full_name": "Kavya Nair",
+                        "email": "auditor@stocksteward.ai",
+                        "password": "audit123",
+                        "role": "AUDITOR",
+                        "risk_tolerance": "LOW",
+                        "trading_mode": "MANUAL"
+                    }
+                ]
+                for u in defaults:
+                    if not db.query(User).filter(User.email == u["email"]).first():
+                        db.add(User(
+                            full_name=u["full_name"],
+                            email=u["email"],
+                            hashed_password=get_password_hash(u["password"]),
+                            risk_tolerance=u["risk_tolerance"],
+                            is_active=True,
+                            role=u["role"],
+                            trading_mode=u["trading_mode"],
+                            is_superuser=True if u["role"] == "SUPERADMIN" else False
+                        ))
+                db.commit()
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Default admin seed failed: {e}")
+        asyncio.create_task(market_feed())
+        asyncio.create_task(admin_feed())
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

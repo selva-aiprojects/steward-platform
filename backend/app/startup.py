@@ -110,7 +110,7 @@ async def perform_health_checks():
         for provider in available_providers:
             try:
                 # Test basic connectivity using the test_connection method
-                test_result = enhanced_llm_service.test_connection(provider)
+                test_result = await enhanced_llm_service.test_connection(provider)
                 if test_result:
                     health_status["llm_services"].append(provider)
             except Exception as e:
