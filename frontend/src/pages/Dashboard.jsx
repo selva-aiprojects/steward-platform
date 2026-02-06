@@ -126,11 +126,11 @@ export function Dashboard() {
                 
                 // Load portfolio history for chart
                 const historyData = await fetchPortfolioHistory(selectedUser?.id || user?.id);
-                setChartData(historyData || [
-                    { name: 'Mon', value: 100000 }, 
-                    { name: 'Tue', value: 102000 }, 
-                    { name: 'Wed', value: 98000 }, 
-                    { name: 'Thu', value: 105000 }, 
+                setChartData(Array.isArray(historyData) ? historyData : [
+                    { name: 'Mon', value: 100000 },
+                    { name: 'Tue', value: 102000 },
+                    { name: 'Wed', value: 98000 },
+                    { name: 'Thu', value: 105000 },
                     { name: 'Fri', value: 107000 }
                 ]);
                 
@@ -141,10 +141,10 @@ export function Dashboard() {
                 setMarketMovers(fallbackMovers);
                 // Set default data if fetch fails
                 setChartData([
-                    { name: 'Mon', value: 100000 }, 
-                    { name: 'Tue', value: 102000 }, 
-                    { name: 'Wed', value: 98000 }, 
-                    { name: 'Thu', value: 105000 }, 
+                    { name: 'Mon', value: 100000 },
+                    { name: 'Tue', value: 102000 },
+                    { name: 'Wed', value: 98000 },
+                    { name: 'Thu', value: 105000 },
                     { name: 'Fri', value: 107000 }
                 ]);
             }
@@ -228,7 +228,7 @@ export function Dashboard() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen pb-4">
+        <div data-testid="dashboard-container" className="flex flex-col min-h-screen pb-4">
             <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
                 <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                     <div>

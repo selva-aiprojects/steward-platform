@@ -19,6 +19,14 @@ export function Users() {
         risk_tolerance: 'MODERATE'
     });
 
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Form States
+    const [tradingMode, setTradingMode] = useState('AUTO');
+    const [allowedSectors, setAllowedSectors] = useState(['Technology']);
+    const [adminComment, setAdminComment] = useState('');
+
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -66,14 +74,6 @@ export function Users() {
             </div>
         );
     }
-
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Form States
-    const [tradingMode, setTradingMode] = useState('AUTO');
-    const [allowedSectors, setAllowedSectors] = useState(['Technology']);
-    const [adminComment, setAdminComment] = useState('');
 
     const openManageModal = (user) => {
         setSelectedUser(user);

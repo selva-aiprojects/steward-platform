@@ -57,7 +57,7 @@ class OrchestratorAgent(BaseAgent):
         
         # decision trace log
         trace = []
-        
+
         def log_step(agent_name: str, output: Dict[str, Any]):
             trace.append({
                 "step": agent_name,

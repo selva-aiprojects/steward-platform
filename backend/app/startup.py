@@ -7,9 +7,14 @@ import asyncio
 import logging
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.services.kite_service import kite_service
-from app.services.enhanced_llm_service import enhanced_llm_service
-from app.services.data_integration import data_integration_service
+from app.services.kite_service import KiteService
+from app.services.enhanced_llm_service import EnhancedLLMService
+from app.services.data_integration import DataIntegrationService
+
+# Initialize global service instances
+kite_service = KiteService()
+enhanced_llm_service = EnhancedLLMService()
+data_integration_service = DataIntegrationService()
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +110,7 @@ async def perform_health_checks():
         for provider in available_providers:
             try:
                 # Test basic connectivity using the test_connection method
-                test_result = await enhanced_llm_service.test_connection(provider)
+                test_result = enhanced_llm_service.test_connection(provider)
                 if test_result:
                     health_status["llm_services"].append(provider)
             except Exception as e:
