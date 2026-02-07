@@ -1,0 +1,17 @@
+from .trades import router as trades_router
+from .market import router as market_router
+from .watchlist import router as watchlist_router
+from .portfolio import router as portfolios_router
+from .users import router as users_router
+from .strategies import router as strategies_router
+from .projections import router as projections_router
+from .logs import router as logs_router
+from .audit import router as audit_router
+from .tickets import router as tickets_router
+from .ai import router as ai_router
+from .enhanced_ai import router as enhanced_ai_router
+from .approvals import router as approvals_router
+from .auth import router as auth_router
+from .backtesting import router as backtesting_router
+from .kyc import router as kyc_router
+from .portfolio_optimization import router as portfolio_optimization_router

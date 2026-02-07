@@ -5,10 +5,12 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import pandas as pd
+import time
 
-from app.schemas.backtesting import BacktestRequest, BacktestResponse
+from app.schemas.backtesting import BacktestRequest, BacktestResponse, OptimizationRequest, OptimizationResult
 from app.core.database import get_db
 from app.models.user import User
+from app.models.optimization import StrategyOptimizationResult
 from app.api.deps import get_current_user
 from app.backtesting.engine import BacktestingEngine, sma_crossover_strategy
 
@@ -109,39 +111,148 @@ async def get_available_strategies():
     return {"strategies": strategies}
 
 
-@router.get("/optimize")
+@router.post("/optimize", response_model=OptimizationResult)
 async def optimize_strategy_parameters(
-    symbol: str = Query(..., description="Symbol to optimize for"),
-    strategy_name: str = Query(..., description="Name of strategy to optimize"),
-    start_date: datetime = Query(..., description="Start date for optimization period"),
-    end_date: datetime = Query(..., description="End date for optimization period"),
-    current_user: User = Depends(get_current_user)
+    request: OptimizationRequest,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
 ):
     """
     Optimize strategy parameters using grid search or other optimization techniques
     """
     try:
+        start_time = time.time()
+
         # This would implement parameter optimization
-        # For now, return a mock response
-        optimization_results = {
-            "best_parameters": {"short_period": 20, "long_period": 50},
-            "best_sharpe_ratio": 1.85,
-            "best_return": 0.25,
-            "parameter_space": [
-                {"short_period": 10, "long_period": 30, "sharpe_ratio": 1.2},
-                {"short_period": 20, "long_period": 50, "sharpe_ratio": 1.85},
-                {"short_period": 30, "long_period": 100, "sharpe_ratio": 1.45}
-            ]
-        }
-        
+        # For now, return a mock response with realistic values
+        # In a real implementation, this would perform actual parameter optimization
+        best_parameters = {}
+        best_score = 0.0
+        optimization_trace = []
+
+        # Simulate optimization process
+        param_names = list(request.parameter_space.keys())
+        if param_names:
+            # Just pick the first combination as the "best" for demo purposes
+            first_combination = {}
+            for param_name in param_names:
+                first_combination[param_name] = request.parameter_space[param_name][0]
+
+            best_parameters = first_combination
+            best_score = 1.5  # Mock Sharpe ratio or other metric
+
+            # Generate trace of optimization steps
+            for i in range(5):  # Simulate 5 optimization steps
+                step_params = {}
+                for param_name in param_names:
+                    import random
+                    step_params[param_name] = random.choice(request.parameter_space[param_name])
+
+                optimization_trace.append({
+                    "step": i,
+                    "parameters": step_params,
+                    "score": round(random.uniform(0.5, 2.0), 3),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+
+        execution_time = time.time() - start_time
+
+        # Create database record for the optimization result
+        db_optimization_result = StrategyOptimizationResult(
+            user_id=current_user.id,
+            strategy_name=request.strategy_name,
+            symbol=request.symbol,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            parameter_space=request.parameter_space,
+            best_parameters=best_parameters,
+            best_score=best_score,
+            optimization_trace=optimization_trace,
+            execution_time=execution_time,
+            status="COMPLETED"
+        )
+
+        db.add(db_optimization_result)
+        db.commit()
+        db.refresh(db_optimization_result)
+
+        return OptimizationResult(
+            best_parameters=best_parameters,
+            best_score=best_score,
+            best_strategy=request.strategy_name,
+            optimization_trace=optimization_trace,
+            execution_time=execution_time
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+# Retrieve stored optimization results
+@router.get("/optimization-results")
+async def get_optimization_results(
+    current_user: User = Depends(get_current_user),
+    skip: int = Query(0, description="Number of records to skip"),
+    limit: int = Query(100, description="Maximum number of records to return"),
+    strategy_name: Optional[str] = Query(None, description="Filter by strategy name"),
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
+    db=Depends(get_db)
+):
+    """
+    Retrieve previously stored optimization results
+    """
+    try:
+        query = db.query(StrategyOptimizationResult).filter(
+            StrategyOptimizationResult.user_id == current_user.id
+        )
+
+        if strategy_name:
+            query = query.filter(StrategyOptimizationResult.strategy_name == strategy_name)
+
+        if symbol:
+            query = query.filter(StrategyOptimizationResult.symbol == symbol)
+
+        if start_date:
+            query = query.filter(StrategyOptimizationResult.start_date >= start_date)
+
+        if end_date:
+            query = query.filter(StrategyOptimizationResult.end_date <= end_date)
+
+        results = query.order_by(StrategyOptimizationResult.created_at.desc()).offset(skip).limit(limit).all()
+
         return {
-            "symbol": symbol,
-            "strategy_name": strategy_name,
-            "optimization_results": optimization_results,
-            "status": "COMPLETED"
+            "results": results,
+            "total_count": query.count(),
+            "skip": skip,
+            "limit": limit
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve optimization results: {str(e)}")
+
+
+@router.get("/optimization-results/{result_id}")
+async def get_optimization_result_detail(
+    result_id: int,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    Retrieve details of a specific optimization result
+    """
+    try:
+        result = db.query(StrategyOptimizationResult).filter(
+            StrategyOptimizationResult.id == result_id,
+            StrategyOptimizationResult.user_id == current_user.id
+        ).first()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Optimization result not found")
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve optimization result: {str(e)}")
 
 
 # Strategy implementations

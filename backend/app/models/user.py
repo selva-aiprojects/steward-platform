@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class User(Base):
@@ -17,3 +18,14 @@ class User(Base):
     trading_suspended = Column(Boolean, default=False)
     approval_threshold = Column(Float, nullable=True)
     confidence_threshold = Column(Float, nullable=True)
+
+    # Relationships
+    optimization_results = relationship("PortfolioOptimizationResult", back_populates="user")
+    strategy_optimization_results = relationship("StrategyOptimizationResult", back_populates="user")
+    portfolios = relationship("Portfolio", back_populates="user")
+    trades = relationship("Trade", back_populates="user")
+    trade_approvals = relationship("TradeApproval", back_populates="user")
+    activities = relationship("Activity", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user")
+    kyc = relationship("KYC", back_populates="user")
+    watchlists = relationship("Watchlist", back_populates="user")

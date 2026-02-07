@@ -8,4 +8,5 @@ from .activity import Activity
 from .audit_log import AuditLog
 from .trade_approval import TradeApproval
 from .kyc import KYCApplication
+from .optimization import PortfolioOptimizationResult, StrategyOptimizationResult
 

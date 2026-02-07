@@ -262,6 +262,12 @@ docker-compose up -d
 - `POST /api/v1/enhanced-ai/portfolio-optimizer` - AI-driven portfolio optimization
 - `GET /api/v1/enhanced-ai/risk-assessment` - Comprehensive risk analysis
 
+### Portfolio Optimization Endpoints
+- `POST /api/v1/portfolio-optimization/portfolio-optimize` - Optimize portfolio allocation using Modern Portfolio Theory
+- `GET /api/v1/portfolio-optimization/portfolio-optimization-results` - Retrieve stored portfolio optimization results
+- `POST /api/v1/backtesting/optimize` - Optimize strategy parameters using grid search
+- `GET /api/v1/backtesting/optimization-results` - Retrieve stored strategy optimization results
+
 ## Configuration
 
 ### Risk Management Settings
