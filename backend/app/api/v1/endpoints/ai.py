@@ -24,9 +24,9 @@ def chat_with_ai(
     current_user: User = Depends(get_current_active_user),
 ):
     # Pass user info as context if needed
-    user_context = f"User: {current_user.full_name}, Role: {current_user.trading_mode}"
+    user_context = f"User: {current_user.full_name}, Role: {current_user.trading_mode}, User_ID: {current_user.id}"
     full_context = f"{user_context}. {request.context}"
-    
+
     response = llm_service.get_chat_response(request.message, full_context)
     return ChatResponse(response=response)
 

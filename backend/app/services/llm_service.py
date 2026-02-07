@@ -39,7 +39,7 @@ class LLMService:
         if not self.client:
             # Graceful Fallback for Demo/Audit without API Key
             logger.warning("Groq client not available, using offline response")
-            return self._generate_offline_response(message)
+            return self._generate_offline_response(message, context)
 
         system_prompt = (
             "You are StockSteward AI, a helpful financial assistant for the StockSteward platform. "
@@ -74,18 +74,42 @@ class LLMService:
 
             # If all models fail, return offline response
             logger.error("All Groq models failed, falling back to offline response")
-            return self._generate_offline_response(message)
+            return self._generate_offline_response(message, context)
 
         except Exception as e:
             logger.error(f"Groq API error: {e}")
             return f"I encountered an error processing your request: {str(e)}. Using offline mode."
 
-    def _generate_offline_response(self, message: str) -> str:
+    def _generate_offline_response(self, message: str, context: str = "") -> str:
         """
         Offline 'Small RAG' that queries the database directly based on keywords.
         Simulates AI behavior using deterministic logic and available internal data.
         """
         msg_lower = message.lower()
+        
+        # Extract user_id from context if available
+        user_id = None
+        if context and "User:" in context:
+            # Extract user_id from context string like "User: John Doe, Role: AUTO"
+            import re
+            # Look for user_id in context if it's passed
+            for part in context.split(','):
+                if 'user_id' in part.lower():
+                    try:
+                        user_id = int(part.split(':')[-1].strip())
+                    except:
+                        pass
+        
+        # If no user_id found in context, default to first user (demo mode)
+        if not user_id:
+            # Try to extract from context string that might contain user_id
+            import re
+            user_id_match = re.search(r'"user_id":\s*(\d+)', context)
+            if user_id_match:
+                user_id = int(user_id_match.group(1))
+            else:
+                user_id = 1  # Default to first user for demo purposes
+        
         from app.core.database import SessionLocal
         from app.models.portfolio import Portfolio
         from app.models.strategy import Strategy
@@ -95,53 +119,66 @@ class LLMService:
         try:
             # 1. Portfolio Queries
             if "portfolio" in msg_lower or "balance" in msg_lower or "value" in msg_lower:
-                port = db.query(Portfolio).first() # Demo mode assumes single user context or first user
+                # Query specific user's portfolio
+                port = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
                 if port:
                     total_val = port.invested_amount + port.cash_balance
                     return (
-                        f"**Internal Ledger Data (Offline Mode):**\n"
+                        f"**Portfolio Summary for User #{user_id}:**\n"
                         f"- **Total Vault Value:** ₹{total_val:,.2f}\n"
-                        f"- **Invested:** ₹{port.invested_amount:,.2f}\n"
-                        f"- **Cash:** ₹{port.cash_balance:,.2f}\n\n"
+                        f"- **Cash Balance:** ₹{port.cash_balance:,.2f}\n"
+                        f"- **Invested Amount:** ₹{port.invested_amount:,.2f}\n"
+                        f"- **Win Rate:** {port.win_rate}%\n\n"
                         f"I can fetch more details if you ask about 'strategies' or 'trades'."
                     )
-                return "I couldn't locate an active portfolio in the local database."
+                return f"No portfolio found for user #{user_id}. Would you like to create one or check another user?"
 
             # 2. Strategy Queries
             if "strategy" in msg_lower or "strategies" in msg_lower or "algo" in msg_lower:
-                strats = db.query(Strategy).all()
-                if strats:
-                    strat_list = "\n".join([f"- **{s.name}** ({s.symbol}): {s.status} | PnL: {s.pnl}" for s in strats[:3]])
-                    return (
-                        f"**Active Algo Strategies (Offline Mode):**\n\n{strat_list}\n\n"
-                        f"Total Active Engines: {len(strats)}"
-                    )
-                return "No algorithmic strategies are currently deployed on this node."
+                # Query specific user's strategies through their portfolio
+                from app.models.portfolio import Portfolio
+                portfolio = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
+                if portfolio:
+                    strats = db.query(Strategy).filter(Strategy.portfolio_id == portfolio.id).all()
+                    if strats:
+                        strat_list = "\n".join([f"- **{s.name}** ({s.symbol}): {s.status} | PnL: {s.pnl}" for s in strats[:3]])
+                        return (
+                            f"**Active Algo Strategies for User #{user_id} (Offline Mode):**\n\n{strat_list}\n\n"
+                            f"Total Active Engines: {len(strats)}"
+                        )
+                    return f"No algorithmic strategies are currently deployed for user #{user_id}'s portfolio."
+                return f"User #{user_id} does not have an active portfolio to associate strategies with."
 
             # 3. Trade/History Queries
             if "trade" in msg_lower or "history" in msg_lower or "order" in msg_lower:
-                trades = db.query(Trade).order_by(Trade.timestamp.desc()).limit(3).all()
-                if trades:
-                    trade_list = "\n".join([f"- {t.action} **{t.symbol}** @ ₹{t.price} ({t.status})" for t in trades])
-                    return (
-                        f"**Recent Execution Log (Offline Mode):**\n\n{trade_list}\n\n"
-                        f"These records are pulled directly from your local transaction ledger."
-                    )
-                return "The transaction ledger is currently empty."
+                # Query specific user's trades through their portfolio
+                portfolio = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
+                if portfolio:
+                    trades = db.query(Trade).filter(Trade.portfolio_id == portfolio.id).order_by(Trade.timestamp.desc()).limit(3).all()
+                    if trades:
+                        trade_list = "\n".join([f"- {t.action} **{t.symbol}** @ ₹{t.price} ({t.status})" for t in trades])
+                        return (
+                            f"**Recent Execution Log for User #{user_id} (Offline Mode):**\n\n{trade_list}\n\n"
+                            f"These records are pulled directly from user #{user_id}'s transaction ledger."
+                        )
+                    return f"The transaction ledger for user #{user_id} is currently empty."
+                return f"User #{user_id} does not have an active portfolio to query trade history from."
 
             # 4. Market/General Fallback
             if "market" in msg_lower or "trend" in msg_lower:
                  return (
                      "**Market Insight (Offline Mode):**\n"
                      "I cannot access live external feeds without the Neural Link (Groq API), but internal telemetry indicates "
-                     "stable connection to NSE/BSE Execution Nodes. Local latency is nominal (24ms)."
+                     "stable connection to NSE/BSE Execution Nodes. Local latency is nominal (24ms).\n\n"
+                     f"For user #{user_id}'s specific portfolio data, try asking: *'Show my portfolio'* or *'List my strategies'*."
                  )
 
             # Default generic response
             return (
-                "**Offline Intelligence:** I am operating with limited connectivity (No external LLM). "
-                "I can still query your **Portfolio**, **Strategies**, and **Trade History** directly from the secure ledger. "
-                "Try asking: *'Show my portfolio'* or *'List active strategies'*."
+                f"**Offline Intelligence for User #{user_id}:** I am operating with limited connectivity (No external LLM). "
+                f"I can query your **Portfolio**, **Strategies**, and **Trade History** directly from the secure ledger. "
+                f"Try asking: *'Show my portfolio'* or *'List active strategies'*.\n\n"
+                f"Current View: User #{user_id} data access."
             )
 
         except Exception as e:
