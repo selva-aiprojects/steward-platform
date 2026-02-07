@@ -69,13 +69,13 @@ const ChatWidget = () => {
                                             remarkPlugins={[remarkGfm]}
                                             components={{
                                                 // Custom rendering for different markdown elements
-                                                p: ({node, ...props}) => <p className="mb-2" {...props} />,
-                                                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
-                                                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
-                                                li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                                                strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
-                                                em: ({node, ...props}) => <em className="italic" {...props} />,
-                                                code: ({node, inline, ...props}) => {
+                                                p: ({...props}) => <p className="mb-2" {...props} />,
+                                                ul: ({...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
+                                                ol: ({...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+                                                li: ({...props}) => <li className="mb-1" {...props} />,
+                                                strong: ({...props}) => <strong className="font-bold" {...props} />,
+                                                em: ({...props}) => <em className="italic" {...props} />,
+                                                code: ({inline, ...props}) => {
                                                     if (inline) {
                                                         return <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs" {...props} />;
                                                     } else {
@@ -86,10 +86,10 @@ const ChatWidget = () => {
                                                         );
                                                     }
                                                 },
-                                                h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2" {...props} />,
-                                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2" {...props} />,
-                                                h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2" {...props} />,
-                                                blockquote: ({node, ...props}) => (
+                                                h1: ({...props}) => <h1 className="text-xl font-bold mb-2" {...props} />,
+                                                h2: ({...props}) => <h2 className="text-lg font-bold mb-2" {...props} />,
+                                                h3: ({...props}) => <h3 className="text-base font-bold mb-2" {...props} />,
+                                                blockquote: ({...props}) => (
                                                     <blockquote className="border-l-4 border-primary pl-4 italic text-gray-600" {...props} />
                                                 ),
                                             }}
