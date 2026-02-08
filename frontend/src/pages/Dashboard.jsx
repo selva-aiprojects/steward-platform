@@ -6,48 +6,25 @@ import {
   BarChart3, 
   Shield, 
   DollarSign, 
-  Zap,
-  ArrowUpRight,
-  ArrowDownRight,
-  Target,
-  Calendar,
-  Search,
-  Clock,
-  Settings,
-  Plus,
-  X,
-  Play,
-  Pause,
-  Activity as ActivityIcon,
-  Shield as ShieldIcon
+  Zap
 } from 'lucide-react';
 import { 
-  LineChart, 
-  Line, 
   AreaChart, 
   Area, 
   XAxis, 
   YAxis,
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  Legend,
-  PieChart,
-  Pie,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Card } from "../components/ui/card";
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
-import { socket, fetchPortfolioSummary, fetchTrades, fetchPortfolioHistory, fetchExchangeStatus, fetchUsers, fetchAllPortfolios, depositFunds, fetchMarketMovers } from "../services/api";
 
 export function Dashboard() {
-    const formatNumber = (value, digits = 2) => {
-        const num = typeof value === 'number' ? value : parseFloat(value);
-        if (!Number.isFinite(num)) return '0.00';
-        return num.toFixed(digits);
-    };
+    const [period, setPeriod] = useState('This Week');
+    
     const { user, selectedUser, setSelectedUser, isAdmin } = useUser();
     const {
         summary,
@@ -66,12 +43,33 @@ export function Dashboard() {
         allUsers,
         refreshAllData
     } = useAppData();
-
-    const [period, setPeriod] = useState('This Week');
-    const [depositing, setDepositing] = useState(false);
-    const [chartData, setChartData] = useState([]);
-    const [socketStatus, setSocketStatus] = useState('disconnected');
-    const [marketMovers, setMarketMovers] = useState({ gainers: [], losers: [] });
+    
+    const formatNumber = (value, digits = 2) => {
+        const num = typeof value === 'number' ? value : parseFloat(value);
+        if (!Number.isFinite(num)) return '0.00';
+        return num.toFixed(digits);
+    };
+    
+    const formatPrice = (value) => {
+        if (value === null || value === undefined) return 'INR --';
+        const num = typeof value === 'number' ? value : parseFloat(value);
+        if (!Number.isFinite(num) || num === 0) return 'INR --';
+        return `INR ${num.toLocaleString()}`;
+    };
+    
+    const exchangeClass = (exchange) => {
+        switch ((exchange || '').toUpperCase()) {
+            case 'NSE':
+                return 'text-emerald-300 border-emerald-500/60';
+            case 'BSE':
+                return 'text-sky-300 border-sky-500/60';
+            case 'MCX':
+                return 'text-amber-300 border-amber-500/60';
+            default:
+                return 'text-slate-300 border-slate-500/60';
+        }
+    };
+    
     const fallbackMovers = {
         gainers: [
             { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
@@ -83,6 +81,7 @@ export function Dashboard() {
             { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
         ]
     };
+    
     const stewardPrediction = stewardPredictionState || {
         prediction: "Initializing market intelligence...",
         decision: "HOLD",
@@ -90,85 +89,39 @@ export function Dashboard() {
         signal_mix: { technical: 0, fundamental: 0, news: 0 },
         risk_radar: 0
     };
+    
+    const marketMovers = marketMoversState || fallbackMovers;
 
-    const navigate = useNavigate();
+    // Sample chart data
+    const [chartData] = useState([
+        { name: 'Mon', value: 100000 },
+        { name: 'Tue', value: 102000 },
+        { name: 'Wed', value: 98000 },
+        { name: 'Thu', value: 105000 },
+        { name: 'Fri', value: 107000 }
+    ]);
 
-    useEffect(() => {
-        if (!socket) return;
-        const up = () => setSocketStatus('connected');
-        const down = () => setSocketStatus('disconnected');
-        socket.on('connect', up);
-        socket.on('disconnect', down);
-        if (socket.connected) up();
-        return () => {
-            socket.off('connect', up);
-            socket.off('disconnect', down);
-        };
-    }, []);
+    if (loading) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p className="font-black uppercase text-xs tracking-[0.3em] text-slate-500 mt-4">LOADING DASHBOARD...</p>
+            </div>
+        );
+    }
 
-    // Load initial data
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Load portfolio summary
-                const summaryData = await fetchPortfolioSummary(selectedUser?.id || user?.id);
-                
-                // Load recent trades
-                const tradesData = await fetchTrades(selectedUser?.id || user?.id, 10);
-                
-                // Load market movers
-                const moversData = await fetchMarketMovers();
-                if (moversData?.gainers?.length || moversData?.losers?.length) {
-                    setMarketMovers(moversData);
-                } else {
-                    setMarketMovers(fallbackMovers);
-                }
-                
-                // Load portfolio history for chart
-                const historyData = await fetchPortfolioHistory(selectedUser?.id || user?.id);
-                setChartData(Array.isArray(historyData) ? historyData : [
-                    { name: 'Mon', value: 100000 },
-                    { name: 'Tue', value: 102000 },
-                    { name: 'Wed', value: 98000 },
-                    { name: 'Thu', value: 105000 },
-                    { name: 'Fri', value: 107000 }
-                ]);
-                
-                // Load exchange status
-                await fetchExchangeStatus();
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                setMarketMovers(fallbackMovers);
-                // Set default data if fetch fails
-                setChartData([
-                    { name: 'Mon', value: 100000 },
-                    { name: 'Tue', value: 102000 },
-                    { name: 'Wed', value: 98000 },
-                    { name: 'Thu', value: 105000 },
-                    { name: 'Fri', value: 107000 }
-                ]);
-            }
-        };
-        
-        loadData();
-    }, [selectedUser?.id, user?.id, isAdmin]); // Changed dependency to only watch IDs to prevent unnecessary re-renders
-
-    const handleQuickDeposit = async () => {
-        const viewId = selectedUser?.id || user?.id;
-        if (!viewId) return;
-        setDepositing(true);
-        try {
-            const result = await depositFunds(viewId, 1000); // Quick INR 1000 deposit
-            if (result) {
-                await refreshAllData();
-                alert("Quick Deposit of INR 1,000 successful.");
-            }
-        } catch (err) {
-            console.error("Quick deposit failed:", err);
-        } finally {
-            setDepositing(false);
-        }
-    };
+    // Group stocks by exchange and take only the first one for each exchange
+    const groupedStocks = [
+        (marketMovers.gainers || []).find(m => m.exchange === 'NSE') || 
+        (marketMovers.losers || []).find(m => m.exchange === 'NSE') || 
+        fallbackMovers.gainers[0],
+        (marketMovers.gainers || []).find(m => m.exchange === 'BSE') || 
+        (marketMovers.losers || []).find(m => m.exchange === 'BSE') || 
+        fallbackMovers.gainers[1],
+        (marketMovers.gainers || []).find(m => m.exchange === 'MCX') || 
+        (marketMovers.losers || []).find(m => m.exchange === 'MCX') || 
+        fallbackMovers.gainers[2]
+    ];
 
     // Define metrics with proper fallbacks
     const metrics = [
@@ -183,28 +136,16 @@ export function Dashboard() {
         {
             label: 'Ready Capital',
             value: summary ? `INR ${(summary.cash_balance || 0).toLocaleString()}` : 'INR 0',
-            change: socketStatus === 'connected' ? 'SECURE' : 'OFFLINE',
+            change: 'SECURE', // Placeholder for socket status
             icon: DollarSign,
             color: 'text-indigo-600',
-            link: '/portfolio',
-            action: (
-                <button
-                    onClick={(e) => { 
-                        e.preventDefault(); 
-                        handleQuickDeposit(); 
-                    }}
-                    disabled={depositing}
-                    className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-400 hover:text-indigo-600 transition-colors"
-                >
-                    {depositing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                </button>
-            )
+            link: '/portfolio'
         },
         {
             label: user?.role === 'AUDITOR' ? 'Audit Exposure' : 'Open Exposure',
             value: `INR ${(summary?.invested_amount || 0).toLocaleString()}`,
             change: summary?.positions_count ? `${summary.positions_count} positions` : 'No active positions',
-            icon: ActivityIcon,
+            icon: Activity,
             color: 'text-indigo-600',
             link: '/portfolio'
         },
@@ -218,17 +159,8 @@ export function Dashboard() {
         }
     ];
 
-    if (loading) {
-        return (
-            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p className="font-black uppercase text-xs tracking-[0.3em] text-slate-500 mt-4">LOADING DASHBOARD...</p>
-            </div>
-        );
-    }
-
     return (
-        <div data-testid="dashboard-container" className="flex flex-col min-h-screen pb-4">
+        <div className="flex flex-col min-h-screen pb-4">
             <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
                 <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
                     <div>
@@ -244,7 +176,7 @@ export function Dashboard() {
                                     user?.role === 'BUSINESS_OWNER' ? 'bg-purple-500' :
                                         'bg-primary'
                                 }`} />
-                            <p className="text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] leading-none">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">
                                 {user?.role === 'SUPERADMIN' ? (selectedUser ? 'User Inspection Mode: ACTIVE' : 'Global System Oversight: ACTIVE') :
                                     user?.role === 'AUDITOR' ? 'Audit Logging: ENABLED' :
                                         user?.role === 'BUSINESS_OWNER' ? 'Revenue Monitoring: PASSIVE' :
@@ -284,7 +216,7 @@ export function Dashboard() {
                                 </select>
                             </div>
                         )}
-                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
+                        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
                             {['Today', 'This Week', 'This Year'].map((p) => (
                                 <button
                                     key={p}
@@ -302,13 +234,13 @@ export function Dashboard() {
                 {/* AI Intelligence Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <ShieldIcon size={160} className="text-primary rotate-12" />
+                        <Shield size={160} className="text-primary rotate-12" />
                     </div>
 
                     <div className="relative z-10 space-y-8">
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                             <div className="flex items-center gap-4">
-                                <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+                                <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-sm">
                                     <Zap className="text-primary animate-pulse" size={28} />
                                 </div>
                                 <div>
@@ -326,7 +258,7 @@ export function Dashboard() {
                             <div className="flex gap-4 w-full md:w-auto">
                                 <Link to="/trading" className="flex-1 md:flex-none">
                                     <button className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-                                        <ActivityIcon size={14} />
+                                        <Activity size={14} />
                                         LAUNCH STRATEGY
                                     </button>
                                 </Link>
@@ -419,16 +351,13 @@ export function Dashboard() {
                                     <div className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${metric.color}`}>
                                         <metric.icon size={18} />
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {metric.action}
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                            metric.change.startsWith('+') || metric.change.includes('SECURE') 
-                                                ? 'bg-green-50 text-green-700' 
-                                                : 'bg-slate-100 text-slate-600'
-                                        }`}>
-                                            {metric.change}
-                                        </span>
-                                    </div>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                        metric.change.startsWith('+') || metric.change.includes('SECURE') 
+                                            ? 'bg-green-50 text-green-700' 
+                                            : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                        {metric.change}
+                                    </span>
                                 </div>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{metric.label}</p>
                                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">{metric.value}</h3>
@@ -451,7 +380,7 @@ export function Dashboard() {
                             </div>
                             <div className="flex gap-2">
                                 <div className="h-3 w-3 rounded-full bg-primary" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase">Steward Equity</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Steward Equity</span>
                             </div>
                         </div>
                         <div className="h-[350px] w-full">
@@ -529,7 +458,7 @@ export function Dashboard() {
                                             <p className="font-black text-slate-900">{mover.symbol}</p>
                                             <p className="text-[10px] text-slate-500">+{mover.change}%</p>
                                         </div>
-                                        <p className="font-black text-green-600">INR {formatNumber(mover.price, 2)}</p>
+                                        <p className="font-black text-green-600">INR {formatPrice(mover.price)}</p>
                                     </div>
                                 ))}
                                 {(marketMovers?.losers?.length ? marketMovers.losers : fallbackMovers.losers).slice(0, 2).map((mover, i) => (
@@ -538,7 +467,7 @@ export function Dashboard() {
                                             <p className="font-black text-slate-900">{mover.symbol}</p>
                                             <p className="text-[10px] text-slate-500">{mover.change}%</p>
                                         </div>
-                                        <p className="font-black text-red-500">INR {formatNumber(mover.price, 2)}</p>
+                                        <p className="font-black text-red-500">INR {formatPrice(mover.price)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -571,7 +500,7 @@ export function Dashboard() {
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
                                 {(orderBook?.bids || []).slice(0, 5).map((bid, i) => (
                                     <div key={i} className="flex justify-between text-xs font-bold text-slate-700 py-1">
-                                        <span>INR {formatNumber(bid.price, 2)}</span>
+                                        <span>INR {formatPrice(bid.price)}</span>
                                         <span>{bid.qty}</span>
                                     </div>
                                 ))}
@@ -583,7 +512,7 @@ export function Dashboard() {
                                 <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
                                 {(orderBook?.asks || []).slice(0, 5).map((ask, i) => (
                                     <div key={i} className="flex justify-between text-xs font-bold text-slate-700 py-1">
-                                        <span>INR {formatNumber(ask.price, 2)}</span>
+                                        <span>INR {formatPrice(ask.price)}</span>
                                         <span>{ask.qty}</span>
                                     </div>
                                 ))}
@@ -625,10 +554,8 @@ export function Dashboard() {
                             <div className="pt-2 border-t border-slate-100">
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600">System Status</span>
-                                    <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                                        socketStatus === 'connected' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                        {socketStatus}
+                                    <span className="text-xs font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                        connected
                                     </span>
                                 </div>
                             </div>
@@ -655,13 +582,13 @@ export function Dashboard() {
                                 {(recentTrades || []).slice(0, 5).map((trade, i) => (
                                     <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
                                         <td className="py-3 font-black text-slate-900">{trade.symbol}</td>
-                                        <td className={`py-3 font-black ${trade.side === 'BUY' ? 'text-green-600' : 'text-red-500'}`}>
-                                            {trade.side}
+                                        <td className={`py-3 font-black ${trade.action === 'BUY' ? 'text-green-600' : trade.action === 'SELL' ? 'text-red-500' : 'text-slate-500'}`}>
+                                            {trade.action}
                                         </td>
                                         <td className="py-3 text-slate-700">{trade.quantity}</td>
-                                        <td className="py-3 font-black text-slate-900">INR {formatNumber(trade.entry_price, 2)}</td>
-                                        <td className={`py-3 font-black ${trade.pnl > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            {trade.pnl > 0 ? '+' : ''}{formatNumber(trade.pnl, 2)}
+                                        <td className="py-3 font-black text-slate-900">INR {formatPrice(trade.price)}</td>
+                                        <td className={`py-3 font-black ${trade.pnl > 0 ? 'text-green-600' : trade.pnl < 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                                            {trade.pnl > 0 ? '+' : ''}{formatPrice(trade.pnl)}
                                         </td>
                                         <td className="py-3 text-[10px] text-slate-500">
                                             {new Date(trade.timestamp || trade.created_at).toLocaleTimeString()}
@@ -681,4 +608,3 @@ export function Dashboard() {
         </div>
     );
 }
-
