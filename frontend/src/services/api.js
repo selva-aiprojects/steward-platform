@@ -132,9 +132,13 @@ export const fetchAllPortfolios = async () => {
     }
 };
 
-export const fetchStrategies = async () => {
+export const fetchStrategies = async (userId = null) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/strategies/`);
+        let url = `${BASE_URL}${API_PREFIX}/strategies/`;
+        if (userId) {
+            url += `?user_id=${userId}`;
+        }
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch strategies');
         return await response.json();
     } catch (error) {
