@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators, fetchStrategies } from '../services/api';
 import { useUser } from './UserContext';
 
@@ -7,6 +8,7 @@ const AppDataContext = createContext();
 export const useAppData = () => useContext(AppDataContext);
 
 export const AppDataProvider = ({ children }) => {
+    const location = useLocation();
     const { user, selectedUser, setUser: setContextUser, setSelectedUser, isAdmin } = useUser();
     const [summary, setSummary] = useState(null);
     const [holdings, setHoldings] = useState([]);
@@ -152,11 +154,17 @@ export const AppDataProvider = ({ children }) => {
 
     useEffect(() => {
         if (!viewId) return;
-        const interval = setInterval(() => {
-            refreshAllData();
-        }, 15000);
-        return () => clearInterval(interval);
-    }, [viewId, refreshAllData]);
+        // Auto-refresh every 15 seconds for most pages, but allow disabling for specific pages
+        const currentPath = location.pathname;
+        const shouldRefresh = !['/reports', '/reports/investment'].includes(currentPath);
+
+        if (shouldRefresh) {
+            const interval = setInterval(() => {
+                refreshAllData();
+            }, 15000);
+            return () => clearInterval(interval);
+        }
+    }, [viewId, refreshAllData, location.pathname]);
 
     useEffect(() => {
         if (!socket) return;
