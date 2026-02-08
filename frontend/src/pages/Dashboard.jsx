@@ -151,7 +151,7 @@ export function Dashboard() {
         };
         
         loadData();
-    }, [selectedUser, user, isAdmin]);
+    }, [selectedUser?.id, user?.id, isAdmin]); // Changed dependency to only watch IDs to prevent unnecessary re-renders
 
     const handleQuickDeposit = async () => {
         const viewId = selectedUser?.id || user?.id;

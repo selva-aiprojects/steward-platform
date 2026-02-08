@@ -161,7 +161,7 @@ export const AppDataProvider = ({ children }) => {
         if (shouldRefresh) {
             const interval = setInterval(() => {
                 refreshAllData();
-            }, 30000); // Increased to 30 seconds to reduce frequency
+            }, 60000); // Increased to 60 seconds to reduce frequency further
             return () => clearInterval(interval);
         }
     }, [viewId, refreshAllData, location.pathname]);

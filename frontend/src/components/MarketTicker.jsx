@@ -164,7 +164,7 @@ export function MarketTicker() {
         <div className="w-full bg-slate-900 border-b border-slate-800 py-2 overflow-hidden relative h-12 flex items-center">
             <div className="flex animate-marquee whitespace-nowrap gap-8 pr-12">
                 {[...stocks, ...stocks].map((stock, i) => (
-                    <div key={i} className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
+                    <div key={`${stock.symbol}-${i}`} className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
                         <div className="flex flex-col">
                             <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(stock.exchange)}`}>
                                 {stock.exchange || 'NSE'}
