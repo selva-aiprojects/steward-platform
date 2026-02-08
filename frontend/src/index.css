@@ -88,6 +88,13 @@
   width: max-content;
 }
 
+/* Multi-line ticker animation */
+.multi-line-ticker {
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+}
+
 .pause-animation:hover {
   animation-play-state: paused;
 }
