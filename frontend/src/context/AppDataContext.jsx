@@ -154,14 +154,14 @@ export const AppDataProvider = ({ children }) => {
 
     useEffect(() => {
         if (!viewId) return;
-        // Auto-refresh every 15 seconds for most pages, but allow disabling for specific pages
+        // Auto-refresh every 30 seconds for most pages, but allow disabling for specific pages
         const currentPath = location.pathname;
-        const shouldRefresh = !['/reports', '/reports/investment', '/investment', '/portfolio'].includes(currentPath);
+        const shouldRefresh = !['/reports', '/reports/investment', '/investment', '/portfolio', '/users'].includes(currentPath);
 
         if (shouldRefresh) {
             const interval = setInterval(() => {
                 refreshAllData();
-            }, 15000);
+            }, 30000); // Increased to 30 seconds to reduce frequency
             return () => clearInterval(interval);
         }
     }, [viewId, refreshAllData, location.pathname]);

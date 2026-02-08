@@ -80,7 +80,7 @@ export function Reports() {
         };
 
         loadData();
-    }, [user, selectedUser]);
+    }, [user?.id, selectedUser?.id]); // Changed dependency to only watch IDs to prevent infinite loop
 
     const refreshAllData = async () => {
         setLoading(true);

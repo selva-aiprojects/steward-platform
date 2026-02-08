@@ -64,7 +64,7 @@ export function Users() {
         if (appUsers && appUsers.length > 0) {
             loadData();
         }
-    }, [appUsers]);
+    }, [appUsers]); // This dependency is fine as it only updates when appUsers changes
 
     if (loading) {
         return (

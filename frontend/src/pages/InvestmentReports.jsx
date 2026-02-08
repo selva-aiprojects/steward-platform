@@ -55,7 +55,7 @@ export function InvestmentReports() {
     };
 
     loadReportData();
-  }, [user, selectedUser, timeRange]);
+  }, [user?.id, selectedUser?.id, timeRange]); // Changed dependency to only watch IDs to prevent infinite loop
 
   // Mock data for demonstration (will be replaced with real API data)
   const mockAlgoPerformance = {
