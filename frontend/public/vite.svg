@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    .vite-icon { fill: #646cff; }
+  </style>
+  <circle cx="50" cy="50" r="45" fill="#ffffff" stroke="#646cff" stroke-width="2"/>
+  <path class="vite-icon" d="M30,30 L50,15 L70,30 L65,55 L50,70 L35,55 Z" fill="#646cff"/>
+  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#646cff">SSAI</text>
+</svg>

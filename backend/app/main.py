@@ -361,6 +361,44 @@ async def database_startup_event():
         from app.core.database import engine
         Base.metadata.create_all(bind=engine)
 
+        # Apply database optimizations for high availability and performance
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                # Create indexes for performance
+                optimizations = [
+                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",
+                    "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
+                    "CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_portfolio_id ON trades(portfolio_id);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);",
+                    "CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);",
+                    "CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_id ON holdings(portfolio_id);",
+                    "CREATE INDEX IF NOT EXISTS idx_holdings_symbol ON holdings(symbol);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_user_status ON trades(user_id, status);",
+                    "CREATE INDEX IF NOT EXISTS idx_trades_symbol_timestamp ON trades(symbol, timestamp DESC);",
+                    "CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_symbol ON holdings(portfolio_id, symbol);",
+                    "ANALYZE users;",
+                    "ANALYZE trades;",
+                    "ANALYZE portfolios;",
+                    "ANALYZE holdings;"
+                ]
+                
+                for opt in optimizations:
+                    try:
+                        conn.execute(text(opt))
+                    except Exception as e:
+                        # Log optimization failure but continue
+                        print(f"INFO: Optimization '{opt}' failed (may already exist): {e}")
+                
+                conn.commit()
+                print("INFO: Database optimizations applied successfully")
+        except Exception as e:
+            print(f"WARNING: Could not apply database optimizations: {e}")
+
         # For PostgreSQL, we might need to handle schema updates manually
         # Check if the role column exists, and if not, try to add it
         try:
