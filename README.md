@@ -1,396 +1,277 @@
-# StockSteward AI - Advanced Agentic AI-Driven Stock Stewardship Platform
+# StockSteward AI
 
-## Overview
+StockSteward AI is an advanced algorithmic trading platform that combines machine learning, real-time market data feeds, and sophisticated risk management to enable automated trading decisions. The system integrates with multiple data sources and brokers to provide both paper trading and live trading capabilities.
 
-StockSteward AI is a sophisticated agentic AI-driven stock stewardship platform that combines multiple LLM providers (Groq/Llama/OpenAI/Anthropic/HuggingFace) with comprehensive financial data integration (NSE Historical + Kaggle + Public datasets). The platform enables users to develop, backtest, and execute trading strategies with comprehensive risk management and real-time market analysis.
+## Architecture Overview
 
-## Key Features
+The system follows a microservices architecture with the following key components:
 
-### 1. Multi-LLM Provider Integration
-- **Groq (Llama models)**: Fast inference for real-time analysis
-- **OpenAI (GPT models)**: Advanced reasoning and complex analysis
-- **Anthropic (Claude models)**: Safety-focused financial insights
-- **Hugging Face (FinGPT/DeepSeek)**: Specialized financial models
-- Automatic fallback between providers for reliability
-- Configurable model selection per use case
+### Core Services
 
-### 2. Multi-Source Data Integration
-- **NSE Live Data**: Real-time market feeds via Zerodha KiteConnect
-- **Historical Datasets**: NSE historical data for backtesting
-- **Kaggle Datasets**: Financial and market datasets
-- **Public APIs**: Alpha Vantage, Yahoo Finance, and more
-- **Custom Data Sources**: CSV, Excel, Parquet file support
-- **Sector & Industry Data**: Comprehensive industry classification
-- **Alternative Data**: News sentiment, economic indicators, social media
+1. **Data Integration Service** (`backend/app/services/data_integration.py`)
+   - Integrates multiple data sources including NSE via KiteConnect, Kaggle datasets, Alpha Vantage, and Yahoo Finance
+   - Provides preprocessing capabilities with technical indicators (SMA, EMA, MACD, RSI, Bollinger Bands)
+   - Handles real-time and historical data retrieval
+   - Implements fallback mechanisms for data availability
 
-### 3. Advanced Backtesting Engine
-- Realistic market simulation with slippage and commission modeling
-- Support for multiple order types (MARKET, LIMIT, STOP, etc.)
-- Performance metrics (Sharpe ratio, max drawdown, win rate, etc.)
-- Parameter optimization capabilities
+2. **Execution Engine** (`backend/app/execution/engine.py`)
+   - Manages order placement and execution
+   - Supports multiple order types (MARKET, LIMIT, STOP, TRAILING_STOP)
+   - Implements algorithmic order types (TWAP, VWAP, PARTICIPATE, MIDPOINT)
+   - Provides paper trading and live trading modes
 
-### 4. Comprehensive Risk Management
-- Position size limits
-- Value at Risk (VaR) calculations
-- Concentration risk monitoring
-- Real-time risk alerts
-- Stop-loss and take-profit controls
+3. **AI/ML Services** (`backend/app/services/enhanced_llm_service.py`)
+   - Integrates multiple LLM providers (Groq, OpenAI, Anthropic, Hugging Face)
+   - Performs market analysis and research
+   - Generates trading signals based on market data
+   - Implements multi-provider redundancy
 
-### 5. Multiple Trading Strategies
-- SMA Crossover Strategy
-- RSI Mean Reversion
-- MACD Crossover
-- Bollinger Bands Strategy
-- Advanced technical analysis strategies
+4. **Kite Service** (`backend/app/services/kite_service.py`)
+   - Handles Zerodha KiteConnect integration
+   - Manages real-time market data feeds
+   - Processes order execution for NSE
 
-### 6. Real-time Market Intelligence
-- Live market feeds from multiple exchanges (NSE, BSE, MCX)
+### Agent System
+
+The platform implements an intelligent agent-based architecture:
+
+1. **Orchestrator Agent** (`backend/app/agents/orchestrator.py`)
+   - Coordinates the entire trading workflow
+   - Manages data flow between agents
+   - Handles error recovery and fallbacks
+
+2. **User Profile Agent** (`backend/app/agents/user_profile.py`)
+   - Retrieves and manages user-specific settings
+   - Applies user-defined risk parameters
+   - Checks account status and permissions
+
+3. **Market Data Agent** (`backend/app/agents/market_data.py`)
+   - Fetches real-time and historical market data
+   - Provides normalized data for strategy consumption
+   - Falls back to mock data when live data is unavailable
+
+4. **Strategy Agent** (`backend/app/agents/strategy.py`)
+   - Analyzes market data using LLMs
+   - Generates trading signals (BUY, SELL, HOLD)
+   - Implements risk management protocols
+
+5. **Trade Decision Agent** (`backend/app/agents/trade_decision.py`)
+   - Evaluates trading proposals
+   - Applies risk management rules
+   - Determines optimal position sizing
+
+6. **Risk Management Agent** (`backend/app/agents/risk_management.py`)
+   - Monitors portfolio risk
+   - Enforces compliance rules
+   - Implements kill switches
+
+7. **Execution Agent** (`backend/app/agents/execution.py`)
+   - Executes trades via broker interfaces
+   - Manages execution modes (PAPER/LIVE)
+   - Handles order confirmations
+
+8. **Reporting Agent** (`backend/app/agents/reporting.py`)
+   - Generates performance reports
+   - Tracks trading metrics
+   - Maintains audit trails
+
+### Database Models
+
+The system uses SQLAlchemy ORM with the following models:
+
+- **User** (`backend/app/models/user.py`): User accounts and authentication
+- **Portfolio** (`backend/app/models/portfolio.py`): Portfolio management and cash balances
+- **Holding** (`backend/app/models/portfolio.py`): Individual stock holdings
+- **Trade** (`backend/app/models/trade.py`): Trade execution records
+- **Strategy** (`backend/app/models/strategy.py`): Trading strategies and parameters
+- **Projection** (`backend/app/models/projection.py`): Financial projections
+- **WatchlistItem** (`backend/app/models/watchlist.py`): User watchlists
+- **Activity** (`backend/app/models/activity.py`): User activity logs
+- **AuditLog** (`backend/app/models/audit_log.py`): Comprehensive audit trail
+- **TradeApproval** (`backend/app/models/trade_approval.py`): Trade approval workflows
+- **KYCApplication** (`backend/app/models/kyc.py`): Know Your Customer applications
+- **PortfolioOptimizationResult** (`backend/app/models/optimization.py`): Portfolio optimization results
+- **StrategyOptimizationResult** (`backend/app/models/optimization.py`): Strategy optimization results
+
+### API Endpoints
+
+The system exposes RESTful APIs under `/api/v1/`:
+
+- `/users/` - User management
+- `/portfolio/` - Portfolio operations
+- `/trades/` - Trade execution
+- `/backtesting/` - Backtesting capabilities
+- `/strategies/` - Strategy management
+- `/market-data/` - Market data retrieval
+- `/reports/` - Reporting endpoints
+- `/approvals/` - Trade approval workflows
+- `/enhanced-ai/` - Advanced AI analytics
+- `/portfolio-optimization/` - Portfolio optimization
+- `/health/` - Health check endpoints
+
+### Key Features
+
+#### 1. Multi-Broker Support
+- Paper trading simulation
+- Live trading via broker integrations
+- Order execution management
+- Execution mode switching (PAPER/LIVE)
+
+#### 2. Risk Management
+- Position sizing algorithms
+- Stop-loss and take-profit mechanisms
+- Portfolio-level risk controls
+- Compliance monitoring
+- Global and user-level kill switches
+
+#### 3. Backtesting Engine
+- Historical data analysis
+- Strategy performance evaluation
+- Optimization capabilities
+- Performance metrics calculation
+
+#### 4. Real-time Analytics
+- Live market data feeds
 - Technical indicator calculations
-- Market sentiment analysis
-- Sector rotation signals
-- AI-powered market predictions
+- Sentiment analysis
+- Market regime detection
 
-### 7. Portfolio Intelligence
-- AI-powered market analysis
-- Performance tracking
-- Risk analytics
-- Allocation optimization
-- Multi-asset portfolio management
+#### 5. Compliance & Audit
+- Comprehensive audit logging
+- Trade approval workflows
+- Regulatory compliance checks
+- Activity monitoring
+- Transaction recording
 
-## Architecture
+#### 6. Advanced AI Capabilities
+- Multi-LLM provider support
+- Market research and analysis
+- Predictive modeling
+- Sentiment analysis integration
 
-### Enhanced Tech Stack
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Socket.io
-- **Backend**: Python 3.11, FastAPI, SQLAlchemy, PostgreSQL
-- **AI/ML Stack**:
-  - LLM Providers: Groq (Llama), OpenAI (GPT), Anthropic (Claude), Hugging Face (FinGPT/DeepSeek)
-  - Libraries: Transformers, PyTorch, scikit-learn, TA-Lib, yfinance
-- **Data Integration**:
-  - Live: Zerodha KiteConnect (NSE/BSE/MCX)
-  - Historical: NSE historical datasets, Kaggle financial datasets
-  - Public: Alpha Vantage, Yahoo Finance, Quandl APIs
-  - Alternative: News feeds, economic indicators, sentiment data
-- **Database**: PostgreSQL, Redis (caching)
-- **Infrastructure**: Docker, Docker Compose
-- **Analytics**: Pandas, NumPy, SciPy for quantitative analysis
-- **Visualization**: Plotly, Recharts for financial charts
+### Configuration
 
-### System Components
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │◄──►│   Backend API    │◄──►│  Broker APIs    │
-│   (React)       │    │   (FastAPI)      │    │ (Kite, etc.)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │   Message Queue   │
-                    │   (Redis/RabbitMQ)│
-                    └─────────┬─────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼────────┐   ┌────────▼────────┐   ┌───────▼────────┐
-│  ML Service    │   │  Risk Manager   │   │  Execution     │
-│  (AI Models)   │   │                 │   │  Engine        │
-└────────────────┘   └─────────────────┘   └────────────────┘
-        │                     │                     │
-        └─────────────────────┼─────────────────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │   Database        │
-                    │   (PostgreSQL)    │
-                    └───────────────────┘
-```
+The system uses Pydantic for configuration management (`backend/app/core/config.py`):
 
-## Prerequisites
+- Database connection settings
+- Broker API credentials
+- LLM provider configurations
+- Execution mode (PAPER_TRADING/LIVE_TRADING)
+- Risk parameters
+- API rate limits
+- Feature flags
 
-### System Requirements
-- Python 3.11+
-- Node.js 18+
-- Docker & Docker Compose
-- PostgreSQL (or Docker for containerized setup)
-- At least 4GB RAM recommended
+### Authentication & Authorization
 
-### External Dependencies
-- Zerodha Kite Connect API key (for live trading)
-- Multiple LLM API keys (Groq, OpenAI, Anthropic, Hugging Face) for AI features
-- TA-Lib C library (for technical analysis)
-- Alpha Vantage/Yahoo Finance/Quandl API keys (for additional data sources)
-- Kaggle API key (for Kaggle datasets access)
-- Redis server (for caching and session management)
-- PostgreSQL database (for persistent storage)
+- JWT-based authentication
+- Role-based access control (RBAC)
+- OAuth2 password flow
+- Secure password hashing
+- Session management
 
-## Installation
+### Socket.IO Integration
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your-username/stocksteward-ai.git
-cd stocksteward-ai
-```
+Real-time communication for:
+- Live market data feeds
+- Trading notifications
+- Portfolio updates
+- System alerts
+- Market mover updates
 
-### 2. Install TA-Lib C Library (Critical Step!)
+### Testing Framework
 
-#### For Ubuntu/Debian:
-```bash
-sudo apt-get update
-sudo apt-get install build-essential wget
-wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
-tar -xzf ta-lib-0.4.0-src.tar.gz
-cd ta-lib/
-./configure --prefix=/usr
-make
-sudo make install
-```
+Comprehensive test coverage including:
+- Unit tests for individual components
+- Integration tests for service interactions
+- Regression tests for critical functionality
+- End-to-end testing
+- Smoke tests for deployment validation
 
-#### For CentOS/RHEL/Fedora:
-```bash
-sudo yum install gcc gcc-c++ wget
-# or for newer versions
-sudo dnf install gcc gcc-c++ wget
-# Then follow same steps as Ubuntu
-```
+## Setup Instructions
 
-#### For macOS:
-```bash
-brew install ta-lib
-```
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-#### For Windows:
-1. Download pre-compiled binaries from [Christoph Gohlke's site](https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib)
-2. Install using pip: `pip install TA_Lib‑0.4.XX‑cpXX‑cpXX‑win_amd64.whl`
+2. Set up environment variables:
+   ```bash
+   # Copy .env.example to .env and configure values
+   cp .env.example .env
+   ```
 
-### 3. Backend Setup
-```bash
-cd backend
+3. Initialize the database:
+   ```bash
+   python -m alembic upgrade head
+   ```
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 4. Frontend Setup
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-```
-
-### 5. Environment Configuration
-Create `.env` files in both backend and frontend directories:
-
-#### Backend `.env`:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/stocksteward
-REDIS_URL=redis://localhost:6379
-KITE_API_KEY=your_kite_api_key
-KITE_ACCESS_TOKEN=your_kite_access_token
-GROQ_API_KEY=your_groq_api_key
-SECRET_KEY=your_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
-
-#### Frontend `.env`:
-```env
-REACT_APP_API_URL=http://localhost:8000
-REACT_APP_SOCKET_URL=http://localhost:8000
-REACT_APP_GROQ_API_KEY=your_groq_api_key
-```
-
-### 6. Database Setup
-```bash
-# Run database migrations
-cd backend
-alembic upgrade head
-```
-
-### 7. Running the Application
-
-#### Option 1: Local Development
-```bash
-# Terminal 1: Start backend
-cd backend
-uvicorn app.main:app --reload
-
-# Terminal 2: Start frontend
-cd frontend
-npm start
-```
-
-#### Option 2: Docker (Recommended)
-```bash
-# Build and start all services
-docker-compose up --build
-
-# Or run in detached mode
-docker-compose up -d
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
-- `GET /api/v1/auth/profile` - Get user profile (requires auth)
-
-### Trading
-- `POST /api/v1/trades/place` - Place a trade
-- `GET /api/v1/trades/history` - Get trade history
-- `GET /api/v1/portfolio/holdings` - Get portfolio holdings
-
-### Backtesting
-- `POST /api/v1/backtesting/run` - Run backtest
-- `GET /api/v1/backtesting/strategies` - Get available strategies
-
-### Market Data
-- `GET /api/v1/market/tickers` - Get market tickers
-- `GET /api/v1/market/history` - Get historical data
-
-### Enhanced AI Endpoints
-- `POST /api/v1/enhanced-ai/market-analysis` - Comprehensive market analysis with multi-LLM support
-- `GET /api/v1/enhanced-ai/market-research` - Sector and market research analysis
-- `POST /api/v1/enhanced-ai/chat` - Financial chat with contextual awareness
-- `POST /api/v1/enhanced-ai/multi-source-analysis` - Cross-referenced analysis from multiple data sources
-- `GET /api/v1/enhanced-ai/available-models` - Get available LLM models
-- `GET /api/v1/enhanced-ai/available-providers` - Get available LLM providers
-- `POST /api/v1/enhanced-ai/generate-strategy` - Generate AI-powered trading strategies
-- `POST /api/v1/enhanced-ai/portfolio-optimizer` - AI-driven portfolio optimization
-- `GET /api/v1/enhanced-ai/risk-assessment` - Comprehensive risk analysis
-
-### Portfolio Optimization Endpoints
-- `POST /api/v1/portfolio-optimization/portfolio-optimize` - Optimize portfolio allocation using Modern Portfolio Theory
-- `GET /api/v1/portfolio-optimization/portfolio-optimization-results` - Retrieve stored portfolio optimization results
-- `POST /api/v1/backtesting/optimize` - Optimize strategy parameters using grid search
-- `GET /api/v1/backtesting/optimization-results` - Retrieve stored strategy optimization results
-
-## Configuration
-
-### Risk Management Settings
-The platform includes comprehensive risk controls that can be configured:
-
-```python
-# In app/core/config.py
-MAX_POSITION_SIZE_PERCENT = 0.10  # 10% of portfolio per position
-MAX_DAILY_LOSS_PERCENT = 0.02     # 2% daily loss limit
-MAX_TOTAL_EXPOSURE = 0.80         # 80% total exposure
-COMMISSION_RATE = 0.001           # 0.1% commission
-SLIPPAGE_RATE = 0.0005            # 0.05% slippage
-```
-
-### Strategy Parameters
-Strategies can be customized with various parameters:
-
-```python
-# Example strategy configuration
-strategy_params = {
-    'sma_crossover': {
-        'short_period': 20,
-        'long_period': 50
-    },
-    'rsi_mean_reversion': {
-        'rsi_period': 14,
-        'overbought_level': 70,
-        'oversold_level': 30
-    }
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. TA-Lib Installation Error
-If you encounter errors like `ta-lib/ta_defs.h: No such file or directory`, ensure you've installed the TA-Lib C library before installing the Python package.
-
-#### 2. Database Connection Issues
-- Verify PostgreSQL is running
-- Check DATABASE_URL in environment variables
-- Ensure database migrations have been applied
-
-#### 3. API Key Issues
-- Verify broker API keys are correct and active
-- Check if API key permissions include trading
-- Ensure account is activated for trading
-
-For detailed troubleshooting, see [TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md).
+4. Start the application:
+   ```bash
+   uvicorn backend.app.main:app --reload
+   ```
 
 ## Development
 
-### Running Tests
-```bash
-# Backend tests
-cd backend
-pytest
+The system includes comprehensive testing and development tools:
 
-# Frontend tests
-cd frontend
-npm test
-```
-
-### Code Quality
-```bash
-# Linting
-flake8 .
-black .
-mypy .
-
-# Frontend linting
-npm run lint
-```
+- Smoke tests (`smoke_test.py`)
+- Regression test suites (`tests/regression_suite.py`)
+- API connectivity tests (`backend/test_api_connectivity.py`)
+- Socket validation (`backend/validate_socket.py`)
+- Integration tests (`backend/tests/integration_test.py`)
+- Advanced strategy tests (`backend/tests/test_advanced_strategies.py`)
 
 ## Security
 
-### Authentication
-- JWT-based authentication
-- Password hashing with bcrypt
-- Rate limiting on auth endpoints
-- Session management
-
-### Data Protection
-- AES-256 encryption for sensitive data
-- SSL/TLS for all communications
 - Input validation and sanitization
 - SQL injection prevention
+- Cross-site scripting (XSS) protection
+- Rate limiting
+- Secure session management
+- API key encryption
+- Audit logging for security events
 
-## Performance
+## Monitoring & Logging
 
-### Optimizations
-- Redis caching for frequently accessed data
-- Database indexing for common queries
-- Asynchronous processing for heavy operations
-- WebSocket connections for real-time updates
+- Structured logging with appropriate levels
+- Performance monitoring
+- Health check endpoints
+- Error tracking and reporting
+- Trade execution monitoring
+- System resource monitoring
 
-### Monitoring
-- Application performance metrics
-- Database query performance
-- API response times
-- Resource utilization
+## Deployment
 
-## Contributing
+The system can be deployed using Docker containers with the provided `docker-compose.yml` file, supporting both development and production environments.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Project Structure
 
-## License
+```
+backend/
+├── app/
+│   ├── agents/           # AI agents for trading workflow
+│   ├── api/             # API endpoints
+│   ├── core/            # Core configuration and database
+│   ├── models/          # Database models
+│   ├── schemas/         # Pydantic schemas
+│   ├── services/        # Core business logic services
+│   ├── utils/           # Utility functions
+│   ├── backtesting/     # Backtesting engine
+│   ├── execution/       # Order execution engine
+│   └── main.py          # Application entry point
+├── alembic/             # Database migrations
+├── tests/               # Test suite
+└── requirements.txt     # Dependencies
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Key Technologies
 
-## Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
-
----
-
-## About StockSteward AI
-
-StockSteward AI is designed for serious traders who want to leverage artificial intelligence and algorithmic trading to enhance their investment strategies. The platform provides enterprise-grade tools for developing, testing, and executing automated trading strategies while maintaining strict risk controls and providing transparent, auditable trading operations.
-
-**Note**: This is a demo platform for educational purposes. Real trading involves substantial risk and may not be suitable for all investors. Past performance is not indicative of future results.
+- Python 3.9+
+- FastAPI for web framework
+- SQLAlchemy for ORM
+- Socket.IO for real-time communication
+- Pandas for data manipulation
+- NumPy for numerical computations
+- Pydantic for data validation
+- Alembic for database migrations
+- Docker for containerization
