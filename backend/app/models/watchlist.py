@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class WatchlistItem(Base):
@@ -10,3 +11,6 @@ class WatchlistItem(Base):
     # Optional fields for simulation
     current_price = Column(Float, default=0.0)
     change = Column(String, default="0.0%")
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="watchlist_items")

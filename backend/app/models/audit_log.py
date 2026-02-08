@@ -15,5 +15,5 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    admin = relationship("User", foreign_keys=[admin_id])
+    admin = relationship("User", foreign_keys=[admin_id], back_populates="audit_logs")
     target_user = relationship("User", foreign_keys=[target_user_id])

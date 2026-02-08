@@ -1,45 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowUpRight, 
-  ArrowDownRight, 
-  TrendingUp, 
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendingUp,
   TrendingDown,
-  DollarSign, 
-  Activity, 
-  PieChart as PieChartIcon, 
+  DollarSign,
+  Activity,
+  PieChart as PieChartIcon,
   Target,
-  Shield, 
-  Zap, 
-  RefreshCcw, 
-  Loader2, 
-  Plus, 
+  Shield,
+  Zap,
+  RefreshCcw,
+  Loader2,
+  Plus,
   X,
   ArrowDownRight as ArrowDownRightIcon,
   GripVertical
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
 import { Card } from "../components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { 
-  fetchPortfolioSummary, 
-  fetchTrades, 
-  fetchPortfolioHistory, 
-  fetchExchangeStatus, 
-  fetchUsers, 
-  fetchAllPortfolios, 
-  depositFunds, 
+import {
+  fetchPortfolioSummary,
+  fetchTrades,
+  fetchPortfolioHistory,
+  fetchExchangeStatus,
+  fetchUsers,
+  fetchAllPortfolios,
+  depositFunds,
   fetchMarketMovers,
   fetchHoldings,
   fetchWatchlist,
@@ -47,6 +47,8 @@ import {
 } from "../services/api";
 import { useUser } from '../context/UserContext';
 import { useAppData } from '../context/AppDataContext';
+import { ConfidenceInvestmentCard } from '../components/ConfidenceInvestmentCard';
+import { investmentService } from '../services/investmentService';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -84,6 +86,14 @@ export function Portfolio() {
   const [orderPrice, setOrderPrice] = useState(0);
   const [orderSide, setOrderSide] = useState('BUY');
   const [tradeStatus, setTradeStatus] = useState(null);
+  const [strategyStatus, setStrategyStatus] = useState('IDLE');
+  const [investmentReadiness, setInvestmentReadiness] = useState({
+    hasCash: false,
+    hasHoldings: false,
+    hasActiveStrategies: false,
+    isReadyForInvestment: false,
+    cashBalance: 0
+  });
 
   const navigate = useNavigate();
 
@@ -93,18 +103,36 @@ export function Portfolio() {
       try {
         // Load portfolio summary
         const summaryData = await fetchPortfolioSummary(selectedUser?.id || user?.id);
-        
+
         // Load holdings
         const holdingsData = await fetchHoldings(selectedUser?.id || user?.id);
         setActiveHoldingsState(holdingsData || []);
-        
+
         // Load watchlist
         const watchlistData = await fetchWatchlist(selectedUser?.id || user?.id);
         setWatchlist(watchlistData || []);
-        
+
         // Load portfolio history
         const historyData = await fetchPortfolioHistory(selectedUser?.id || user?.id);
         setHistory(historyData || []);
+
+        // Load investment readiness
+        const userId = selectedUser?.id || user?.id;
+        if (userId) {
+          try {
+            const readiness = await investmentService.getInvestmentReadiness(userId);
+            setInvestmentReadiness(readiness);
+
+            // Set strategy status based on active strategies
+            if (readiness.hasActiveStrategies) {
+              setStrategyStatus('RUNNING');
+            } else {
+              setStrategyStatus('IDLE');
+            }
+          } catch (error) {
+            console.error('Error loading investment readiness:', error);
+          }
+        }
       } catch (error) {
         console.error('Error loading portfolio data:', error);
         // Set default data if fetch fails
@@ -113,7 +141,7 @@ export function Portfolio() {
         setHistory([]);
       }
     };
-    
+
     loadData();
   }, [selectedUser, user]);
 
@@ -126,10 +154,10 @@ export function Portfolio() {
 
     const userId = selectedUser?.id || user?.id;
     setDepositing(true);
-    
+
     try {
       const result = await depositFunds(userId, depositAmount);
-      
+
       if (result) {
         setFundStatus({ type: 'success', message: `Successfully deposited INR ${depositAmount}` });
         setTimeout(() => {
@@ -146,6 +174,51 @@ export function Portfolio() {
       setFundStatus({ type: 'error', message: error.message || 'Deposit failed' });
     } finally {
       setDepositing(false);
+    }
+  };
+
+  // Handle strategy launch
+  const handleLaunchStrategy = async () => {
+    const userId = selectedUser?.id || user?.id;
+    if (!userId) {
+      setTradeStatus({ type: 'error', message: 'No user selected' });
+      return;
+    }
+
+    setExecuting(true);
+
+    try {
+      await investmentService.launchStrategy(userId, {
+        name: "Auto Steward Primary",
+        symbol: "",
+        status: "RUNNING",
+        execution_mode: "PAPER_TRADING"
+      });
+
+      setStrategyStatus('RUNNING');
+      setInvestmentReadiness(prev => ({
+        ...prev,
+        isReadyForInvestment: false,
+        hasActiveStrategies: true
+      }));
+
+      setTradeStatus({
+        type: 'success',
+        message: 'Investment strategy launched successfully! Your funds are now being actively managed.'
+      });
+
+      // Refresh data to show new holdings
+      setTimeout(() => {
+        refreshAllData();
+      }, 2000);
+    } catch (error) {
+      console.error('Error launching strategy:', error);
+      setTradeStatus({
+        type: 'error',
+        message: 'Failed to launch strategy: ' + error.message
+      });
+    } finally {
+      setExecuting(false);
     }
   };
 
@@ -463,6 +536,18 @@ export function Portfolio() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Confidence Investment Card - Show when cash exists but no holdings */}
+      {investmentReadiness.isReadyForInvestment && (
+        <ConfidenceInvestmentCard
+          cashBalance={summary?.cash_balance || 0}
+          investedAmount={summary?.invested_amount || 0}
+          onLaunchStrategy={handleLaunchStrategy}
+          isLoading={executing}
+          strategyStatus={strategyStatus}
+          userRole={user?.role || 'TRADER'}
+        />
       )}
 
       {/* Portfolio Summary Cards */}

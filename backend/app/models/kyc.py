@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -7,6 +8,7 @@ class KYCApplication(Base):
     __tablename__ = "kyc_applications"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))  # Link to the user who submitted the application
 
     full_name = Column(String, nullable=False, index=True)
     email = Column(String, nullable=False, index=True)
@@ -46,3 +48,7 @@ class KYCApplication(Base):
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="kyc_applications")
+    reviewer = relationship("User", foreign_keys=[reviewer_id])

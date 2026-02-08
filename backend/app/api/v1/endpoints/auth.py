@@ -23,7 +23,7 @@ def login(
             "admin@stocksteward.ai": "admin123",
             "owner@stocksteward.ai": "owner123",
             "trader@stocksteward.ai": "trader123",
-            "auditor@stocksteward.ai": "auditor123",
+            "auditor@stocksteward.ai": "audit123",  # Fixed: was "auditor123", should be "audit123"
         }
 
         # Auto-provision default users if missing (fresh DB on hosted env)

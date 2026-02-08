@@ -71,12 +71,20 @@ export function Layout({ children }) {
                                 <Briefcase size={18} className={`${location.pathname === '/portfolio' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
                                 <span>Portfolio</span>
                             </NavLink>
+                            <NavLink to="/investment" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <Activity size={18} className={`${location.pathname === '/investment' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
+                                <span>Investment</span>
+                            </NavLink>
                         </>
                     )}
 
                     <NavLink to="/reports" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                         <BarChart2 size={18} className={`${location.pathname === '/reports' ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'} transition-colors`} />
                         <span>Reports</span>
+                    </NavLink>
+                    <NavLink to="/reports/investment" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                        <BarChart2 size={18} className={`${location.pathname === '/reports/investment' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
+                        <span>Investment Reports</span>
                     </NavLink>
 
                     <NavLink to="/support" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>

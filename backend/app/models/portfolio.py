@@ -11,10 +11,11 @@ class Portfolio(Base):
     cash_balance = Column(Float, default=0.0)
     invested_amount = Column(Float, default=0.0)
     win_rate = Column(Float, default=0.0)
-    
+
     # Relationships
-    user = relationship("User")
+    user = relationship("User", back_populates="portfolios")
     holdings = relationship("Holding", back_populates="portfolio")
+    trades = relationship("Trade", back_populates="portfolio")
 
 class Holding(Base):
     __tablename__ = "holdings"

@@ -52,7 +52,7 @@ def seed_db():
         auditor = User(
             id=888,
             full_name="Compliance Auditor",
-            email="audit@stocksteward.ai",
+            email="auditor@stocksteward.ai",  # Fixed: was "audit@stocksteward.ai", should be "auditor@stocksteward.ai"
             hashed_password=get_password_hash("audit123"),
             risk_tolerance="LOW",
             is_active=True,
