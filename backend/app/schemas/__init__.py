@@ -14,7 +14,7 @@ from . import projection
 from . import watchlist
 from .audit_log import AuditLogCreate, AuditLogResponse
 from .approval import ApprovalCreate, ApprovalResponse
-from .auth import LoginRequest, LoginResponse
+from .auth import LoginRequest, LoginResponse, LoginResponseWithToken
 from .kyc import (
     KYCApplicationBase,
     KYCApplicationCreate,

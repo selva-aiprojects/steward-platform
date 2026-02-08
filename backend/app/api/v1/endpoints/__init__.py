@@ -1,7 +1,7 @@
 from .trades import router as trades_router
 from .market import router as market_router
 from .watchlist import router as watchlist_router
-from .portfolio import router as portfolios_router
+from .portfolios import router as portfolios_router
 from .users import router as users_router
 from .strategies import router as strategies_router
 from .projections import router as projections_router

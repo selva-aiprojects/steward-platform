@@ -1,5 +1,5 @@
 """
-Pydantic schemas for portfolio optimization functionality
+Pydantic schemas for portfolio functionality
 """
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 
+# Portfolio optimization schemas
 class OptimizationMethod(str, Enum):
     MARKOWITZ = "markowitz"
     RISK_PARITY = "risk_parity"
@@ -30,9 +31,9 @@ class PortfolioOptimizationRequest(BaseModel):
     symbols: List[str] = Field(..., description="List of symbols to include in optimization")
     start_date: datetime = Field(..., description="Start date for historical data")
     end_date: datetime = Field(..., description="End date for historical data")
-    optimization_method: OptimizationMethod = Field(OptimizationMethod.MARKOWITZ, 
+    optimization_method: OptimizationMethod = Field(OptimizationMethod.MARKOWITZ,
                                                    description="Optimization method to use")
-    objective_metric: ObjectiveMetric = Field(ObjectiveMetric.SHARPE_RATIO, 
+    objective_metric: ObjectiveMetric = Field(ObjectiveMetric.SHARPE_RATIO,
                                               description="Objective metric to optimize for")
     constraints: Optional[Dict[str, float]] = Field(None, description="Constraints for optimization")
     risk_free_rate: float = Field(0.02, description="Risk-free rate for Sharpe ratio calculation")
@@ -48,3 +49,51 @@ class PortfolioOptimizationResponse(BaseModel):
     sharpe_ratio: float = Field(..., description="Sharpe ratio of optimized portfolio")
     optimization_method: str = Field(..., description="Method used for optimization")
     execution_time: float = Field(..., description="Time taken for optimization in seconds")
+
+
+# Standard portfolio schemas (to maintain compatibility)
+class PortfolioBase(BaseModel):
+    name: str
+    cash_balance: float = 0.0
+    invested_amount: float = 0.0
+    win_rate: float = 0.0
+
+
+class PortfolioCreate(PortfolioBase):
+    pass
+
+
+class PortfolioResponse(PortfolioBase):
+    id: int
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class PortfolioHistoryPoint(BaseModel):
+    timestamp: datetime
+    total_value: float
+    cash: float
+    unrealized_pnl: float
+
+
+class HoldingResponse(BaseModel):
+    id: int
+    symbol: str
+    quantity: int
+    avg_price: float
+    current_price: float
+    pnl: float
+    pnl_pct: float
+
+    class Config:
+        from_attributes = True
+
+
+class DepositRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Amount to deposit")
+
+
+class WithdrawRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Amount to withdraw")

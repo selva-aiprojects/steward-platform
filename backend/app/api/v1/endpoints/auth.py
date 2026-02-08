@@ -1,14 +1,16 @@
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import verify_password
+from app.core.auth import verify_password, create_access_token
+from app.core.config import settings
 from app import models, schemas
 
 router = APIRouter()
 
 
-@router.post("/login", response_model=schemas.LoginResponse)
-@router.post("/login/", response_model=schemas.LoginResponse)
+@router.post("/login", response_model=schemas.LoginResponseWithToken)
+@router.post("/login/", response_model=schemas.LoginResponseWithToken)
 def login(
     payload: schemas.LoginRequest,
     db: Session = Depends(get_db),
@@ -26,7 +28,7 @@ def login(
 
         # Auto-provision default users if missing (fresh DB on hosted env)
         if not user and payload.email in default_passwords and payload.password == default_passwords[payload.email]:
-            from app.core.security import get_password_hash
+            from app.core.auth import get_password_hash
             # Determine role based on email
             role_map = {
                 "admin@stocksteward.ai": "SUPERADMIN",
@@ -60,7 +62,7 @@ def login(
         # If a seeded account exists with a different password, reset to default for demo access
         elif user and payload.email in default_passwords and payload.password == default_passwords[payload.email]:
             if not verify_password(payload.password, user.hashed_password):
-                from app.core.security import get_password_hash
+                from app.core.auth import get_password_hash
                 user.hashed_password = get_password_hash(payload.password)
                 db.add(user)
                 db.commit()
@@ -71,6 +73,13 @@ def login(
         if not verify_password(payload.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid password")
 
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email, "user_id": user.id, "role": user.role},
+            expires_delta=access_token_expires
+        )
+
         return {
             "id": user.id,
             "email": user.email,
@@ -78,6 +87,8 @@ def login(
             "role": user.role or ("SUPERADMIN" if user.is_superuser else "TRADER"),
             "trading_mode": user.trading_mode or "AUTO",  # Provide default if not set
             "risk_tolerance": user.risk_tolerance,
+            "access_token": access_token,
+            "token_type": "bearer"
         }
     finally:
         db.close()

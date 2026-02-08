@@ -15,3 +15,8 @@ class LoginResponse(BaseModel):
     trading_mode: Optional[str] = None
     risk_tolerance: Optional[str] = None
 
+
+class LoginResponseWithToken(LoginResponse):
+    access_token: str
+    token_type: str
+
