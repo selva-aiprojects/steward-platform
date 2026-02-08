@@ -246,12 +246,15 @@ export function InvestmentDashboard() {
                   <p className="font-black text-green-700">Auto-Investment ACTIVE</p>
                   <p className="text-sm text-green-600">Your funds are being actively managed</p>
                 </div>
-                <div className="mt-6">
-                  <button 
+                <div className="mt-6 space-y-4">
+                  <p className="text-slate-600 text-sm">
+                    Manage your active investment strategy:
+                  </p>
+                  <button
                     onClick={() => navigate('/trading')}
                     className="bg-primary text-white px-6 py-3 rounded-xl font-black hover:opacity-90 transition-all"
                   >
-                    View Strategy Details
+                    Manage Strategy in Trading Hub
                   </button>
                 </div>
               </div>
@@ -282,13 +285,24 @@ export function InvestmentDashboard() {
                   <p className="font-black text-yellow-700">Ready for Investment</p>
                   <p className="text-sm text-yellow-600">₹{(summary?.cash_balance || 0).toLocaleString()} available</p>
                 </div>
-                <div className="mt-6">
-                  <button 
-                    onClick={handleLaunchStrategy}
-                    className="bg-primary text-white px-6 py-3 rounded-xl font-black hover:opacity-90 transition-all"
-                  >
-                    Launch Investment Strategy
-                  </button>
+                <div className="mt-6 space-y-4">
+                  <p className="text-slate-600 text-sm">
+                    Select from our curated investment strategies to begin your investment journey:
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={handleLaunchStrategy}
+                      className="bg-primary text-white px-6 py-3 rounded-xl font-black hover:opacity-90 transition-all"
+                    >
+                      Quick Launch Strategy
+                    </button>
+                    <button
+                      onClick={() => navigate('/trading')}
+                      className="bg-slate-800 text-white px-6 py-3 rounded-xl font-black hover:bg-slate-700 transition-all"
+                    >
+                      Browse All Strategies
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
