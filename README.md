@@ -149,6 +149,13 @@ The system exposes RESTful APIs under `/api/v1/`:
 - Predictive modeling
 - Sentiment analysis integration
 
+#### 7. RAG (Retrieval Augmented Generation) System
+- **Bronze Layer**: Raw data ingestion from multiple sources (NSE, Kaggle, Alpha Vantage, Yahoo Finance)
+- **Silver Layer**: Data cleansing, transformation, and standardization
+- **Gold Layer**: Feature engineering, indexing, and optimization for AI consumption
+- Vector embeddings for semantic search and similarity matching
+- Context-aware AI responses based on historical and real-time data
+
 ### Configuration
 
 The system uses Pydantic for configuration management (`backend/app/core/config.py`):

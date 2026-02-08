@@ -292,14 +292,59 @@ MAX_POSITION_SIZE_PERCENTAGE=0.10
 
 ## 12. Data Flow
 
-### 12.1 Market Data Pipeline
+### 12.1 RAG (Retrieval Augmented Generation) Data Pipeline
+
+The system implements a three-tier data architecture following the Bronze/Silver/Gold paradigm:
+
+#### Bronze Layer (Raw Data Ingestion)
+1. **Data Sources**: Collect raw data from multiple sources
+   - NSE historical data via KiteConnect API
+   - Kaggle datasets (CSV, Parquet, Excel)
+   - Alpha Vantage API responses
+   - Yahoo Finance data
+   - Custom data uploads
+2. **Ingestion Process**:
+   - Raw data preservation in original format
+   - Metadata capture (source, timestamp, version)
+   - Integrity checks and checksums
+   - Immutable storage in data lake
+3. **Storage**: Raw data stored in original format with metadata
+
+#### Silver Layer (Data Cleansing & Transformation)
+1. **Data Quality Checks**:
+   - Validation against schema expectations
+   - Missing value identification and handling
+   - Outlier detection using statistical methods
+   - Duplicate identification and resolution
+2. **Transformation Process**:
+   - Standardization of field names and formats
+   - Data type conversions
+   - Date/time normalization
+   - Currency conversion if applicable
+   - Technical indicator calculations
+3. **Output**: Clean, structured data ready for analysis
+
+#### Gold Layer (Feature Engineering & Indexing)
+1. **Feature Engineering**:
+   - Technical indicator calculations (SMA, EMA, MACD, RSI, Bollinger Bands)
+   - Statistical features (volatility, correlations, momentum)
+   - Market regime detection features
+   - Cross-sectional features (sector, market cap, etc.)
+2. **Indexing Process**:
+   - Vector embeddings for semantic similarity search
+   - Time-series indexing for temporal queries
+   - Symbol-based indexing for asset-specific retrieval
+   - Technical indicator indexing for pattern matching
+3. **Optimization**: Curated datasets optimized for AI/ML consumption
+
+### 12.2 Market Data Pipeline
 1. Fetch from primary source (KiteConnect)
 2. Validate and clean data
 3. Calculate technical indicators
 4. Store in cache/database
 5. Distribute to subscribers
 
-### 12.2 Trading Pipeline
+### 12.3 Trading Pipeline
 1. Receive trade request
 2. Validate user permissions
 3. Fetch market data
@@ -308,6 +353,14 @@ MAX_POSITION_SIZE_PERCENTAGE=0.10
 6. Execute trade
 7. Record transaction
 8. Update portfolio
+
+### 12.4 AI/ML Data Pipeline
+1. Retrieve relevant data from Gold layer
+2. Apply vector embeddings for context retrieval
+3. Generate AI prompts with retrieved context
+4. Process LLM responses
+5. Validate and format outputs
+6. Store insights and recommendations
 
 ## 13. Scalability
 

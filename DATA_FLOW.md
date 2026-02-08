@@ -352,6 +352,64 @@ External Data Source → Data Integration Service → Preprocessing → Storage
 - Data normalization and standardization
 - Data validation and cleansing
 
+### RAG (Retrieval Augmented Generation) Data Flow
+
+The system implements a three-tier data architecture for AI/ML processing:
+
+#### Bronze Layer (Raw Data)
+```
+External Sources → Raw Data Ingestion → Data Lake Storage
+```
+
+**Characteristics:**
+- Stores raw, unprocessed data in original format
+- Preserves all original attributes and metadata
+- Sources include:
+  - NSE historical data via KiteConnect
+  - Kaggle datasets
+  - Alpha Vantage API responses
+  - Yahoo Finance data
+  - Custom data uploads
+- Immutable storage for audit and recovery purposes
+
+#### Silver Layer (Cleansed Data)
+```
+Bronze Layer → Data Cleansing → Transformation → Structured Storage
+```
+
+**Processing Steps:**
+- Data validation and quality checks
+- Missing value imputation
+- Outlier detection and handling
+- Schema validation and enforcement
+- Duplicate removal
+- Standardization of formats and units
+
+**Transformations:**
+- Column renaming to standard schema
+- Data type conversions
+- Date/time normalization
+- Currency conversion if needed
+- Technical indicator calculations
+
+#### Gold Layer (Curated Data)
+```
+Silver Layer → Feature Engineering → Indexing → Optimized Storage
+```
+
+**Processing Steps:**
+- Feature extraction and selection
+- Dimensionality reduction
+- Index creation for fast retrieval
+- Aggregation and summarization
+- Quality scoring and metadata enrichment
+
+**Indexing Strategy:**
+- Vector embeddings for semantic search
+- Time-series indexing for temporal queries
+- Symbol-based indexing for asset-specific queries
+- Technical indicator indexing for pattern matching
+
 ### Trade Data Flow
 ```
 Trade Proposal → Validation → Risk Assessment → Execution → Storage
