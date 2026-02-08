@@ -282,3 +282,31 @@ backend/
 - Pydantic for data validation
 - Alembic for database migrations
 - Docker for containerization
+## Testing the Investment Workflow
+
+To validate the complete investment workflow:
+
+1. Create a trade user with appropriate credentials
+2. Deposit funds (₹100,000 recommended for testing)
+3. Create an investment strategy named "Smart Algo"
+4. Add holdings for TCS, ICICI, and Reliance stocks
+5. Verify that Portfolio page reflects all changes
+6. Check that Investment Reports show the new strategy and holdings
+7. Confirm General Reports also reflect the investment activity
+8. Ensure reports pages do not auto-refresh, allowing users to view data without interruption
+
+## Known Issues Fixed
+- Reports pages no longer auto-refresh every 15 seconds
+- Strategy creation properly authenticates with backend
+- Investment flow guides users to select strategies before starting
+- Portfolio and reports properly reflect user investments
+
+## QA Validation Checklist
+- [ ] User creation works properly
+- [ ] Fund deposits are processed correctly
+- [ ] Strategy creation succeeds without errors
+- [ ] Holdings are added to portfolio
+- [ ] Portfolio page shows accurate data
+- [ ] Investment reports reflect changes
+- [ ] General reports reflect changes
+- [ ] No auto-refresh on reports pages

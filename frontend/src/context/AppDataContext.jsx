@@ -156,7 +156,7 @@ export const AppDataProvider = ({ children }) => {
         if (!viewId) return;
         // Auto-refresh every 15 seconds for most pages, but allow disabling for specific pages
         const currentPath = location.pathname;
-        const shouldRefresh = !['/reports', '/reports/investment', '/investment'].includes(currentPath);
+        const shouldRefresh = !['/reports', '/reports/investment', '/investment', '/portfolio'].includes(currentPath);
 
         if (shouldRefresh) {
             const interval = setInterval(() => {
