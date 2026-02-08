@@ -79,10 +79,14 @@ export const investmentService = {
         ...strategyData
       };
 
+      // Get auth token from localStorage (same as main API service)
+      const token = localStorage.getItem('stocksteward_token');
+
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/strategies/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           ...getAuthHeaders()
         },
         body: JSON.stringify(defaultStrategy)
