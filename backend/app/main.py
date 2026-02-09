@@ -190,18 +190,30 @@ async def market_feed():
 
                 # 2. Identify Gainers and Losers
                 # Filter out any that might have missing change data
-                valid_quotes = {s: q for s, q in quotes.items() if 'change' in q and q.get('change') is not None}
+                valid_quotes = {s: q for s, q in quotes.items() if 'last_price' in q}
                 if valid_quotes:
-                    sorted_movers = sorted(valid_quotes.items(), key=lambda x: x[1].get('change', 0), reverse=True)
+                    # Calculate changes for each quote if not directly available
+                    quotes_with_changes = {}
+                    for s, q in valid_quotes.items():
+                        change_pct = q.get('net_change_percent', 0)
+                        if change_pct == 0 and 'ohlc' in q and 'open' in q['ohlc']:
+                            change_pct = ((q['last_price'] - q['ohlc']['open']) / q['ohlc']['open']) * 100
+                        elif change_pct == 0 and 'change' in q:
+                            change_pct = q['change']
+                        
+                        quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
+                    
+                    sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
 
                     top_gainers = sorted_movers[:10] # Top 10
                     top_losers = sorted_movers[-10:] # Bottom 10
 
                     # Format movers for frontend
-                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
-                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
+                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q['calculated_change'], 2)} for s, q in top_gainers]
+                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q['calculated_change'], 2)} for s, q in top_losers]
 
                     # Update global state
+                    global last_market_movers
                     last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
 
                     # Emit consolidated movers event
@@ -257,6 +269,7 @@ async def market_feed():
                             analysis = json.loads(completion.choices[0].message.content.strip())
 
                             # Update global state
+                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': analysis.get('prediction', "Market stability maintained."),
                                 'decision': analysis.get('decision', "HOLD"),
@@ -270,6 +283,7 @@ async def market_feed():
                         except Exception as e:
                             print(f"Groq analysis error: {e}")
                             # Use fallback prediction
+                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': "Market showing neutral momentum. Monitoring AI signals.",
                                 'decision': "HOLD",
@@ -291,6 +305,7 @@ async def market_feed():
                     'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
                 ])
                 # Update global state for REST compatibility
+                global last_market_movers
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
@@ -328,6 +343,7 @@ async def market_feed():
                     await sio.emit('market_update', update, room='market_data')
 
                 # Mock high-fidelity prediction for UI testing
+                global last_steward_prediction
                 last_steward_prediction = {
                     'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
                     'decision': "STRONG BUY",
@@ -340,6 +356,7 @@ async def market_feed():
 
                 # Also update global prediction in mock mode
                 if last_steward_prediction['prediction'] == "Initializing...":
+                    global last_steward_prediction
                     last_steward_prediction['prediction'] = "Market showing neutral momentum in mock session. Monitoring AI signals."
                     await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
 
