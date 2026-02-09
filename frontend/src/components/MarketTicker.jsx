@@ -17,58 +17,6 @@ export function MarketTicker() {
         { symbol: 'SILVER', exchange: 'MCX', price: 74200, change: -0.2 }
     ], []);
 
-    // Extract gainers and losers from marketMovers
-    let gainers = [];
-    let losers = [];
-    
-    if (Array.isArray(marketMovers)) {
-        // If marketMovers is an array, treat it as the main list
-        gainers = marketMovers;
-    } else if (marketMovers && typeof marketMovers === 'object') {
-        // If marketMovers is an object with gainers/losers properties
-        gainers = Array.isArray(marketMovers.gainers) ? marketMovers.gainers : [];
-        losers = Array.isArray(marketMovers.losers) ? marketMovers.losers : [];
-    }
-    
-    // Get stock for each exchange (first from gainers, then from losers, then fallback)
-    const getStockForExchange = (exchange) => {
-        // Find in gainers first
-        const fromGainers = gainers.find(item => 
-            (item.exchange || 'NSE').toUpperCase() === exchange.toUpperCase()
-        );
-        
-        if (fromGainers) {
-            return {
-                symbol: fromGainers.symbol || fallbackStocks.find(s => s.exchange === exchange)?.symbol || 'RELIANCE',
-                exchange: fromGainers.exchange || exchange,
-                price: fromGainers.price || fromGainers.last_price || fallbackStocks.find(s => s.exchange === exchange)?.price || 0,
-                change: fromGainers.change || fromGainers.percent_change || fallbackStocks.find(s => s.exchange === exchange)?.change || 0
-            };
-        }
-        
-        // Find in losers if not in gainers
-        const fromLosers = losers.find(item => 
-            (item.exchange || 'NSE').toUpperCase() === exchange.toUpperCase()
-        );
-        
-        if (fromLosers) {
-            return {
-                symbol: fromLosers.symbol || fallbackStocks.find(s => s.exchange === exchange)?.symbol || 'RELIANCE',
-                exchange: fromLosers.exchange || exchange,
-                price: fromLosers.price || fromLosers.last_price || fallbackStocks.find(s => s.exchange === exchange)?.price || 0,
-                change: fromLosers.change || fromLosers.percent_change || fallbackStocks.find(s => s.exchange === exchange)?.change || 0
-            };
-        }
-        
-        // Return fallback if nothing found
-        return fallbackStocks.find(s => s.exchange === exchange) || { symbol: 'N/A', exchange: exchange, price: 0, change: 0 };
-    };
-
-    // Get stocks for each exchange
-    const nseStock = getStockForExchange('NSE');
-    const bseStock = getStockForExchange('BSE');
-    const mcxStock = getStockForExchange('MCX');
-
     // Exchange-specific styling
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
@@ -91,6 +39,42 @@ export function MarketTicker() {
         return `INR ${num.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
     };
 
+    // Group stocks by exchange and take only the first one for each exchange
+    const groupedStocks = useMemo(() => {
+        const groups = {
+            'NSE': [],
+            'BSE': [],
+            'MCX': []
+        };
+
+        // Process gainers and losers from marketMovers
+        const gainers = Array.isArray(marketMovers?.gainers) ? marketMovers.gainers : [];
+        const losers = Array.isArray(marketMovers?.losers) ? marketMovers.losers : [];
+
+        // Add gainers to their respective groups
+        gainers.forEach(item => {
+            const exchange = (item.exchange || 'NSE').toUpperCase();
+            if (groups[exchange]) {
+                groups[exchange].push(item);
+            }
+        });
+
+        // Add losers to their respective groups if not already in gainers
+        losers.forEach(item => {
+            const exchange = (item.exchange || 'NSE').toUpperCase();
+            if (groups[exchange] && !groups[exchange].find(g => g.symbol === item.symbol)) {
+                groups[exchange].push(item);
+            }
+        });
+
+        // Return the first stock from each exchange group, or fallback if none
+        return [
+            groups.NSE[0] || fallbackStocks.find(s => s.exchange === 'NSE') || { symbol: 'RELIANCE', exchange: 'NSE', price: 0, change: 0 },
+            groups.BSE[0] || fallbackStocks.find(s => s.exchange === 'BSE') || { symbol: 'SENSEX', exchange: 'BSE', price: 0, change: 0 },
+            groups.MCX[0] || fallbackStocks.find(s => s.exchange === 'MCX') || { symbol: 'CRUDEOIL', exchange: 'MCX', price: 0, change: 0 }
+        ];
+    }, [marketMovers]);
+
     // Don't render if loading or no data
     if (loading) return null;
 
@@ -100,16 +84,16 @@ export function MarketTicker() {
             <div className="flex animate-marquee whitespace-nowrap gap-8 pr-12 mb-1">
                 <div className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
                     <div className="flex flex-col">
-                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(nseStock?.exchange)}`}>
-                            {nseStock?.exchange || 'NSE'}
+                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(groupedStocks[0]?.exchange)}`}>
+                            {groupedStocks[0]?.exchange || 'NSE'}
                         </span>
-                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{nseStock?.symbol || 'RELIANCE'}</span>
+                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{groupedStocks[0]?.symbol || 'RELIANCE'}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                        <span className="text-[11px] font-black text-white">{formatPrice(nseStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(nseStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {parseFloat(nseStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {parseFloat(nseStock?.change || 0) >= 0 ? '+' : ''}{typeof nseStock?.change === 'number' ? nseStock.change.toFixed(2) : '0.00'}%
+                        <span className="text-[11px] font-black text-white">{formatPrice(groupedStocks[0]?.price)}</span>
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(groupedStocks[0]?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(groupedStocks[0]?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(groupedStocks[0]?.change || 0) >= 0 ? '+' : ''}{typeof groupedStocks[0]?.change === 'number' ? groupedStocks[0].change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
@@ -119,16 +103,16 @@ export function MarketTicker() {
             <div className="flex animate-marquee whitespace-nowrap gap-8 pr-12 mb-1">
                 <div className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
                     <div className="flex flex-col">
-                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(bseStock?.exchange)}`}>
-                            {bseStock?.exchange || 'BSE'}
+                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(groupedStocks[1]?.exchange)}`}>
+                            {groupedStocks[1]?.exchange || 'BSE'}
                         </span>
-                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{bseStock?.symbol || 'SENSEX'}</span>
+                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{groupedStocks[1]?.symbol || 'SENSEX'}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                        <span className="text-[11px] font-black text-white">{formatPrice(bseStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(bseStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {parseFloat(bseStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {parseFloat(bseStock?.change || 0) >= 0 ? '+' : ''}{typeof bseStock?.change === 'number' ? bseStock.change.toFixed(2) : '0.00'}%
+                        <span className="text-[11px] font-black text-white">{formatPrice(groupedStocks[1]?.price)}</span>
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(groupedStocks[1]?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(groupedStocks[1]?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(groupedStocks[1]?.change || 0) >= 0 ? '+' : ''}{typeof groupedStocks[1]?.change === 'number' ? groupedStocks[1].change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
@@ -138,16 +122,16 @@ export function MarketTicker() {
             <div className="flex animate-marquee whitespace-nowrap gap-8 pr-12">
                 <div className="flex items-center gap-4 bg-slate-800/70 px-4 py-1.5 rounded-lg border border-slate-600/60 shadow-sm">
                     <div className="flex flex-col">
-                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(mcxStock?.exchange)}`}>
-                            {mcxStock?.exchange || 'MCX'}
+                        <span className={`text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-0.5 px-1.5 py-0.5 rounded border ${exchangeClass(groupedStocks[2]?.exchange)}`}>
+                            {groupedStocks[2]?.exchange || 'MCX'}
                         </span>
-                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{mcxStock?.symbol || 'CRUDEOIL'}</span>
+                        <span className="text-[11px] font-black text-white uppercase tracking-tight">{groupedStocks[2]?.symbol || 'CRUDEOIL'}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                        <span className="text-[11px] font-black text-white">{formatPrice(mcxStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(mcxStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {parseFloat(mcxStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {parseFloat(mcxStock?.change || 0) >= 0 ? '+' : ''}{typeof mcxStock?.change === 'number' ? mcxStock.change.toFixed(2) : '0.00'}%
+                        <span className="text-[11px] font-black text-white">{formatPrice(groupedStocks[2]?.price)}</span>
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(groupedStocks[2]?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(groupedStocks[2]?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(groupedStocks[2]?.change || 0) >= 0 ? '+' : ''}{typeof groupedStocks[2]?.change === 'number' ? groupedStocks[2].change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>

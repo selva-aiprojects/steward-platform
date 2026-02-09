@@ -202,7 +202,6 @@ async def market_feed():
                     losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
 
                     # Update global state
-                    global last_market_movers
                     last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
 
                     # Emit consolidated movers event
@@ -258,7 +257,6 @@ async def market_feed():
                             analysis = json.loads(completion.choices[0].message.content.strip())
 
                             # Update global state
-                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': analysis.get('prediction', "Market stability maintained."),
                                 'decision': analysis.get('decision', "HOLD"),
@@ -272,7 +270,6 @@ async def market_feed():
                         except Exception as e:
                             print(f"Groq analysis error: {e}")
                             # Use fallback prediction
-                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': "Market showing neutral momentum. Monitoring AI signals.",
                                 'decision': "HOLD",
@@ -294,7 +291,6 @@ async def market_feed():
                     'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
                 ])
                 # Update global state for REST compatibility
-                global last_market_movers
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
@@ -332,7 +328,6 @@ async def market_feed():
                     await sio.emit('market_update', update, room='market_data')
 
                 # Mock high-fidelity prediction for UI testing
-                global last_steward_prediction
                 last_steward_prediction = {
                     'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
                     'decision': "STRONG BUY",
