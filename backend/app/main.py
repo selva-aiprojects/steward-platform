@@ -188,11 +188,11 @@ async def market_feed():
                         'exchange': s.split(":")[0]
                     } for s in watchlist}
 
-                quotes = {s.split(":")[-1]: q for s, q in raw_quotes.items()}
+                quotes = {s.split(":")[-1]: q for s, q in raw_quotes.items() if q.get('last_price')}
 
                 # 2. Identify Gainers and Losers
                 # Filter out any that might have missing change data
-                valid_quotes = {s: q for s, q in quotes.items() if 'last_price' in q}
+                valid_quotes = {s: q for s, q in quotes.items() if q.get('last_price') is not None}
                 if valid_quotes:
                     # Calculate changes for each quote if not directly available
                     quotes_with_changes = {}
@@ -202,9 +202,9 @@ async def market_feed():
                             change_pct = ((q['last_price'] - q['ohlc']['open']) / q['ohlc']['open']) * 100
                         elif change_pct == 0 and 'change' in q:
                             change_pct = q['change']
-                        
+
                         quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
-                    
+
                     sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
 
                     top_gainers = sorted_movers[:10] # Top 10
