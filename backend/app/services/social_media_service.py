@@ -34,35 +34,72 @@ class SocialMediaService:
         Fetch social media data from StockTwits for a given symbol
         """
         try:
-            # In a real implementation, we would use the StockTwits API
-            # For now, we'll simulate data retrieval
             logger.info(f"Fetching StockTwits data for symbol: {symbol}")
-            
-            # This is a simulation - in production, we would call the actual StockTwits API
-            # using the API key from environment variables
+
+            # Get API key from environment variables
             stocktwits_api_key = os.getenv("STOCKTWITS_API_KEY")
-            
-            # Simulated response structure
-            simulated_posts = [
-                {
-                    "id": f"sim_{symbol}_post_{i}",
-                    "message": f"This is a simulated post about ${symbol} {'bullish' if i % 3 == 0 else 'bearish' if i % 3 == 1 else 'neutral'} market sentiment",
-                    "author": f"user_{i}",
-                    "timestamp": (datetime.utcnow() - timedelta(minutes=i)).isoformat(),
-                    "engagement": {
-                        "likes": i * 2,
-                        "reshares": i // 2,
-                        "replies": i // 3
-                    },
-                    "symbols": [symbol]
-                }
-                for i in range(limit)
-            ]
-            
-            return simulated_posts
-            
+
+            # Construct the API URL
+            url = self.stocktwits_api_url.format(symbol=symbol.upper())
+
+            # Add API key to parameters if available
+            params = {}
+            if stocktwits_api_key:
+                params['access_token'] = stocktwits_api_key
+
+            # Make the API request
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        # Check if the response contains messages
+                        if 'messages' in data:
+                            posts = []
+                            for msg in data['messages']:
+                                if len(posts) >= limit:
+                                    break
+
+                                # Extract message information
+                                post = {
+                                    "id": str(msg.get('id', '')),
+                                    "message": msg.get('body', ''),
+                                    "author": msg.get('user', {}).get('username', 'unknown'),
+                                    "timestamp": msg.get('created_at', datetime.utcnow().isoformat()),
+                                    "engagement": {
+                                        "likes": msg.get('likes', {}).get('total', 0),
+                                        "reshares": msg.get('reshares', {}).get('total', 0),
+                                        "replies": msg.get('reply_count', 0)
+                                    },
+                                    "symbols": [tag.get('symbol', '') for tag in msg.get('symbols', [])]
+                                }
+                                posts.append(post)
+
+                            logger.info(f"Successfully fetched {len(posts)} posts from StockTwits for {symbol}")
+                            return posts
+                        else:
+                            logger.warning(f"No messages found in StockTwits response for {symbol}")
+                            return []
+                    elif response.status == 401:
+                        logger.warning(f"Unauthorized access to StockTwits API for {symbol} - check API key")
+                        return []
+                    elif response.status == 403:
+                        logger.warning(f"Forbidden access to StockTwits API for {symbol} - partner access required")
+                        # The streams/symbol endpoint requires Partner-Level Access
+                        # Return empty list but log the limitation
+                        return []
+                    elif response.status == 429:
+                        logger.warning(f"Rate limit exceeded for StockTwits API for {symbol}")
+                        return []
+                    else:
+                        logger.error(f"HTTP {response.status} error fetching StockTwits data for {symbol}")
+                        return []
+
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error fetching StockTwits data for {symbol}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error fetching StockTwits data for {symbol}: {e}")
+            logger.error(f"Unexpected error fetching StockTwits data for {symbol}: {e}")
             return []
     
     async def fetch_twitter_data(self, symbol: str, limit: int = 50) -> List[Dict[str, Any]]:
@@ -71,32 +108,91 @@ class SocialMediaService:
         """
         try:
             logger.info(f"Fetching Twitter data for symbol: {symbol}")
-            
-            # In a real implementation, we would use the Twitter API v2
-            # For now, we'll simulate data retrieval
+
+            # Get Twitter Bearer Token from environment variables
             twitter_bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
-            
-            # Simulated response structure
-            simulated_tweets = [
-                {
-                    "id": f"tweet_{symbol}_{i}",
-                    "text": f"Just bought more ${symbol} {'bullish' if i % 3 == 0 else 'bearish' if i % 3 == 1 else 'hold'} on this dip!",
-                    "author": f"trader_{i}",
-                    "timestamp": (datetime.utcnow() - timedelta(minutes=i)).isoformat(),
-                    "engagement": {
-                        "likes": i * 3,
-                        "retweets": i,
-                        "replies": i // 2
-                    },
-                    "symbols": [symbol]
-                }
-                for i in range(limit)
-            ]
-            
-            return simulated_tweets
-            
+
+            if not twitter_bearer_token:
+                logger.warning("TWITTER_BEARER_TOKEN not set, skipping Twitter data fetch")
+                return []
+
+            # Twitter API v2 endpoint for searching tweets
+            url = "https://api.twitter.com/2/tweets/search/recent"
+
+            headers = {
+                "Authorization": f"Bearer {twitter_bearer_token}"
+            }
+
+            # Query for tweets containing the symbol (with $ prefix or as standalone)
+            query = f"$${symbol} OR {symbol} lang:en"
+
+            params = {
+                "query": query,
+                "max_results": min(limit, 100),  # Twitter API max is 100
+                "tweet.fields": "created_at,public_metrics,author_id",
+                "expansions": "author_id",
+                "user.fields": "username,name"
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        if 'data' in data:
+                            tweets = []
+                            # Create a mapping of users for reference
+                            users_map = {}
+                            if 'includes' in data and 'users' in data['includes']:
+                                for user in data['includes']['users']:
+                                    users_map[user['id']] = user
+
+                            for tweet in data['data']:
+                                if len(tweets) >= limit:
+                                    break
+
+                                # Get author info
+                                author_info = users_map.get(tweet.get('author_id', ''), {})
+                                username = author_info.get('username', 'unknown')
+
+                                # Extract engagement metrics
+                                public_metrics = tweet.get('public_metrics', {})
+
+                                post = {
+                                    "id": tweet.get('id', ''),
+                                    "text": tweet.get('text', ''),
+                                    "author": username,
+                                    "timestamp": tweet.get('created_at', datetime.utcnow().isoformat()),
+                                    "engagement": {
+                                        "likes": public_metrics.get('like_count', 0),
+                                        "retweets": public_metrics.get('retweet_count', 0),
+                                        "replies": public_metrics.get('reply_count', 0),
+                                        "quotes": public_metrics.get('quote_count', 0)
+                                    },
+                                    "symbols": [symbol]  # Will need to extract from text in real implementation
+                                }
+                                tweets.append(post)
+
+                            logger.info(f"Successfully fetched {len(tweets)} tweets for {symbol}")
+                            return tweets
+                        else:
+                            logger.warning(f"No tweets found in Twitter response for {symbol}")
+                            return []
+                    elif response.status == 401:
+                        logger.warning(f"Unauthorized access to Twitter API for {symbol} - check bearer token")
+                        return []
+                    elif response.status == 429:
+                        logger.warning(f"Rate limit exceeded for Twitter API for {symbol}")
+                        return []
+                    else:
+                        logger.error(f"HTTP {response.status} error fetching Twitter data for {symbol}")
+                        return []
+
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error fetching Twitter data for {symbol}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error fetching Twitter data for {symbol}: {e}")
+            logger.error(f"Unexpected error fetching Twitter data for {symbol}: {e}")
             return []
     
     async def fetch_reddit_data(self, symbol: str, limit: int = 50) -> List[Dict[str, Any]]:
@@ -105,31 +201,73 @@ class SocialMediaService:
         """
         try:
             logger.info(f"Fetching Reddit data for symbol: {symbol}")
-            
-            # In a real implementation, we would use the Reddit API
-            # For now, we'll simulate data retrieval
-            # Simulated response structure
-            simulated_posts = [
-                {
-                    "id": f"reddit_{symbol}_{i}",
-                    "title": f"${symbol} {'bullish' if i % 3 == 0 else 'bearish' if i % 3 == 1 else 'neutral'} discussion",
-                    "text": f"Thoughts on ${symbol}? {'Looking good!' if i % 3 == 0 else 'Concerned about this.' if i % 3 == 1 else 'Holding steady.'}",
-                    "author": f"investor_{i}",
-                    "timestamp": (datetime.utcnow() - timedelta(minutes=i)).isoformat(),
-                    "engagement": {
-                        "upvotes": i * 5,
-                        "comments": i,
-                        "downvotes": i // 4
-                    },
-                    "symbols": [symbol]
+
+            # Search in popular finance-related subreddits
+            finance_subreddits = ['wallstreetbets', 'stocks', 'investing', 'securityanalysis', 'options']
+
+            all_posts = []
+
+            for subreddit in finance_subreddits:
+                # Reddit API endpoint for searching posts
+                url = f"https://www.reddit.com/r/{subreddit}/search.json"
+
+                params = {
+                    'q': symbol,
+                    'limit': min(25, limit - len(all_posts)),  # Don't exceed total limit
+                    'sort': 'new',
+                    'restrict_sr': 'on'  # Restrict search to this subreddit
                 }
-                for i in range(limit)
-            ]
-            
-            return simulated_posts
-            
+
+                headers = {
+                    'User-Agent': 'StockStewardAI/1.0 by StockStewardTeam'
+                }
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, params=params, headers=headers) as response:
+                        if response.status == 200:
+                            data = await response.json()
+
+                            if 'data' in data and 'children' in data['data']:
+                                for child in data['data']['children']:
+                                    if len(all_posts) >= limit:
+                                        break
+
+                                    post = child['data']  # 'data' field contains the actual post data
+
+                                    # Extract post information
+                                    post_data = {
+                                        "id": post.get('id', ''),
+                                        "title": post.get('title', ''),
+                                        "text": post.get('selftext', ''),
+                                        "author": post.get('author', 'unknown'),
+                                        "timestamp": datetime.utcfromtimestamp(post.get('created_utc', 0)).isoformat(),
+                                        "engagement": {
+                                            "upvotes": post.get('ups', 0),
+                                            "comments": post.get('num_comments', 0),
+                                            "downvotes": post.get('downs', 0)
+                                        },
+                                        "symbols": [symbol],  # Will need to extract from title/text in real implementation
+                                        "subreddit": post.get('subreddit', subreddit)
+                                    }
+                                    all_posts.append(post_data)
+
+                                if len(all_posts) >= limit:
+                                    break
+                        elif response.status == 429:
+                            logger.warning(f"Rate limited by Reddit API for {symbol}, pausing...")
+                            # Wait before trying next subreddit
+                            await asyncio.sleep(2)
+                        else:
+                            logger.warning(f"HTTP {response.status} error fetching Reddit data from r/{subreddit} for {symbol}")
+
+            logger.info(f"Successfully fetched {len(all_posts)} Reddit posts for {symbol}")
+            return all_posts
+
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error fetching Reddit data for {symbol}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error fetching Reddit data for {symbol}: {e}")
+            logger.error(f"Unexpected error fetching Reddit data for {symbol}: {e}")
             return []
     
     async def process_social_media_post(self, post_data: Dict[str, Any], source: str) -> Dict[str, Any]:

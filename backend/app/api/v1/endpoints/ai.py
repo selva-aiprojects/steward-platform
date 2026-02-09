@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from app.api.deps import get_current_active_user
 from app.models.user import User
 from app.services.llm_service import llm_service
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -18,14 +22,47 @@ class MarketResearchResponse(BaseModel):
     sentiment: dict
     watchlist: list[dict]
 
+async def get_live_market_data():
+    """Fetch live market data to enrich AI responses"""
+    try:
+        # Fetch market movers (top gainers and losers)
+        from app.main import last_market_movers
+        return last_market_movers
+    except Exception as e:
+        logger.error(f"Error fetching live market data: {e}")
+        return {"gainers": [], "losers": []}
+
+
 @router.post("/chat", response_model=ChatResponse)
-def chat_with_ai(
+async def chat_with_ai(
     request: ChatRequest,
     current_user: User = Depends(get_current_active_user),
 ):
     # Pass user info as context if needed
     user_context = f"User: {current_user.full_name}, Role: {current_user.trading_mode}, User_ID: {current_user.id}"
-    full_context = f"{user_context}. {request.context}"
+
+    # Fetch live market data to enrich the context
+    market_data = await get_live_market_data()
+
+    # Format market data for context
+    market_context_parts = []
+
+    # Add top gainers
+    if market_data.get("gainers"):
+        top_gainers = market_data["gainers"][:3]  # Top 3 gainers
+        gainers_str = ", ".join([f"{g['symbol']}: {g['change']}%" for g in top_gainers])
+        market_context_parts.append(f"Top Gainers: {gainers_str}")
+
+    # Add top losers
+    if market_data.get("losers"):
+        top_losers = market_data["losers"][:3]  # Top 3 losers
+        losers_str = ", ".join([f"{l['symbol']}: {l['change']}%" for l in top_losers])
+        market_context_parts.append(f"Top Losers: {losers_str}")
+
+    # Combine all context
+    market_context = " | ".join(market_context_parts) if market_context_parts else "No live market data available"
+
+    full_context = f"{user_context}. Live Market Data: {market_context}. {request.context}"
 
     response = llm_service.get_chat_response(request.message, full_context)
     return ChatResponse(response=response)
