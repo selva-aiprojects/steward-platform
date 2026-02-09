@@ -1,16 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppData } from '../context/AppDataContext';
 
 export function MarketTicker() {
+    const [stocks, setStocks] = useState([]);
     const { marketMovers, loading } = useAppData();
     
     // Define fallback stocks for each exchange
-    const fallbackStocks = {
-        NSE: { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
-        BSE: { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 },
-        MCX: { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 }
-    };
+    const fallbackStocks = useMemo(() => [
+        { symbol: 'RELIANCE', exchange: 'NSE', price: 2987.5, change: 1.2 },
+        { symbol: 'HDFCBANK', exchange: 'NSE', price: 1450, change: 0.8 },
+        { symbol: 'INFY', exchange: 'NSE', price: 1540, change: 0.6 },
+        { symbol: 'SENSEX', exchange: 'BSE', price: 72150, change: 0.6 },
+        { symbol: 'BOM500002', exchange: 'BSE', price: 17900, change: 0.4 },
+        { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985, change: -0.4 },
+        { symbol: 'GOLD', exchange: 'MCX', price: 62450, change: 0.7 },
+        { symbol: 'SILVER', exchange: 'MCX', price: 74200, change: -0.2 }
+    ], []);
 
     // Extract gainers and losers from marketMovers
     let gainers = [];
@@ -34,10 +40,10 @@ export function MarketTicker() {
         
         if (fromGainers) {
             return {
-                symbol: fromGainers.symbol || fallbackStocks[exchange]?.symbol,
+                symbol: fromGainers.symbol || fallbackStocks.find(s => s.exchange === exchange)?.symbol || 'RELIANCE',
                 exchange: fromGainers.exchange || exchange,
-                price: fromGainers.price || fromGainers.last_price || fallbackStocks[exchange]?.price,
-                change: fromGainers.change || fromGainers.percent_change || fallbackStocks[exchange]?.change
+                price: fromGainers.price || fromGainers.last_price || fallbackStocks.find(s => s.exchange === exchange)?.price || 0,
+                change: fromGainers.change || fromGainers.percent_change || fallbackStocks.find(s => s.exchange === exchange)?.change || 0
             };
         }
         
@@ -48,15 +54,15 @@ export function MarketTicker() {
         
         if (fromLosers) {
             return {
-                symbol: fromLosers.symbol || fallbackStocks[exchange]?.symbol,
+                symbol: fromLosers.symbol || fallbackStocks.find(s => s.exchange === exchange)?.symbol || 'RELIANCE',
                 exchange: fromLosers.exchange || exchange,
-                price: fromLosers.price || fromLosers.last_price || fallbackStocks[exchange]?.price,
-                change: fromLosers.change || fromLosers.percent_change || fallbackStocks[exchange]?.change
+                price: fromLosers.price || fromLosers.last_price || fallbackStocks.find(s => s.exchange === exchange)?.price || 0,
+                change: fromLosers.change || fromLosers.percent_change || fallbackStocks.find(s => s.exchange === exchange)?.change || 0
             };
         }
         
         // Return fallback if nothing found
-        return fallbackStocks[exchange] || { symbol: 'N/A', exchange: exchange, price: 0, change: 0 };
+        return fallbackStocks.find(s => s.exchange === exchange) || { symbol: 'N/A', exchange: exchange, price: 0, change: 0 };
     };
 
     // Get stocks for each exchange
