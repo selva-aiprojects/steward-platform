@@ -8,6 +8,7 @@ import {
     DollarSign,
     Zap
 } from 'lucide-react';
+import CompactTicker from '../components/CompactTicker';
 import {
     AreaChart,
     Area,
@@ -83,8 +84,8 @@ export function Dashboard() {
     const gainers = Array.isArray(mm.gainers) ? mm.gainers : [];
     const losers = Array.isArray(mm.losers) ? mm.losers : [];
 
-    // Tickers: just take first 3 movers
-    const groupedStocks = [...gainers, ...losers].slice(0, 3);
+    // Tickers: take more stocks for the compact ticker display
+    const groupedStocks = [...gainers, ...losers].slice(0, 10);
 
     // Currencies: from live movers only (symbols ending with INR)
     const currencyItems = (() => {
@@ -456,54 +457,8 @@ export function Dashboard() {
                     ))}
                 </div>
 
-                {/* Live Ticker Strip */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {groupedStocks.length === 0 ? (
-                        <div className="col-span-3 text-xs text-slate-400 italic">
-                            No live tickers available
-                        </div>
-                    ) : (
-                        groupedStocks.map((stock, i) => {
-                            const change = Number(stock.change || 0);
-                            const isUp = change >= 0;
-                            return (
-                                <div
-                                    key={i}
-                                    className={`flex items-center justify-between px-4 py-3 rounded-2xl border bg-slate-900 text-white ${exchangeClass(
-                                        stock.exchange
-                                    )}`}
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase tracking-widest">
-                        {stock.symbol}
-                      </span>
-                                            <span className="text-[10px] font-bold uppercase text-slate-400">
-                        {stock.exchange}
-                      </span>
-                                        </div>
-                                        <p className="text-sm font-bold mt-1">{formatPrice(stock.price)}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        {isUp ? (
-                                            <TrendingUp size={16} className="text-emerald-400" />
-                                        ) : (
-                                            <TrendingDown size={16} className="text-red-400" />
-                                        )}
-                                        <span
-                                            className={`text-xs font-black ${
-                                                isUp ? 'text-emerald-400' : 'text-red-400'
-                                            }`}
-                                        >
-                      {isUp ? '+' : ''}
-                                            {formatNumber(change, 2)}%
-                    </span>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
+                {/* Compact Live Ticker Strip */}
+                <CompactTicker stocks={groupedStocks} title="LIVE MARKET DATA" height="h-12" />
 
                 {/* FX + IPO cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
