@@ -92,6 +92,37 @@ export function Dashboard() {
     
     const marketMovers = marketMoversState || fallbackMovers;
 
+    const currencyItems = (() => {
+        const all = [
+            ...(Array.isArray(marketMovers.gainers) ? marketMovers.gainers : []),
+            ...(Array.isArray(marketMovers.losers) ? marketMovers.losers : [])
+        ];
+        const fx = all
+            .filter(s => s && s.symbol && String(s.symbol).toUpperCase().endsWith('INR'))
+            .slice(0, 8);
+        if (fx.length > 0) return fx;
+        return [
+            { symbol: 'USDINR', exchange: 'FX', price: 83.15, change: 0.12 },
+            { symbol: 'EURINR', exchange: 'FX', price: 90.25, change: -0.08 },
+            { symbol: 'GBPINR', exchange: 'FX', price: 106.55, change: 0.05 },
+            { symbol: 'JPYINR', exchange: 'FX', price: 0.56, change: -0.10 }
+        ];
+    })();
+
+    const ipoNews = (() => {
+        const news = Array.isArray(marketNews) ? marketNews : [];
+        const items = news.filter(n => {
+            const text = [n?.title, n?.headline, n?.summary, n?.content].filter(Boolean).join(' ').toLowerCase();
+            return text.includes('ipo') || text.includes('listing');
+        }).slice(0, 6);
+        if (items.length > 0) return items;
+        return [
+            { title: 'Upcoming IPO: ABC Tech Ltd', date: 'TBA' },
+            { title: 'Upcoming IPO: Bharat Foods Pvt', date: 'TBA' },
+            { title: 'Upcoming IPO: Zenith Renewables', date: 'TBA' }
+        ];
+    })();
+
     // Sample chart data
     const [chartData] = useState([
         { name: 'Mon', value: 100000 },
@@ -364,6 +395,51 @@ export function Dashboard() {
                             </Card>
                         </Link>
                     ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="p-6 bg-white border border-slate-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-heading font-black text-slate-900 text-base">Currencies</h3>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">FX PAIRS</span>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto pb-2">
+                            {currencyItems.length === 0 ? (
+                                <span className="text-[10px] font-bold text-slate-400">No FX data</span>
+                            ) : currencyItems.map((item, i) => {
+                                const change = Number(item.change || 0);
+                                const isUp = change >= 0;
+                                const price = Number(item.price);
+                                return (
+                                    <div key={i} className="min-w-[180px] px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-800">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-slate-700">
+                                                {item.symbol.slice(0, -3)} INR
+                                            </span>
+                                            <span className={`text-[10px] font-black ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {isUp ? '+' : ''}{change.toFixed(2)}%
+                                            </span>
+                                        </div>
+                                        <div className="text-sm font-bold">₹ {Number.isFinite(price) && price !== 0 ? price.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : '--'}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                    <Card className="p-6 bg-white border border-slate-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-heading font-black text-slate-900 text-base">New IPOs</h3>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">LISTINGS</span>
+                        </div>
+                        <div className="space-y-3">
+                            {ipoNews.map((n, i) => (
+                                <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <p className="text-sm font-bold text-slate-900">{n.title || n.headline || 'IPO Announcement'}</p>
+                                    {n.date && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{n.date}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">

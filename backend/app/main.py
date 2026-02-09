@@ -145,9 +145,11 @@ async def market_feed():
         'NSE:POWERGRID', 'NSE:NTPC', 'NSE:COALINDIA', 'NSE:SUNPHARMA',
         'NSE:DRREDDY', 'NSE:CIPLA', 'NSE:HINDUNILVR',
         # BSE
-        'BSE:SENSEX', 'BSE:BOM500002', 'BSE:BOM500010',
+        'BSE:SENSEX', 'BSE:BOM500002', 'BSE:BOM500010', 'BSE:BOM500325', 'BSE:BOM532540',
         # Commodities (MCX)
-        'MCX:GOLD', 'MCX:SILVER', 'MCX:CRUDEOIL', 'MCX:NATURALGAS'
+        'MCX:GOLD', 'MCX:SILVER', 'MCX:CRUDEOIL', 'MCX:NATURALGAS', 'MCX:COPPER', 'MCX:ALUMINIUM', 'MCX:ZINC', 'MCX:NICKEL',
+        # Currency (NSE Currency Derivatives)
+        'NSE:USDINR', 'NSE:EURINR', 'NSE:GBPINR', 'NSE:JPYINR'
     ]
     
     # Store history in memory (simple deque-like structure)
@@ -213,7 +215,6 @@ async def market_feed():
                     losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q['calculated_change'], 2)} for s, q in top_losers]
 
                     # Update global state
-                    global last_market_movers
                     last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
 
                     # Emit consolidated movers event
@@ -269,7 +270,6 @@ async def market_feed():
                             analysis = json.loads(completion.choices[0].message.content.strip())
 
                             # Update global state
-                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': analysis.get('prediction', "Market stability maintained."),
                                 'decision': analysis.get('decision', "HOLD"),
@@ -283,7 +283,6 @@ async def market_feed():
                         except Exception as e:
                             print(f"Groq analysis error: {e}")
                             # Use fallback prediction
-                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': "Market showing neutral momentum. Monitoring AI signals.",
                                 'decision': "HOLD",
@@ -305,7 +304,6 @@ async def market_feed():
                     'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
                 ])
                 # Update global state for REST compatibility
-                global last_market_movers
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
@@ -343,7 +341,6 @@ async def market_feed():
                     await sio.emit('market_update', update, room='market_data')
 
                 # Mock high-fidelity prediction for UI testing
-                global last_steward_prediction
                 last_steward_prediction = {
                     'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
                     'decision': "STRONG BUY",
@@ -356,7 +353,6 @@ async def market_feed():
 
                 # Also update global prediction in mock mode
                 if last_steward_prediction['prediction'] == "Initializing...":
-                    global last_steward_prediction
                     last_steward_prediction['prediction'] = "Market showing neutral momentum in mock session. Monitoring AI signals."
                     await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
 

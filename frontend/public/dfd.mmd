@@ -1,0 +1,24 @@
+flowchart LR
+  subgraph Client
+    UI[React UI (Dashboard, Ticker)]
+    Ctx[AppDataContext]
+  end
+
+  subgraph Backend
+    API[FastAPI REST]
+    SIO[Socket.IO ASGI]
+    Worker[Market Feed Worker]
+    DB[(PostgreSQL)]
+    Cache[(In-memory Cache)]
+  end
+
+  Feeds[Exchange Feeds: NSE/BSE/MCX/FX] --> Worker
+  Worker -->|emit movers| SIO
+  Worker -->|persist users/portfolio| DB
+  Worker -->|update last state| Cache
+
+  UI -->|subscribe| SIO
+  Ctx --> UI
+  UI -->|REST| API
+  API --> DB
+  API --> Cache

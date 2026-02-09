@@ -51,7 +51,7 @@ def main():
     
     # Now import and run the main application
     try:
-        from app.main import app
+        from app.main import socket_app as app
         import uvicorn
         
         # Run the application

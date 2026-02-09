@@ -105,9 +105,11 @@ export const AppDataProvider = ({ children }) => {
 
             if (moversData) {
                 if (Array.isArray(moversData)) {
-                    setMarketMovers(moversData);
+                    setMarketMovers({ gainers: moversData, losers: [] });
                 } else if (moversData.gainers) {
-                    setMarketMovers([...moversData.gainers, ...moversData.losers]);
+                    setMarketMovers(moversData);
+                } else {
+                    setMarketMovers({ gainers: [], losers: [] });
                 }
             }
 
@@ -175,16 +177,7 @@ export const AppDataProvider = ({ children }) => {
             socket.emit('join_stream', { role: user?.role || 'TRADER', userId: user?.id });
         };
 
-        const onMarketUpdate = (data) => {
-            setMarketMovers(prev => {
-                const exists = prev.find(m => m.symbol === data.symbol);
-                if (exists) {
-                    return prev.map(m => m.symbol === data.symbol ? { ...m, ...data } : m);
-                } else {
-                    return [data, ...prev].slice(0, 10);
-                }
-            });
-        };
+        const onMarketUpdate = (data) => {};
 
         const onStewardPrediction = (data) => {
             if (data && typeof data === 'object') {
@@ -197,8 +190,8 @@ export const AppDataProvider = ({ children }) => {
         };
 
         const onMarketMovers = (data) => {
-            if (data.gainers) {
-                setMarketMovers([...data.gainers, ...data.losers]);
+            if (data && data.gainers && data.losers) {
+                setMarketMovers(data);
             }
         };
 

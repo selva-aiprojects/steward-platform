@@ -1,8 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <style>
-    .vite-icon { fill: #646cff; }
-  </style>
-  <circle cx="50" cy="50" r="45" fill="#ffffff" stroke="#646cff" stroke-width="2"/>
-  <path class="vite-icon" d="M30,30 L50,15 L70,30 L65,55 L50,70 L35,55 Z" fill="#646cff"/>
-  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#646cff">SSAI</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="52" height="52" rx="12" fill="#0f172a"/>
+  <g transform="translate(10 10)">
+    <path d="M22 2 L42 32 L2 32 Z" fill="url(#g1)"/>
+    <circle cx="22" cy="22" r="8" fill="url(#g2)"/>
+  </g>
 </svg>
