@@ -99,7 +99,7 @@ const Support = () => {
                     <Button onClick={() => setView('create')}>Create Ticket</Button>
                 )}
                 {view !== 'list' && (
-                    <Button variant="outline" onClick={() => { setView('list'); setSelectedTicket(null); }}>Back to List</Button>
+                    <Button variant="outline" onClick={() => { setView('list'); setSelectedTicket(null); setMessages([]); }}>Back to List</Button>
                 )}
             </div>
 
@@ -118,7 +118,7 @@ const Support = () => {
                                     <CardTitle className="text-xl font-medium">
                                         {ticket.subject}
                                     </CardTitle>
-                                    <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                                    <Badge variant={getStatusColor(ticket.status) === 'success' ? 'default' : getStatusColor(ticket.status)}>{ticket.status}</Badge>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-sm text-muted-foreground truncate">
@@ -132,7 +132,7 @@ const Support = () => {
                         ))
                     )}
                 </div>
-            )}
+
 
             {view === 'create' && (
                 <Card className="max-w-2xl mx-auto">
@@ -195,7 +195,7 @@ const Support = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     <Badge variant="outline">{selectedTicket.priority}</Badge>
-                                    <Badge variant={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Badge>
+                                    <Badge variant={getStatusColor(selectedTicket.status) === 'success' ? 'default' : getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Badge>
                                 </div>
                             </div>
                         </CardHeader>

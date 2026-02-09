@@ -154,9 +154,10 @@ export const AppDataProvider = ({ children }) => {
 
     useEffect(() => {
         if (!viewId) return;
-        // Auto-refresh every 30 seconds for most pages, but allow disabling for specific pages
+        // Auto-refresh every 60 seconds for most pages, but allow disabling for specific pages
+        // Added more pages to exclude from auto-refresh to prevent unwanted page refreshes
         const currentPath = location.pathname;
-        const shouldRefresh = !['/reports', '/reports/investment', '/investment', '/portfolio', '/users'].includes(currentPath);
+        const shouldRefresh = !['/reports', '/reports/investment', '/investment', '/portfolio', '/users', '/support', '/help', '/subscription', '/kyc'].includes(currentPath);
 
         if (shouldRefresh) {
             const interval = setInterval(() => {
