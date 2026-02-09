@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 const API_URL = `${BASE_URL}/tickets`;
-const change = Number(item.change_pct ?? item.change ?? 0);
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
