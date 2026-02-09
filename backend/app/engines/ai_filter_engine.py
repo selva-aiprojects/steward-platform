@@ -12,13 +12,18 @@ This module implements the AI Filter Engine responsible for:
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 import asyncio
+
+# Import database components
+from sqlalchemy.orm import Session
+from app.core.database import SessionLocal
+from app.models.social_sentiment import SocialSentiment
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +74,7 @@ class AIFilterEngine(AIFilterEngineInterface):
         self.scalers = {}
         logger.info("AI Filter Engine initialized")
 
-    async def analyze_market_sentiment(self, news_data: List[Dict[str, Any]], social_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def analyze_market_sentiment(self, news_data: List[Dict[str, Any]], social_data: List[Dict[str, Any]] = None, symbols: List[str] = None) -> Dict[str, Any]:
         """Analyze market sentiment from news and social media"""
         try:
             # Process news sentiment
@@ -80,42 +85,48 @@ class AIFilterEngine(AIFilterEngineInterface):
                     # Simple sentiment scoring based on keywords
                     title = item.get("title", "").lower()
                     content = item.get("content", "").lower()
-                    
+
                     positive_keywords = ["positive", "bullish", "gain", "rise", "strong", "buy", "upgrade"]
                     negative_keywords = ["negative", "bearish", "loss", "fall", "weak", "sell", "downgrade", "crisis"]
-                    
+
                     pos_count = sum(1 for kw in positive_keywords if kw in title or kw in content)
                     neg_count = sum(1 for kw in negative_keywords if kw in title or kw in content)
-                    
+
                     score = (pos_count - neg_count) / (pos_count + neg_count + 1)  # +1 to avoid division by zero
                     news_scores.append(score)
-                
+
                 news_sentiment_score = sum(news_scores) / len(news_scores) if news_scores else 0
-            
-            # Process social media sentiment
+
+            # Process social media sentiment - prioritize database data if symbols provided
             social_sentiment_score = 0
-            if social_data:
+            if symbols:
+                # Fetch social media data from database for the specified symbols
+                social_scores = await self._get_social_sentiment_from_db(symbols)
+                if social_scores:
+                    social_sentiment_score = sum(social_scores) / len(social_scores)
+            elif social_data:
+                # Use provided social data if no symbols specified
                 social_scores = []
                 for item in social_data:
                     text = item.get("text", "").lower()
-                    
+
                     positive_keywords = ["positive", "bullish", "buy", "strong", "great", "amazing", "profit"]
                     negative_keywords = ["negative", "bearish", "sell", "weak", "terrible", "loss", "crash"]
-                    
+
                     pos_count = sum(1 for kw in positive_keywords if kw in text)
                     neg_count = sum(1 for kw in negative_keywords if kw in text)
-                    
+
                     score = (pos_count - neg_count) / (pos_count + neg_count + 1)
                     social_scores.append(score)
-                
+
                 social_sentiment_score = sum(social_scores) / len(social_scores) if social_scores else 0
-            
+
             # Combine sentiments with weights
             combined_sentiment = (news_sentiment_score * 0.6) + (social_sentiment_score * 0.4)
-            
+
             # Normalize to -1 to 1 scale
             normalized_sentiment = max(-1, min(1, combined_sentiment))
-            
+
             sentiment_analysis = {
                 "overall_sentiment": normalized_sentiment,
                 "news_sentiment": news_sentiment_score,
@@ -123,9 +134,9 @@ class AIFilterEngine(AIFilterEngineInterface):
                 "confidence": 0.7,  # Would be calculated based on model confidence
                 "timestamp": datetime.now().isoformat()
             }
-            
+
             logger.info("Completed market sentiment analysis")
-            
+
             return {
                 "success": True,
                 "sentiment_analysis": sentiment_analysis
@@ -136,6 +147,29 @@ class AIFilterEngine(AIFilterEngineInterface):
                 "success": False,
                 "error": str(e)
             }
+
+    async def _get_social_sentiment_from_db(self, symbols: List[str]) -> List[float]:
+        """Helper method to get social sentiment scores from database for given symbols"""
+        try:
+            db = SessionLocal()
+            try:
+                # Get social sentiment data for the specified symbols from the last 24 hours
+                social_sentiments = db.query(SocialSentiment).filter(
+                    SocialSentiment.symbol.in_(symbols),
+                    SocialSentiment.timestamp >= datetime.utcnow() - timedelta(hours=24)
+                ).all()
+
+                # Extract sentiment scores
+                scores = [float(sent.sentiment_score) for sent in social_sentiments if sent.sentiment_score is not None]
+
+                logger.info(f"Fetched {len(scores)} social sentiment records for symbols: {symbols}")
+
+                return scores
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Error fetching social sentiment from database: {str(e)}")
+            return []
 
     async def process_technical_indicators(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process technical indicators using AI"""

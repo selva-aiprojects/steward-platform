@@ -102,9 +102,20 @@ class TradingInfrastructure:
             
             # Step 1: AI Market Analysis
             ai_analysis_start = datetime.now()
+
+            # Extract symbols from market data to fetch social sentiment from database
+            symbols = []
+            if market_data.get("symbols"):
+                symbols = market_data["symbols"] if isinstance(market_data["symbols"], list) else [market_data["symbols"]]
+            elif market_data.get("symbol"):
+                symbols = [market_data["symbol"]]
+            elif market_data.get("prices"):  # If we have price data, extract symbols
+                symbols = [item.get("symbol") for item in market_data["prices"] if item.get("symbol")]
+
             ai_result = await self.ai_filter_engine.analyze_market_sentiment(
                 market_data.get("news", []),
-                market_data.get("social", [])
+                market_data.get("social", []),
+                symbols=symbols
             )
             ai_analysis_time = (datetime.now() - ai_analysis_start).total_seconds()
             

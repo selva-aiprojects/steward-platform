@@ -29,3 +29,4 @@ class User(Base):
     audit_logs = relationship("AuditLog", foreign_keys="[AuditLog.admin_id]", back_populates="admin")
     kyc_applications = relationship("KYCApplication", foreign_keys="[KYCApplication.user_id]", back_populates="user")
     watchlist_items = relationship("WatchlistItem", back_populates="user")
+    social_sentiments = relationship("SocialSentiment", back_populates="user")

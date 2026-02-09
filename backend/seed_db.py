@@ -6,17 +6,26 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.getcwd())
 
 from app.core.database import SessionLocal, engine, Base
+from sqlalchemy import text
 from app.models.user import User
 from app.models.portfolio import Portfolio, Holding
 from app.models.watchlist import WatchlistItem
 from app.models.trade import Trade
 from app.models.strategy import Strategy
 from app.models.projection import Projection
+from app.models.social_sentiment import SocialSentiment
 from datetime import datetime, timedelta
 
 def seed_db():
     print("Recreating database tables...")
-    Base.metadata.drop_all(bind=engine)
+    # Drop all tables with cascade to handle foreign key constraints
+    with engine.connect() as conn:
+        # Execute raw SQL to drop all tables with CASCADE
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS public"))
+        conn.commit()
+
+    # Create all tables
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
