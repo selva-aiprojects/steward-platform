@@ -8,7 +8,11 @@ const Support = () => {
     const [view, setView] = useState('list'); // list, create, detail
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
-    const [formData, setFormData] = useState({ subject: '', description: '', priority: 'MEDIUM' });
+    const [formData, setFormData] = useState({ 
+        subject: '', 
+        description: '', 
+        priority: 'MEDIUM' 
+    });
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -20,9 +24,6 @@ const Support = () => {
 
     useEffect(() => {
         if (selectedTicket) {
-            // In a real app we might fetch specific messages here if not included in the main ticket object,
-            // but our API returns messages with the ticket detail.
-            // ticketService.getTicket(selectedTicket.id).then(data => setMessages(data.messages));
             setMessages(selectedTicket.messages || []);
             scrollToBottom();
         }
@@ -64,11 +65,11 @@ const Support = () => {
         e.preventDefault();
         if (!newMessage.trim()) return;
         try {
-            const msg = await ticketService.addMessage(selectedTicket.id, newMessage);
-            // Optimistically update or re-fetch
+            await ticketService.addMessage(selectedTicket.id, newMessage);
+            // Re-fetch the ticket to get updated messages
             const updatedTicket = await ticketService.getTicket(selectedTicket.id);
-            setSelectedTicket(updatedTicket); // Update local state
-            setMessages(updatedTicket.messages); // Update messages
+            setSelectedTicket(updatedTicket);
+            setMessages(updatedTicket.messages || []);
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message:", error);
@@ -83,9 +84,9 @@ const Support = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'OPEN': return 'default'; // or a specific variant
+            case 'OPEN': return 'default';
             case 'IN_PROGRESS': return 'secondary';
-            case 'RESOLVED': return 'success'; // if we had success variant, else default
+            case 'RESOLVED': return 'default'; // Using default instead of success to avoid undefined variant
             case 'CLOSED': return 'outline';
             default: return 'default';
         }
@@ -99,7 +100,16 @@ const Support = () => {
                     <Button onClick={() => setView('create')}>Create Ticket</Button>
                 )}
                 {view !== 'list' && (
-                    <Button variant="outline" onClick={() => { setView('list'); setSelectedTicket(null); setMessages([]); }}>Back to List</Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { 
+                            setView('list'); 
+                            setSelectedTicket(null); 
+                            setMessages([]); 
+                        }}
+                    >
+                        Back to List
+                    </Button>
                 )}
             </div>
 
@@ -113,12 +123,18 @@ const Support = () => {
                         </Card>
                     ) : (
                         tickets.map((ticket) => (
-                            <Card key={ticket.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleViewTicket(ticket.id)}>
+                            <Card 
+                                key={ticket.id} 
+                                className="cursor-pointer hover:bg-accent/50 transition-colors" 
+                                onClick={() => handleViewTicket(ticket.id)}
+                            >
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-xl font-medium">
                                         {ticket.subject}
                                     </CardTitle>
-                                    <Badge variant={getStatusColor(ticket.status) === 'success' ? 'default' : getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                                    <Badge variant={getStatusColor(ticket.status)}>
+                                        {ticket.status}
+                                    </Badge>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-sm text-muted-foreground truncate">
@@ -132,7 +148,7 @@ const Support = () => {
                         ))
                     )}
                 </div>
-
+            )}
 
             {view === 'create' && (
                 <Card className="max-w-2xl mx-auto">
@@ -188,14 +204,18 @@ const Support = () => {
                         <CardHeader>
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <CardTitle className="text-2xl">{selectedTicket.subject}</CardTitle>
+                                    <CardTitle className="text-2xl">
+                                        {selectedTicket.subject}
+                                    </CardTitle>
                                     <div className="text-sm text-muted-foreground mt-1">
                                         Created on {new Date(selectedTicket.created_at).toLocaleString()}
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Badge variant="outline">{selectedTicket.priority}</Badge>
-                                    <Badge variant={getStatusColor(selectedTicket.status) === 'success' ? 'default' : getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Badge>
+                                    <Badge variant={getStatusColor(selectedTicket.status)}>
+                                        {selectedTicket.status}
+                                    </Badge>
                                 </div>
                             </div>
                         </CardHeader>
@@ -208,11 +228,22 @@ const Support = () => {
                         <h3 className="text-lg font-semibold">Discussion</h3>
                         <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border rounded-lg bg-card/50">
                             {messages.length === 0 ? (
-                                <p className="text-center text-muted-foreground text-sm">No messages yet.</p>
+                                <p className="text-center text-muted-foreground text-sm">
+                                    No messages yet.
+                                </p>
                             ) : (
                                 messages.map((msg) => (
-                                    <div key={msg.id} className={`flex flex-col ${msg.user_id === selectedTicket.user_id ? 'items-end' : 'items-start'}`}>
-                                        <div className={`max-w-[80%] rounded-lg p-3 ${msg.user_id === selectedTicket.user_id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                    <div 
+                                        key={msg.id} 
+                                        className={`flex flex-col ${msg.user_id === selectedTicket.user_id ? 'items-end' : 'items-start'}`}
+                                    >
+                                        <div 
+                                            className={`max-w-[80%] rounded-lg p-3 ${
+                                                msg.user_id === selectedTicket.user_id 
+                                                    ? 'bg-primary text-primary-foreground' 
+                                                    : 'bg-muted'
+                                            }`}
+                                        >
                                             <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                                         </div>
                                         <span className="text-xs text-muted-foreground mt-1">
@@ -232,7 +263,9 @@ const Support = () => {
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                             />
-                            <Button type="submit" disabled={!newMessage.trim()}>Send</Button>
+                            <Button type="submit" disabled={!newMessage.trim()}>
+                                Send
+                            </Button>
                         </form>
                     </div>
                 </div>
