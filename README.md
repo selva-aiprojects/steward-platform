@@ -271,6 +271,15 @@ backend/
 └── requirements.txt     # Dependencies
 ```
 
+## Documentation
+Comprehensive documentation is available in the organized documentation hub:
+
+- **[Documentation Hub](./DOCUMENTATION_HUB.md)** - Main entry point for all documentation
+- **[User Manuals](./docs/user-manuals/)** - Role-specific guides for Trader, Auditor, Business Owner, and Super Admin
+- **[Technical Documentation](./docs/technical-docs/)** - System architecture and technical specifications
+- **[Requirements](./docs/requirements/)** - Software requirements and specifications
+- **[Quality Assurance Report](./QUALITY_ASSURANCE_REPORT.md)** - Complete QA analysis and resolutions
+
 ## Key Technologies
 
 - Python 3.9+
