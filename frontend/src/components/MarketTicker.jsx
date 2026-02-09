@@ -3,7 +3,6 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppData } from '../context/AppDataContext';
 
 export function MarketTicker() {
-    const [stocks, setStocks] = useState([]);
     const { marketMovers, loading } = useAppData();
     
     // Define fallback stocks for each exchange
@@ -108,9 +107,9 @@ export function MarketTicker() {
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[11px] font-black text-white">{formatPrice(nseStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${nseStock?.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {nseStock?.change >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {nseStock?.change >= 0 ? '+' : ''}{typeof nseStock?.change === 'number' ? nseStock.change.toFixed(2) : '0.00'}%
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(nseStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(nseStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(nseStock?.change || 0) >= 0 ? '+' : ''}{typeof nseStock?.change === 'number' ? nseStock.change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
@@ -127,9 +126,9 @@ export function MarketTicker() {
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[11px] font-black text-white">{formatPrice(bseStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${bseStock?.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {bseStock?.change >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {bseStock?.change >= 0 ? '+' : ''}{typeof bseStock?.change === 'number' ? bseStock.change.toFixed(2) : '0.00'}%
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(bseStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(bseStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(bseStock?.change || 0) >= 0 ? '+' : ''}{typeof bseStock?.change === 'number' ? bseStock.change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
@@ -146,9 +145,9 @@ export function MarketTicker() {
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[11px] font-black text-white">{formatPrice(mcxStock?.price)}</span>
-                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${mcxStock?.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            {mcxStock?.change >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                            {mcxStock?.change >= 0 ? '+' : ''}{typeof mcxStock?.change === 'number' ? mcxStock.change.toFixed(2) : '0.00'}%
+                        <div className={`flex items-center gap-0.5 text-[9px] font-bold ${parseFloat(mcxStock?.change || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            {parseFloat(mcxStock?.change || 0) >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                            {parseFloat(mcxStock?.change || 0) >= 0 ? '+' : ''}{typeof mcxStock?.change === 'number' ? mcxStock.change.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
