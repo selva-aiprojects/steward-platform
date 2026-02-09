@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "./components/theme-provider"
-import { Layout } from "./components/layout/layout"
+import { Layout } from "./components/layout/Layout"
 import { Dashboard } from "./pages/Dashboard"
 import { Portfolio } from "./pages/Portfolio"
 import { TradingHub } from "./pages/TradingHub"
