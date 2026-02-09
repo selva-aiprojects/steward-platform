@@ -73,7 +73,7 @@ export default function Subscription() {
     const [billingCycle, setBillingCycle] = useState('monthly');
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500 pb-20">
+        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500 pb-20 bg-background text-foreground">
             <div className="text-center space-y-4">
                 <h1 className="text-4xl font-black text-slate-900 font-heading">Upgrade Your Intelligence</h1>
                 <p className="text-slate-500 max-w-2xl mx-auto text-lg">
@@ -124,7 +124,7 @@ export default function Subscription() {
                                 window.alert('Order Initiated: StockSteward Agent Provisioning in progress...');
                                 navigate('/');
                             }}
-                            className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all hover:opacity-90 mb-8 shadow-lg ${tier.btnColor}`}
+                            className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all hover:opacity-90 mb-8 shadow-lg ${tier.btnColor} ${tier.id === 'enterprise' ? 'text-slate-900' : 'text-white'}`}
                         >
                             {tier.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
                         </button>
