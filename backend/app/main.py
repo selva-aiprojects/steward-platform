@@ -59,29 +59,35 @@ last_steward_prediction = {"prediction": "Initializing...", "history": []}
 
 # Mock data for fallback mode
 mock_gainers = [
-    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2450.00, 'change': '+1.20%'},
-    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': '+0.85%'},
-    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': '+2.10%'},
-    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': '+0.95%'},
-    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': '+1.05%'},
-    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': '+0.65%'},
-    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': '+0.70%'},
-    {'symbol': 'SENSEX', 'exchange': 'BSE', 'price': 72420.00, 'change': '+0.55%'},
-    {'symbol': 'NIFTY', 'exchange': 'NSE', 'price': 22340.00, 'change': '+0.60%'},
-    {'symbol': 'GOLD', 'exchange': 'MCX', 'price': 62450.00, 'change': '+0.70%'}
+    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.5, 'change': 1.2},
+    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.0, 'change': 0.8},
+    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.0, 'change': 0.6},
+    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.0, 'change': 1.1},
+    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.0, 'change': 0.9},
+    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.0, 'change': 0.7},
+    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.0, 'change': 0.5},
+    {'symbol': 'SENSEX', 'exchange': 'BSE', 'price': 72420.0, 'change': 0.6},
+    {'symbol': 'NIFTY', 'exchange': 'NSE', 'price': 22340.0, 'change': 0.8},
+    {'symbol': 'GOLD', 'exchange': 'MCX', 'price': 62450.0, 'change': 0.9}
 ]
+
 mock_losers = [
-    {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.00, 'change': '-1.10%'},
-    {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.00, 'change': '-2.30%'},
-    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': '-1.50%'},
-    {'symbol': 'NTPC', 'exchange': 'NSE', 'price': 310.00, 'change': '-0.85%'},
-    {'symbol': 'POWERGRID', 'exchange': 'NSE', 'price': 275.00, 'change': '-0.70%'},
-    {'symbol': 'BAJAJFINSV', 'exchange': 'NSE', 'price': 1680.00, 'change': '-0.95%'},
-    {'symbol': 'SUNPHARMA', 'exchange': 'NSE', 'price': 1340.00, 'change': '-0.60%'},
-    {'symbol': 'CRUDEOIL', 'exchange': 'MCX', 'price': 6940.00, 'change': '-0.90%'},
-    {'symbol': 'SILVER', 'exchange': 'MCX', 'price': 74200.00, 'change': '-0.55%'},
-    {'symbol': 'BOM500002', 'exchange': 'BSE', 'price': 1790.00, 'change': '-0.45%'}
+    {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.0, 'change': -1.2},
+    {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.0, 'change': -2.3},
+    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.0, 'change': -1.5},
+    {'symbol': 'NTPC', 'exchange': 'NSE', 'price': 310.0, 'change': -0.8},
+    {'symbol': 'POWERGRID', 'exchange': 'NSE', 'price': 275.0, 'change': -0.7},
+    {'symbol': 'BAJAJFINSV', 'exchange': 'NSE', 'price': 1680.0, 'change': -0.9},
+    {'symbol': 'SUNPHARMA', 'exchange': 'NSE', 'price': 1340.0, 'change': -0.6},
+    {'symbol': 'CRUDEOIL', 'exchange': 'MCX', 'price': 6985.0, 'change': -0.9},
+    {'symbol': 'SILVER', 'exchange': 'MCX', 'price': 74200.0, 'change': -0.5},
+    {'symbol': 'BOM500002', 'exchange': 'BSE', 'price': 1790.0, 'change': -0.4}
 ]
+
+@sio.event
+async def connect(sid, environ):
+    print(f"Socket connected: {sid}")
+    await sio.emit('connect_response', {'msg': 'Connected to StockSteward AI Market Feed', 'socket_id': sid}, room=sid)
 
 @sio.event
 async def join_stream(sid, data):
@@ -114,7 +120,7 @@ async def join_stream(sid, data):
 
 @sio.event
 async def disconnect(sid):
-    print(f"Client disconnected: {sid}")
+    print(f"Socket disconnected: {sid}")
 
 # Background Market Publisher (Live & Public)
 async def market_feed():
@@ -149,7 +155,7 @@ async def market_feed():
     
     while True:
         # 30-60 second cycle for comprehensive analysis to avoid rate limits
-        # Using 10s for demo responsiveness
+        # Using 8s for demo responsiveness
         await asyncio.sleep(8 if settings.EXECUTION_MODE == "LIVE_TRADING" else 3)
         
         try:
@@ -162,8 +168,10 @@ async def market_feed():
                     groq_client = Groq(api_key=groq_key)
                 except ImportError:
                     print("Groq library not installed")
+                    groq_client = None  # Define the variable even if import fails
                 except Exception as e:
                     print(f"Error initializing Groq client: {e}")
+                    groq_client = None  # Define the variable even if initialization fails
 
             if settings.EXECUTION_MODE == "LIVE_TRADING":
                 # 1. Attempt real fetch
@@ -190,18 +198,20 @@ async def market_feed():
                     top_losers = sorted_movers[-10:] # Bottom 10
 
                     # Format movers for frontend
-                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
-                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q['last_price'], 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
+                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q.get('change', 0), 2)} for s, q in top_gainers]
+                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q.get('change', 0), 2)} for s, q in top_losers]
 
                     # Update global state
+                    global last_market_movers
                     last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
 
                     # Emit consolidated movers event
                     await sio.emit('market_movers', last_market_movers, room='market_data')
 
-                    # 4. Ticker Broadcast (Multi-exchange)
+                    # 3. Ticker Broadcast (Multi-exchange)
                     for s in watchlist:
                         symbol = s.split(":")[-1]
+                        exchange = s.split(":")[0]
                         quote = raw_quotes.get(s)
                         if not quote: continue
 
@@ -212,17 +222,17 @@ async def market_feed():
 
                         update = {
                             'symbol': symbol,
-                            'exchange': s.split(":")[0],
-                            'price': quote['last_price'],
-                            'change': quote['change'],
-                            'type': 'up' if quote['change'] >= 0 else 'down'
+                            'exchange': exchange,
+                            'price': quote.get('last_price', quote.get('price', 0)),
+                            'change': quote.get('change', 0),
+                            'type': 'up' if quote.get('change', 0) >= 0 else 'down'
                         }
                         await sio.emit('market_update', update, room='market_data')
 
                     # 4. Global "Steward Prediction" (Dynamic real-time trend)
                     if groq_client:
                         try:
-                            market_summary = ", ".join([f"{s}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
+                            market_summary = ", ".join([f"{s.split(':')[-1]}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
                             prompt = f"""
                             Analyze the current Nifty 50 trend based on these changes: {market_summary}.
                             Provide a senior wealth steward analysis in JSON format:
@@ -248,6 +258,7 @@ async def market_feed():
                             analysis = json.loads(completion.choices[0].message.content.strip())
 
                             # Update global state
+                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': analysis.get('prediction', "Market stability maintained."),
                                 'decision': analysis.get('decision', "HOLD"),
@@ -261,6 +272,7 @@ async def market_feed():
                         except Exception as e:
                             print(f"Groq analysis error: {e}")
                             # Use fallback prediction
+                            global last_steward_prediction
                             last_steward_prediction = {
                                 'prediction': "Market showing neutral momentum. Monitoring AI signals.",
                                 'decision': "HOLD",
@@ -282,6 +294,7 @@ async def market_feed():
                     'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
                 ])
                 # Update global state for REST compatibility
+                global last_market_movers
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
@@ -319,6 +332,7 @@ async def market_feed():
                     await sio.emit('market_update', update, room='market_data')
 
                 # Mock high-fidelity prediction for UI testing
+                global last_steward_prediction
                 last_steward_prediction = {
                     'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
                     'decision': "STRONG BUY",
@@ -355,194 +369,6 @@ async def admin_feed():
              print(f"Admin feed error: {e}")
 
 @app.on_event("startup")
-async def database_startup_event():
-    if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
-        # Create all tables and ensure schema is up to date
-        from app.core.database import engine
-        Base.metadata.create_all(bind=engine)
-
-        # Apply database optimizations for high availability and performance
-        try:
-            from sqlalchemy import text
-            with engine.connect() as conn:
-                # Create indexes for performance
-                optimizations = [
-                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);",
-                    "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
-                    "CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_portfolio_id ON trades(portfolio_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);",
-                    "CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_id ON holdings(portfolio_id);",
-                    "CREATE INDEX IF NOT EXISTS idx_holdings_symbol ON holdings(symbol);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_user_status ON trades(user_id, status);",
-                    "CREATE INDEX IF NOT EXISTS idx_trades_symbol_timestamp ON trades(symbol, timestamp DESC);",
-                    "CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_symbol ON holdings(portfolio_id, symbol);",
-                    "ANALYZE users;",
-                    "ANALYZE trades;",
-                    "ANALYZE portfolios;",
-                    "ANALYZE holdings;"
-                ]
-                
-                for opt in optimizations:
-                    try:
-                        conn.execute(text(opt))
-                    except Exception as e:
-                        # Log optimization failure but continue
-                        print(f"INFO: Optimization '{opt}' failed (may already exist): {e}")
-                
-                conn.commit()
-                print("INFO: Database optimizations applied successfully")
-        except Exception as e:
-            print(f"WARNING: Could not apply database optimizations: {e}")
-
-        # For PostgreSQL, we might need to handle schema updates manually
-        # Check if the role column exists, and if not, try to add it
-        try:
-            from sqlalchemy import text
-            with engine.connect() as conn:
-                # Check if role column exists
-                result = conn.execute(text("""
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'users' AND column_name = 'role'
-                """))
-                if not result.fetchone():
-                    # Add role column if it doesn't exist
-                    try:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'TRADER'"))
-                        conn.commit()
-                        print("Added 'role' column to users table")
-                    except Exception as e:
-                        print(f"Could not add 'role' column: {e}")
-                        conn.rollback()
-
-                # Also check for other potentially missing columns
-                columns_to_check = [
-                    ('trading_mode', 'VARCHAR(20)', 'AUTO'),
-                    ('risk_tolerance', 'VARCHAR(20)', 'MODERATE'),
-                    ('is_superuser', 'BOOLEAN', 'FALSE'),
-                    ('trading_suspended', 'BOOLEAN', 'FALSE'),
-                    ('allowed_sectors', 'VARCHAR(100)', 'ALL'),
-                    ('approval_threshold', 'FLOAT', None),
-                    ('confidence_threshold', 'FLOAT', None)
-                ]
-
-                for col_name, col_type, default_val in columns_to_check:
-                    result = conn.execute(text(f"""
-                        SELECT column_name
-                        FROM information_schema.columns
-                        WHERE table_name = 'users' AND column_name = '{col_name}'
-                    """))
-                    if not result.fetchone():
-                        try:
-                            if default_val is None:
-                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
-                            else:
-                                default_value = default_val if default_val in ['TRUE', 'FALSE'] else f"'{default_val}'"
-                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default_value}"))
-                            conn.commit()
-                            print(f"Added '{col_name}' column to users table")
-                        except Exception as e:
-                            print(f"Could not add '{col_name}' column: {e}")
-                            conn.rollback()
-        except Exception as e:
-            print(f"Schema check/update failed: {e}")
-
-        # Ensure a default superadmin exists for fresh databases
-        try:
-            from app.core.database import SessionLocal
-            from app.models.user import User
-            from app.core.security import get_password_hash
-            db = SessionLocal()
-            try:
-                existing = db.query(User).first()
-                if not existing:
-                    admin = User(
-                        id=1,
-                        full_name="Super Admin",
-                        email="admin@stocksteward.ai",
-                        hashed_password=get_password_hash("admin123"),
-                        risk_tolerance="LOW",
-                        is_active=True,
-                        role="SUPERADMIN",
-                        is_superuser=True
-                    )
-                    db.add(admin)
-                    db.commit()
-                elif not db.query(User).filter(User.id == 1).first():
-                    db.add(User(
-                        id=1,
-                        full_name="Super Admin",
-                        email="admin@stocksteward.ai",
-                        hashed_password=get_password_hash("admin123"),
-                        risk_tolerance="LOW",
-                        is_active=True,
-                        role="SUPERADMIN",
-                        is_superuser=True
-                    ))
-                    db.commit()
-                # Ensure baseline RBAC users exist
-                defaults = [
-                    {
-                        "full_name": "Asha Iyer",
-                        "email": "owner@stocksteward.ai",
-                        "password": "owner123",
-                        "role": "BUSINESS_OWNER",
-                        "risk_tolerance": "MODERATE",
-                        "trading_mode": "AUTO"
-                    },
-                    {
-                        "full_name": "Rahul Mehta",
-                        "email": "trader@stocksteward.ai",
-                        "password": "trader123",
-                        "role": "TRADER",
-                        "risk_tolerance": "MODERATE",
-                        "trading_mode": "MANUAL"
-                    },
-                    {
-                        "full_name": "Kavya Nair",
-                        "email": "auditor@stocksteward.ai",
-                        "password": "audit123",
-                        "role": "AUDITOR",
-                        "risk_tolerance": "LOW",
-                        "trading_mode": "MANUAL"
-                    }
-                ]
-                for u in defaults:
-                    if not db.query(User).filter(User.email == u["email"]).first():
-                        db.add(User(
-                            full_name=u["full_name"],
-                            email=u["email"],
-                            hashed_password=get_password_hash(u["password"]),
-                            risk_tolerance=u["risk_tolerance"],
-                            is_active=True,
-                            role=u["role"],
-                            trading_mode=u["trading_mode"],
-                            is_superuser=True if u["role"] == "SUPERADMIN" else False
-                        ))
-                db.commit()
-            finally:
-                db.close()
-        except Exception as e:
-            print(f"Default admin seed failed: {e}")
-        asyncio.create_task(market_feed())
-        asyncio.create_task(admin_feed())
-
-app.include_router(api_router, prefix=settings.API_V1_STR)
-
-@app.get("/")
-async def root():
-    return {
-        "message": "StockSteward AI Backend is fully operational",
-        "mode": settings.EXECUTION_MODE,
-        "risk_policy": "STRICT"
-    }
-
-@app.on_event("startup")
 async def startup_event():
     """
     Application startup event - initialize all services
@@ -554,7 +380,36 @@ async def startup_event():
         logging.error(f"Application startup failed: {e}")
         raise
 
+    # Start background tasks
+    if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
+        # Start market feed background task
+        asyncio.create_task(market_feed())
+        # Start admin telemetry background task
+        asyncio.create_task(admin_feed())
+
+@app.get("/")
+async def root():
+    return {
+        "message": "StockSteward AI Backend is fully operational",
+        "mode": settings.EXECUTION_MODE,
+        "risk_policy": "STRICT"
+    }
+
+# Include API routes
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "build": "cors-fix-2699d6f"}
+
+@app.get("/api/v1/market/movers")
+async def get_market_movers():
+    """REST endpoint to get market movers (for compatibility with existing frontend code)"""
+    global last_market_movers
+    return last_market_movers
+
+@app.get("/api/v1/ai/steward-prediction")
+async def get_steward_prediction():
+    """REST endpoint to get steward prediction (for compatibility with existing frontend code)"""
+    global last_steward_prediction
+    return last_steward_prediction
