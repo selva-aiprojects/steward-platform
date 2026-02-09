@@ -38,8 +38,8 @@ def sanitize_database_url():
         cleaned_url = cleaned_url.strip("'\"")
         
         # If the URL was changed, update the environment variable
-        if cleaned_url != original_url:
-            print(f"INFO: Sanitized DATABASE_URL from: '{original_url}' to: '{cleaned_url}'", file=sys.stderr)
+        if cleaned_url != db_url:
+            print(f"INFO: Sanitized DATABASE_URL from: '{db_url}' to: '{cleaned_url}'", file=sys.stderr)
             os.environ['DATABASE_URL'] = cleaned_url
         else:
             print(f"INFO: DATABASE_URL format is valid: '{cleaned_url}'", file=sys.stderr)

@@ -59,15 +59,8 @@ export function MarketTicker() {
     const isUp = change >= 0;
 
     return (
-      <div className="flex items-center gap-4 bg-slate-800/60 backdrop-blur px-4 py-2 rounded-xl border border-slate-700/60 min-w-[200px] shadow-lg">
+      <div className="flex items-center gap-4 bg-slate-800/60 backdrop-blur px-4 py-2 rounded-xl border border-slate-700/60 min-w-[180px] shadow-lg">
         <div className="flex flex-col">
-          <span
-            className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${exchangeClass(
-              item.exchange
-            )}`}
-          >
-            {item.exchange}
-          </span>
           <span className="text-sm font-bold text-white">{item.symbol}</span>
         </div>
 
@@ -89,10 +82,30 @@ export function MarketTicker() {
 
   const Row = ({ label, items }: { label: string; items: any[] }) => {
     if (!items || items.length === 0) return null;
+    
+    const getExchangeClass = (exchange: string) => {
+      switch (exchange.toUpperCase()) {
+        case "NSE":
+          return "bg-emerald-900/60 text-emerald-300 border-emerald-500/60";
+        case "BSE":
+          return "bg-sky-900/60 text-sky-300 border-sky-500/60";
+        case "MCX":
+          return "bg-amber-900/60 text-amber-300 border-amber-500/60";
+        case "METALS":
+          return "bg-purple-900/60 text-purple-300 border-purple-500/60";
+        default:
+          return "bg-slate-900/60 text-slate-300 border-slate-500/60";
+      }
+    };
+    
+    const exchangeClass = getExchangeClass(label);
+    
     return (
       <div className="pl-36 pr-6 py-2">
         <div className="flex flex-nowrap gap-6 animate-ticker whitespace-nowrap">
-          <span className="text-[10px] font-bold text-white tracking-widest">{label}</span>
+          <div className={`flex items-center px-3 py-1.5 rounded-lg border ${exchangeClass} backdrop-blur-sm`}>
+            <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
+          </div>
           {items.map((stock, i) => (
             <TickerItem key={label + stock.symbol + i} item={stock} />
           ))}
