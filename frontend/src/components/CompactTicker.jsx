@@ -1,30 +1,30 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-10" }) => {
+const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-6" }) => {
   if (!stocks || stocks.length === 0) {
     return (
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5 overflow-hidden">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-1 overflow-hidden">
+        <div className="flex items-center gap-1 mb-0.5">
+          <span className="text-[7px] font-black text-slate-500 uppercase tracking-tight px-1 py-0.5 bg-slate-100 rounded-sm">
             {title}
           </span>
-          <div className="h-1 w-1 rounded-full bg-slate-400" />
+          <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
         </div>
         <div className={`${height} flex items-center justify-center`}>
-          <span className="text-[9px] text-slate-400">No live tickers</span>
+          <span className="text-[7px] text-slate-400">No live tickers</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5 overflow-hidden">
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded">
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-1 overflow-hidden">
+      <div className="flex items-center gap-1 mb-0.5">
+        <span className="text-[7px] font-black text-slate-500 uppercase tracking-tight px-1 py-0.5 bg-slate-100 rounded-sm">
           {title}
         </span>
-        <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="h-0.5 w-0.5 rounded-full bg-emerald-500 animate-pulse" />
       </div>
       <div className={`${height}`}>
         <div className="h-full ticker-container">
@@ -36,22 +36,22 @@ const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-10
                 const price = Number(stock.price || 0);
 
                 return (
-                  <div key={`${stock.symbol}-${index}`} className="mx-2 flex items-center gap-1.5 border-r border-slate-200 pr-2 last:border-r-0">
+                  <div key={`${stock.symbol}-${index}`} className="mx-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5 last:border-r-0">
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[9px] font-black text-slate-600">{stock.symbol}</span>
-                      <span className="text-[7px] text-slate-400">{stock.exchange}</span>
+                      <span className="text-[7px] font-black text-slate-600">{stock.symbol}</span>
+                      <span className="text-[6px] text-slate-400">{stock.exchange}</span>
                     </div>
                     <div className="flex items-center gap-0.5">
                       {isUp ? (
-                        <TrendingUp size={9} className="text-emerald-500 flex-shrink-0" />
+                        <TrendingUp size={7} className="text-emerald-500 flex-shrink-0" />
                       ) : (
-                        <TrendingDown size={9} className="text-red-500 flex-shrink-0" />
+                        <TrendingDown size={7} className="text-red-500 flex-shrink-0" />
                       )}
-                      <span className={`text-[8px] font-black ${isUp ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <span className={`text-[7px] font-black ${isUp ? 'text-emerald-600' : 'text-red-600'}`}>
                         {isUp ? '+' : ''}{Number.isFinite(change) ? change.toFixed(2) : '0.00'}%
                       </span>
                     </div>
-                    <span className="text-[8px] font-bold text-slate-800">
+                    <span className="text-[7px] font-bold text-slate-800">
                       {Number.isFinite(price) && price !== 0
                         ? `₹${price.toLocaleString('en-IN', { maximumFractionDigits: 1 })}`
                         : 'N/A'}
@@ -70,7 +70,7 @@ const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-10
           100% { transform: translateX(-50%); }
         }
         .animate-compact-scroll {
-          animation: compact-scroll 45s linear infinite;
+          animation: compact-scroll 40s linear infinite;
         }
       `}</style>
     </div>

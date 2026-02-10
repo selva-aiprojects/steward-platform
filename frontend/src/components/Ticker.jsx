@@ -57,33 +57,36 @@ export function Ticker() {
     if (tickers.length === 0) return null;
 
     return (
-        <div className="w-full bg-slate-900 border-b border-slate-800 overflow-hidden h-8 flex items-center relative z-20">
-            <div className="flex items-center gap-2 px-3 bg-slate-900 z-10 h-full border-r border-slate-800">
-                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[9px] font-black text-white uppercase tracking-wider whitespace-nowrap">LIVE</span>
+        <div className="w-full bg-slate-900 overflow-hidden h-6 flex items-center text-[7px]">
+            <div className="flex items-center gap-1.5 px-2 bg-slate-800 h-full min-w-[50px]">
+                <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
+                <span className="font-black text-white uppercase tracking-tight">LIVE</span>
             </div>
 
             {/* Ticker Animation Container */}
-            <div className="flex flex-1 overflow-hidden">
-                <div className="flex animate-ticker-marquee whitespace-nowrap flex-1">
-                    {tickers.map((item, index) => (
-                        <TickerItem key={`${item.symbol}-${index}`} item={item} />
-                    ))}
-                    {/* Duplicate items for seamless loop */}
-                    {tickers.map((item, index) => (
-                        <TickerItem key={`duplicate-${item.symbol}-${index}`} item={item} />
-                    ))}
+            <div className="flex-1 overflow-hidden h-full">
+                <div className="flex items-center h-full">
+                    <div className="flex animate-ticker-marquee whitespace-nowrap h-full items-center">
+                        {tickers.map((item, index) => (
+                            <TickerItem key={`${item.symbol}-${index}`} item={item} />
+                        ))}
+                        {/* Duplicate items for seamless loop */}
+                        {tickers.map((item, index) => (
+                            <TickerItem key={`duplicate-${item.symbol}-${index}`} item={item} />
+                        ))}
+                    </div>
                 </div>
             </div>
 
             <style jsx>{`
                 @keyframes ticker-marquee {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
+                    0% { transform: translateX(100%); }
+                    100% { transform: translateX(-100%); }
                 }
                 .animate-ticker-marquee {
-                    animation: ticker-marquee 60s linear infinite;
+                    animation: ticker-marquee 45s linear infinite;
                     display: inline-block;
+                    height: 100%;
                 }
             `}</style>
         </div>
@@ -100,21 +103,19 @@ function TickerItem({ item }) {
         ? item.price.toLocaleString()
         : item.price;
     return (
-        <div className="flex items-center gap-1.5 mx-4 px-2 py-1 border border-slate-700 rounded-md bg-slate-800/50">
-            <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-bold text-slate-200">{item.symbol}</span>
-                    {item.exchange && (
-                        <span className="text-[7px] font-black text-slate-400 uppercase">{item.exchange}</span>
-                    )}
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="text-[8px] font-bold text-slate-300">₹{priceLabel || '--'}</span>
-                </div>
+        <div className="h-full flex items-center mx-3 px-1.5 py-0.5 border border-slate-700/50 rounded-sm bg-slate-800/30">
+            <div className="flex items-center gap-0.5 mr-1.5">
+                <span className="font-bold text-slate-200">{item.symbol}</span>
+                {item.exchange && (
+                    <span className="text-[6px] text-slate-400 uppercase">{item.exchange}</span>
+                )}
             </div>
-            <div className={`flex items-center gap-0.5 min-w-[40px] justify-center px-1 rounded ${isUp ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                <span className="text-[8px] font-black">{changeLabel}</span>
+            <div className="flex items-center gap-0.5">
+                <span className="font-bold text-slate-300">₹{priceLabel || '--'}</span>
+                <div className={`flex items-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {isUp ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
+                    <span className="font-black">{changeLabel}</span>
+                </div>
             </div>
         </div>
     );
