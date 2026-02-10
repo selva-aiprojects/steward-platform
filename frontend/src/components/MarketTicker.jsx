@@ -21,16 +21,54 @@ export function MarketTicker() {
             (s) => s && s.symbol && s.exchange && Number.isFinite(Number(s.price))
         );
 
-        // Separate items by exchange - handle different exchange naming conventions
-        const nseFiltered = all.filter(item => {
+        // Separate items by exchange with fallback logic
+        const nseFiltered = [];
+        const bseFiltered = [];
+        const otherItems = []; // For items without clear exchange designation
+
+        all.forEach(item => {
             const exchange = item.exchange ? item.exchange.toUpperCase() : '';
-            return exchange.includes('NSE') || exchange.includes('XNSE') || exchange === 'NATIONAL STOCK EXCHANGE OF INDIA';
+            if (exchange.includes('NSE') || exchange.includes('XNSE') || exchange === 'NATIONAL STOCK EXCHANGE OF INDIA') {
+                nseFiltered.push(item);
+            } else if (exchange.includes('BSE') || exchange.includes('XBOM') || exchange === 'BOMBAY STOCK EXCHANGE') {
+                bseFiltered.push(item);
+            } else {
+                // If exchange is not clearly identified, distribute evenly or use as fallback
+                otherItems.push(item);
+            }
         });
 
-        const bseFiltered = all.filter(item => {
-            const exchange = item.exchange ? item.exchange.toUpperCase() : '';
-            return exchange.includes('BSE') || exchange.includes('XBOM') || exchange === 'BOMBAY STOCK EXCHANGE';
-        });
+        // If we don't have enough items for each exchange, use otherItems as fallback
+        if (nseFiltered.length < 5 && otherItems.length > 0) {
+            const needed = 5 - nseFiltered.length;
+            const additionalNse = otherItems.splice(0, needed);
+            nseFiltered.push(...additionalNse);
+        }
+
+        if (bseFiltered.length < 5 && otherItems.length > 0) {
+            const needed = 5 - bseFiltered.length;
+            const additionalBse = otherItems.splice(0, needed);
+            bseFiltered.push(...additionalBse);
+        }
+
+        // If still not enough items, duplicate existing ones to ensure continuous scrolling
+        if (nseFiltered.length > 0 && nseFiltered.length < 10) {
+            const duplicatesNeeded = 10 - nseFiltered.length;
+            const duplicates = [];
+            for (let i = 0; i < duplicatesNeeded; i++) {
+                duplicates.push({...nseFiltered[i % nseFiltered.length], id: `dup-nse-${i}`});
+            }
+            nseFiltered.push(...duplicates);
+        }
+
+        if (bseFiltered.length > 0 && bseFiltered.length < 10) {
+            const duplicatesNeeded = 10 - bseFiltered.length;
+            const duplicates = [];
+            for (let i = 0; i < duplicatesNeeded; i++) {
+                duplicates.push({...bseFiltered[i % bseFiltered.length], id: `dup-bse-${i}`});
+            }
+            bseFiltered.push(...duplicates);
+        }
 
         setNseItems(nseFiltered);
         setBseItems(bseFiltered);
