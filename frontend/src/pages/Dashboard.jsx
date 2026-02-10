@@ -71,7 +71,7 @@ export function Dashboard() {
         }
     };
 
-    const stewardPrediction = stewardPredictionState || {
+    const currentStewardPrediction = stewardPrediction || {
         prediction: '',
         decision: '',
         confidence: 0,
@@ -80,7 +80,7 @@ export function Dashboard() {
     };
 
     // Live movers
-    const mm = marketMoversState || { gainers: [], losers: [] };
+    const mm = marketMovers || { gainers: [], losers: [] };
     const gainers = Array.isArray(mm.gainers) ? mm.gainers : [];
     const losers = Array.isArray(mm.losers) ? mm.losers : [];
 
@@ -297,7 +297,7 @@ export function Dashboard() {
                     </span>
                                     </div>
                                     <h2 className="text-white text-xl font-black tracking-tight leading-tight max-w-2xl">
-                                        {stewardPrediction?.prediction || 'Waiting for live model signal...'}
+                                        {currentStewardPrediction?.prediction || 'Waiting for live model signal...'}
                                     </h2>
                                 </div>
                             </div>
@@ -322,14 +322,14 @@ export function Dashboard() {
                                 </p>
                                 <div
                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                                        stewardPrediction?.decision?.includes('BUY')
+                                        currentStewardPrediction?.decision?.includes('BUY')
                                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                            : stewardPrediction?.decision?.includes('SELL')
+                                            : currentStewardPrediction?.decision?.includes('SELL')
                                                 ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                                                 : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
                                     }`}
                                 >
-                                    {stewardPrediction?.decision || 'HOLD'}
+                                    {currentStewardPrediction?.decision || 'HOLD'}
                                 </div>
                                 <span className="text-[10px] font-bold text-slate-500">MEDIUM TERM</span>
                             </div>
@@ -340,12 +340,12 @@ export function Dashboard() {
                                 </p>
                                 <div className="flex items-center gap-3">
                   <span className="text-xl font-black text-white">
-                    {stewardPrediction?.confidence || 0}%
+                    {currentStewardPrediction?.confidence || 0}%
                   </span>
                                     <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-primary transition-all duration-1000"
-                                            style={{ width: `${stewardPrediction?.confidence || 0}%` }}
+                                            style={{ width: `${currentStewardPrediction?.confidence || 0}%` }}
                                         />
                                     </div>
                                 </div>
@@ -359,19 +359,19 @@ export function Dashboard() {
                                     <div className="flex items-center gap-1.5">
                                         <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                                         <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      TECH: {stewardPrediction?.signal_mix?.technical || 0}
+                      TECH: {currentStewardPrediction?.signal_mix?.technical || 0}
                     </span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
                                         <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      FUND: {stewardPrediction?.signal_mix?.fundamental || 0}
+                      FUND: {currentStewardPrediction?.signal_mix?.fundamental || 0}
                     </span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
                                         <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      NEWS: {stewardPrediction?.signal_mix?.news || 0}
+                      NEWS: {currentStewardPrediction?.signal_mix?.news || 0}
                     </span>
                                     </div>
                                 </div>
@@ -402,13 +402,13 @@ export function Dashboard() {
                                                 strokeWidth="3"
                                                 strokeDasharray={113}
                                                 strokeDashoffset={
-                                                    113 - (113 * (stewardPrediction?.risk_radar || 0)) / 100
+                                                    113 - (113 * (currentStewardPrediction?.risk_radar || 0)) / 100
                                                 }
                                                 className="text-red-500 transition-all duration-1000"
                                             />
                                         </svg>
                                         <span className="absolute text-[8px] font-black text-white">
-                      {stewardPrediction?.risk_radar || 0}
+                      {currentStewardPrediction?.risk_radar || 0}
                     </span>
                                     </div>
                                     <div>

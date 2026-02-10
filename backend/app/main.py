@@ -126,40 +126,51 @@ async def disconnect(sid):
 async def market_feed():
     """
     Background worker that broadcasts market updates.
-    Switches between Live Zerodha Data and Mock Data based on EXECUTION_MODE.
+    Switches between Live yfinance Data and Mock Data based on EXECUTION_MODE.
     """
     global last_market_movers, last_steward_prediction
-    from app.services.kite_service import kite_service
+    from app.services.data_integration import data_integration_service
     from app.core.config import settings
     import os
     import random
-    
-    # Multi-exchange Watchlist (NSE, BSE, MCX)
+    import yfinance as yf
+
+    # Multi-exchange Watchlist (NSE, BSE, MCX) - converted to yfinance format
     watchlist = [
-        # NSE (Nifty 50 highlights)
-        'NSE:RELIANCE', 'NSE:TCS', 'NSE:HDFCBANK', 'NSE:INFY', 'NSE:ICICIBANK',
-        'NSE:SBIN', 'NSE:ITC', 'NSE:LT', 'NSE:AXISBANK', 'NSE:KOTAKBANK',
-        'NSE:BAJFINANCE', 'NSE:BAJAJFINSV', 'NSE:MARUTI', 'NSE:TATAMOTORS',
-        'NSE:BHARTIARTL', 'NSE:ADANIENT', 'NSE:ADANIPORTS', 'NSE:ASIANPAINT',
-        'NSE:ULTRACEMCO', 'NSE:WIPRO', 'NSE:TECHM', 'NSE:HCLTECH', 'NSE:ONGC',
-        'NSE:POWERGRID', 'NSE:NTPC', 'NSE:COALINDIA', 'NSE:SUNPHARMA',
-        'NSE:DRREDDY', 'NSE:CIPLA', 'NSE:HINDUNILVR',
-        # BSE
-        'BSE:SENSEX', 'BSE:BOM500002', 'BSE:BOM500010', 'BSE:BOM500325', 'BSE:BOM532540',
-        # Commodities (MCX)
-        'MCX:GOLD', 'MCX:SILVER', 'MCX:CRUDEOIL', 'MCX:NATURALGAS', 'MCX:COPPER', 'MCX:ALUMINIUM', 'MCX:ZINC', 'MCX:NICKEL',
-        # Currency (NSE Currency Derivatives)
-        'NSE:USDINR', 'NSE:EURINR', 'NSE:GBPINR', 'NSE:JPYINR'
+        # NSE (Nifty 50 highlights) - converted to yfinance format (SYMBOL.NS)
+        'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
+        'SBIN.NS', 'ITC.NS', 'LT.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
+        'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'MARUTI.NS', 'TATAMOTORS.NS',
+        'BHARTIARTL.NS', 'ADANIENT.NS', 'ADANIPORTS.NS', 'ASIANPAINT.NS',
+        'ULTRACEMCO.NS', 'WIPRO.NS', 'TECHM.NS', 'HCLTECH.NS', 'ONGC.NS',
+        'POWERGRID.NS', 'NTPC.NS', 'COALINDIA.NS', 'SUNPHARMA.NS',
+        'DRREDDY.NS', 'CIPLA.NS', 'HINDUNILVR.NS',
+        # BSE (using .BO for Bombay Stock Exchange)
+        '^BSESN',  # SENSEX index
+        # Commodities (using appropriate yfinance symbols)
+        'GC=F',  # Gold futures
+        'SI=F',  # Silver futures
+        'CL=F',  # Crude Oil
+        'NG=F',  # Natural Gas
+        'HG=F',  # Copper
+        'ALI=F', # Aluminum
+        'ZNC=F', # Zinc
+        'HG=F',  # Nickel (using copper as placeholder since nickel futures may not be available)
+        # Currency pairs
+        'INR=X',  # USD/INR
+        'EURINR=X',  # EUR/INR
+        'GBPINR=X',  # GBP/INR
+        'JPYINR=X'   # JPY/INR
     ]
-    
+
     # Store history in memory (simple deque-like structure)
     prediction_history = []
-    
+
     while True:
         # 30-60 second cycle for comprehensive analysis to avoid rate limits
         # Using 8s for demo responsiveness
         await asyncio.sleep(8 if settings.EXECUTION_MODE == "LIVE_TRADING" else 3)
-        
+
         try:
             # Setup Groq once per cycle (if key exists)
             groq_key = os.getenv("GROQ_API_KEY")
@@ -176,19 +187,68 @@ async def market_feed():
                     groq_client = None  # Define the variable even if initialization fails
 
             if settings.EXECUTION_MODE == "LIVE_TRADING":
-                # 1. Attempt real fetch
-                raw_quotes = kite_service.get_quotes(watchlist)
+                # 1. Attempt real fetch using yfinance
+                try:
+                    # Get live data for all symbols in the watchlist
+                    tickers_data = yf.Tickers(' '.join(watchlist))
+
+                    # Fetch data for all tickers at once
+                    raw_quotes = {}
+                    for ticker_symbol in watchlist:
+                        try:
+                            ticker = yf.Ticker(ticker_symbol)
+                            hist = ticker.history(period="1d", interval="1m")
+
+                            if not hist.empty:
+                                current_price = hist['Close'].iloc[-1]
+                                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+                                change_pct = ((current_price - prev_close) / prev_close) * 100
+
+                                # Determine exchange from ticker symbol
+                                if '.NS' in ticker_symbol:
+                                    exchange = 'NSE'
+                                elif '.BO' in ticker_symbol:
+                                    exchange = 'BSE'
+                                elif ticker_symbol.startswith('^'):
+                                    exchange = 'BSE'  # Index
+                                elif ticker_symbol.endswith('=F'):
+                                    exchange = 'MCX'  # Commodities
+                                elif ticker_symbol.endswith('=X'):
+                                    exchange = 'FOREX'  # Forex
+                                else:
+                                    exchange = 'OTHER'
+
+                                # Extract clean symbol name
+                                clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
+
+                                raw_quotes[ticker_symbol] = {
+                                    'last_price': current_price,
+                                    'change': change_pct,
+                                    'exchange': exchange,
+                                    'symbol': clean_symbol
+                                }
+                        except Exception as e:
+                            print(f"Error fetching data for {ticker_symbol}: {e}")
+                            continue
+                except Exception as e:
+                    print(f"yfinance bulk fetch error: {e}")
+                    raw_quotes = {}
 
                 # 2. Smart Simulator fallback
-                if not raw_quotes or not isinstance(raw_quotes, dict) or len(raw_quotes) == 0:
-                    print("Kite API failed, using smart simulator fallback")
+                if not raw_quotes or len(raw_quotes) == 0:
+                    print("yfinance API failed, using smart simulator fallback")
                     raw_quotes = {s: {
-                        'last_price': round((72000 if 'SENSEX' in s else 50000 if 'MCX' in s else 1500) + random.uniform(-100, 100), 2),
+                        'last_price': round((72000 if 'BSESN' in s else 50000 if '=F' in s else 1500) + random.uniform(-100, 100), 2),
                         'change': round(random.uniform(-3, 3), 2),
-                        'exchange': s.split(":")[0]
+                        'exchange': 'NSE' if '.NS' in s else 'BSE' if '.BO' in s else 'MCX' if '=F' in s else 'FOREX' if '=X' in s else 'OTHER'
                     } for s in watchlist}
 
-                quotes = {s.split(":")[-1]: q for s, q in raw_quotes.items() if q.get('last_price')}
+                # Process quotes for gainers/losers
+                quotes = {}
+                for ticker_symbol, data in raw_quotes.items():
+                    # Extract clean symbol name
+                    clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
+                    quotes[clean_symbol] = data
 
                 # 2. Identify Gainers and Losers
                 # Filter out any that might have missing change data
@@ -197,11 +257,7 @@ async def market_feed():
                     # Calculate changes for each quote if not directly available
                     quotes_with_changes = {}
                     for s, q in valid_quotes.items():
-                        change_pct = q.get('net_change_percent', 0)
-                        if change_pct == 0 and 'ohlc' in q and 'open' in q['ohlc']:
-                            change_pct = ((q['last_price'] - q['ohlc']['open']) / q['ohlc']['open']) * 100
-                        elif change_pct == 0 and 'change' in q:
-                            change_pct = q['change']
+                        change_pct = q.get('change', 0)
 
                         quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
 
@@ -211,8 +267,27 @@ async def market_feed():
                     top_losers = sorted_movers[-10:] # Bottom 10
 
                     # Format movers for frontend
-                    gainers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q['calculated_change'], 2)} for s, q in top_gainers]
-                    losers_data = [{'symbol': s.split(":")[-1], 'exchange': s.split(":")[0], 'price': q.get('last_price', 0), 'change': round(q['calculated_change'], 2)} for s, q in top_losers]
+                    gainers_data = []
+                    for s, q in top_gainers:
+                        # Determine exchange from original ticker symbol
+                        exchange = q.get('exchange', 'NSE')
+                        gainers_data.append({
+                            'symbol': s,
+                            'exchange': exchange,
+                            'price': q.get('last_price', 0),
+                            'change': round(q['calculated_change'], 2)
+                        })
+
+                    losers_data = []
+                    for s, q in top_losers:
+                        # Determine exchange from original ticker symbol
+                        exchange = q.get('exchange', 'NSE')
+                        losers_data.append({
+                            'symbol': s,
+                            'exchange': exchange,
+                            'price': q.get('last_price', 0),
+                            'change': round(q['calculated_change'], 2)
+                        })
 
                     # Update global state
                     last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
@@ -221,19 +296,29 @@ async def market_feed():
                     await sio.emit('market_movers', last_market_movers, room='market_data')
 
                     # 3. Ticker Broadcast (Multi-exchange)
-                    for s in watchlist:
-                        symbol = s.split(":")[-1]
-                        exchange = s.split(":")[0]
-                        quote = raw_quotes.get(s)
+                    for ticker_symbol in watchlist:
+                        # Extract clean symbol name
+                        clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
+
+                        quote = raw_quotes.get(ticker_symbol)
                         if not quote: continue
 
-                        # Handle cases where quote data might be an error object
-                        if quote.get('error'):
-                            print(f"Quote error for {s}: {quote.get('error')}")
-                            continue
+                        # Determine exchange from ticker symbol
+                        if '.NS' in ticker_symbol:
+                            exchange = 'NSE'
+                        elif '.BO' in ticker_symbol:
+                            exchange = 'BSE'
+                        elif ticker_symbol.startswith('^'):
+                            exchange = 'BSE'  # Index
+                        elif ticker_symbol.endswith('=F'):
+                            exchange = 'MCX'  # Commodities
+                        elif ticker_symbol.endswith('=X'):
+                            exchange = 'FOREX'  # Forex
+                        else:
+                            exchange = 'OTHER'
 
                         update = {
-                            'symbol': symbol,
+                            'symbol': clean_symbol,
                             'exchange': exchange,
                             'price': quote.get('last_price', quote.get('price', 0)),
                             'change': quote.get('change', 0),
@@ -244,9 +329,9 @@ async def market_feed():
                     # 4. Global "Steward Prediction" (Dynamic real-time trend)
                     if groq_client:
                         try:
-                            market_summary = ", ".join([f"{s.split(':')[-1]}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
+                            market_summary = ", ".join([f"{s}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
                             prompt = f"""
-                            Analyze the current Nifty 50 trend based on these changes: {market_summary}.
+                            Analyze the current market trend based on these changes: {market_summary}.
                             Provide a senior wealth steward analysis in JSON format:
                             {{
                                 "prediction": "one punchy, expert sentence summary",

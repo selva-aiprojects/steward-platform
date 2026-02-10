@@ -33,7 +33,7 @@ const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-12
               {stocks.map((stock, index) => {
                 const change = Number(stock.change || 0);
                 const isUp = change >= 0;
-                const price = Number(stock.price);
+                const price = Number(stock.price || 0);
 
                 return (
                   <div key={`${stock.symbol}-${index}`} className="mx-3 flex items-center gap-3 border-r border-slate-200 pr-3 last:border-r-0">
@@ -63,6 +63,16 @@ const CompactTicker = ({ stocks = [], title = "LIVE MARKET DATA", height = "h-12
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+          animation: scroll 30s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
