@@ -87,7 +87,7 @@ export function Dashboard() {
     const losers = Array.isArray(mm.losers) ? mm.losers : [];
 
     // Tickers: take more stocks for the compact ticker display
-    const groupedStocks = [...gainers, ...losers].slice(0, 10);
+    const groupedStocks = [...gainers, ...losers].slice(0, 15);
 
     // Currencies: from live movers only (symbols ending with INR)
     const currencyItems = (() => {

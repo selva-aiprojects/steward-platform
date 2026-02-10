@@ -19,8 +19,8 @@ export function MarketTicker() {
     // Sort items alphabetically by symbol
     const sortedItems = [...all].sort((a, b) => a.symbol.localeCompare(b.symbol));
 
-    // For the header ticker, show only a few items to keep it compact
-    return sortedItems.slice(0, 5); // Limit to 5 items for header
+    // Show up to 15 items for a good scrolling effect
+    return sortedItems.slice(0, 15); // Increased from 5 to 15 for better scrolling
   }, [marketMovers]);
 
   const formatPrice = (price: any) => {
