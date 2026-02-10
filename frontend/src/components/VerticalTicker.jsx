@@ -44,24 +44,26 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
 
   const ItemDisplay = ({ item, isNext = false }) => {
     if (!item) return null;
-    
-    const change = Number(item.change_pct ?? item.change ?? 0);
+
+    // Handle different data structures for currencies/commodities vs stocks
+    const change = Number(item.change_pct ?? item.change ?? item.percent_change ?? 0);
+    const price = item.price ?? item.last_price ?? item.current_price ?? 0;
+    const symbol = item.symbol ?? item.ticker ?? 'N/A';
+    const exchange = item.exchange ?? 'FX'; // Default to FX for currencies
     const isUp = change >= 0;
 
     return (
       <div className={`flex items-center justify-between p-3 rounded-lg border ${isNext ? 'bg-slate-50 border-slate-100' : 'bg-slate-100 border-slate-200'} transition-all duration-500`}>
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="flex flex-col min-w-0">
-            <span className="font-black text-slate-900 text-[10px] truncate">{item.symbol}</span>
-            {item.exchange && (
-              <span className="text-[8px] text-slate-500 uppercase">{item.exchange}</span>
-            )}
+            <span className="font-black text-slate-900 text-[10px] truncate">{symbol}</span>
+            <span className="text-[8px] text-slate-500 uppercase">{exchange}</span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 min-w-fit">
           <span className="font-bold text-slate-800 text-[10px]">
-            {type === 'currencies' ? '₹' : ''}{formatPrice(item.price)}
+            {type === 'currencies' ? '₹' : ''}{formatPrice(price)}
           </span>
           <div className={`flex items-center gap-1 ${isUp ? 'text-emerald-500' : 'text-red-500'}`}>
             {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
