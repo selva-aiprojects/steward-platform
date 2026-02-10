@@ -366,6 +366,36 @@ export const fetchMarketMovers = async () => {
     }
 };
 
+export const fetchCurrencyMovers = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/currencies`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return { currencies: [] };
+    }
+};
+
+export const fetchMetalsMovers = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/metals`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return { metals: [] };
+    }
+};
+
+export const fetchCommodityMovers = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/commodities`);
+        if (!response.ok) throw new Error();
+        return await response.json();
+    } catch (error) {
+        return { commodities: [] };
+    }
+};
+
 export const withdrawFunds = async (userId, amount) => {
     try {
         const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/withdraw`, {

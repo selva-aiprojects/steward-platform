@@ -103,7 +103,7 @@
 
 .animate-ticker-marquee {
   animation-name: ticker-marquee;
-  animation-duration: 15s; /* adjust for speed */
+  animation-duration: 5s; /* adjust for speed */
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   display: inline-flex;

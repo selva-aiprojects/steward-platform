@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators, fetchStrategies } from '../services/api';
+import { socket, fetchUsers, fetchUser, fetchPortfolioSummary, fetchHoldings, fetchWatchlist, fetchTrades, fetchProjections, fetchMarketMovers, fetchExchangeStatus, updateUser, fetchMarketResearch, fetchSectorHeatmap, fetchMarketNews, fetchOptionsSnapshot, fetchOrderBookDepth, fetchMacroIndicators, fetchStrategies, fetchCurrencyMovers, fetchMetalsMovers, fetchCommodityMovers } from '../services/api';
 import { useUser } from './UserContext';
 
 const AppDataContext = createContext();
@@ -16,7 +16,13 @@ export const AppDataProvider = ({ children }) => {
     const [trades, setTrades] = useState([]);
     const [projections, setProjections] = useState([]);
     const [strategies, setStrategies] = useState([]);
-    const [marketMovers, setMarketMovers] = useState([]);
+    const [marketMovers, setMarketMovers] = useState({
+        gainers: [],
+        losers: [],
+        currencies: [],
+        metals: [],
+        commodities: []
+    });
     const [marketResearch, setMarketResearch] = useState(null);
     const [sectorHeatmap, setSectorHeatmap] = useState([]);
     const [marketNews, setMarketNews] = useState([]);
@@ -44,7 +50,7 @@ export const AppDataProvider = ({ children }) => {
             setLoading(true);
         }
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData] = await Promise.all([
+            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData, currencyData, metalsData, commodityData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
@@ -59,7 +65,10 @@ export const AppDataProvider = ({ children }) => {
                 fetchMarketNews(),
                 fetchOptionsSnapshot(),
                 fetchOrderBookDepth(),
-                fetchMacroIndicators()
+                fetchMacroIndicators(),
+                fetchCurrencyMovers(),
+                fetchMetalsMovers(),
+                fetchCommodityMovers()
             ]);
 
             const safeSummary = sumData && typeof sumData === 'object'
@@ -103,21 +112,42 @@ export const AppDataProvider = ({ children }) => {
                 }
             }
 
+            // Prepare the marketMovers object with all data
+            const updatedMarketMovers = {
+                gainers: [],
+                losers: [],
+                currencies: [],
+                metals: [],
+                commodities: []
+            };
+
             if (moversData) {
                 if (Array.isArray(moversData)) {
                     // If it's an array, treat it as gainers
-                    setMarketMovers({ gainers: moversData, losers: [] });
+                    updatedMarketMovers.gainers = moversData;
                 } else if (moversData.gainers !== undefined || moversData.losers !== undefined) {
                     // If it has gainers/losers properties, use as-is but ensure structure
-                    setMarketMovers({
-                        gainers: Array.isArray(moversData.gainers) ? moversData.gainers : [],
-                        losers: Array.isArray(moversData.losers) ? moversData.losers : []
-                    });
-                } else {
-                    // Default case
-                    setMarketMovers({ gainers: [], losers: [] });
+                    updatedMarketMovers.gainers = Array.isArray(moversData.gainers) ? moversData.gainers : [];
+                    updatedMarketMovers.losers = Array.isArray(moversData.losers) ? moversData.losers : [];
                 }
             }
+
+            // Add currency data if available
+            if (currencyData && Array.isArray(currencyData.currencies)) {
+                updatedMarketMovers.currencies = currencyData.currencies;
+            }
+
+            // Add metals data if available
+            if (metalsData && Array.isArray(metalsData.metals)) {
+                updatedMarketMovers.metals = metalsData.metals;
+            }
+
+            // Add commodities data if available
+            if (commodityData && Array.isArray(commodityData.commodities)) {
+                updatedMarketMovers.commodities = commodityData.commodities;
+            }
+
+            setMarketMovers(updatedMarketMovers);
 
             setExchangeStatus(statusData || { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
             setMarketResearch(researchData);

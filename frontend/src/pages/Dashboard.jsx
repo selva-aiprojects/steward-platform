@@ -88,8 +88,14 @@ export function Dashboard() {
     // Tickers: take more stocks for the compact ticker display
     const groupedStocks = [...gainers, ...losers].slice(0, 15);
 
-    // Currencies: from live movers only (symbols ending with INR)
+    // Currencies: fetch from dedicated API endpoint
     const currencyItems = (() => {
+        // Use currencies from marketMovers if available, or fallback to filtering from gainers/losers
+        if (marketMovers && marketMovers.currencies) {
+            return marketMovers.currencies.slice(0, 8);
+        }
+
+        // Fallback to filtering from gainers/losers
         const all = [...gainers, ...losers];
         return all
             .filter(
@@ -102,8 +108,14 @@ export function Dashboard() {
             .slice(0, 8);
     })();
 
-    // Commodities: from live movers only (MCX exchange)
+    // Commodities: fetch from dedicated API endpoint
     const commoditiesItems = (() => {
+        // Use commodities from marketMovers if available, or fallback to filtering from gainers/losers
+        if (marketMovers && marketMovers.commodities) {
+            return marketMovers.commodities.slice(0, 8);
+        }
+
+        // Fallback to filtering from gainers/losers
         const all = [...gainers, ...losers];
         return all
             .filter(
@@ -117,8 +129,14 @@ export function Dashboard() {
             .slice(0, 8);
     })();
 
-    // Metals: from live movers (specific metal symbols like GC=F, SI=F, GOLD, SILVER, etc.)
+    // Metals: fetch from dedicated API endpoint
     const metalsItems = (() => {
+        // Use metals from marketMovers if available, or fallback to filtering from gainers/losers
+        if (marketMovers && marketMovers.metals) {
+            return marketMovers.metals.slice(0, 8);
+        }
+
+        // Fallback to filtering from gainers/losers
         const all = [...gainers, ...losers];
         return all
             .filter(
