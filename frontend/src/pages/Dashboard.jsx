@@ -90,9 +90,9 @@ export function Dashboard() {
 
     // Currencies: fetch from dedicated API endpoint
     const currencyItems = (() => {
-        // Use currencies from marketMovers if available, or fallback to filtering from gainers/losers
-        if (marketMovers && marketMovers.currencies) {
-            return marketMovers.currencies.slice(0, 8);
+        // Use currencies from marketMoversState if available, or fallback to filtering from gainers/losers
+        if (marketMoversState && marketMoversState.currencies) {
+            return marketMoversState.currencies.slice(0, 8);
         }
 
         // Fallback to filtering from gainers/losers
@@ -110,9 +110,9 @@ export function Dashboard() {
 
     // Commodities: fetch from dedicated API endpoint
     const commoditiesItems = (() => {
-        // Use commodities from marketMovers if available, or fallback to filtering from gainers/losers
-        if (marketMovers && marketMovers.commodities) {
-            return marketMovers.commodities.slice(0, 8);
+        // Use commodities from marketMoversState if available, or fallback to filtering from gainers/losers
+        if (marketMoversState && marketMoversState.commodities) {
+            return marketMoversState.commodities.slice(0, 8);
         }
 
         // Fallback to filtering from gainers/losers
@@ -131,9 +131,9 @@ export function Dashboard() {
 
     // Metals: fetch from dedicated API endpoint
     const metalsItems = (() => {
-        // Use metals from marketMovers if available, or fallback to filtering from gainers/losers
-        if (marketMovers && marketMovers.metals) {
-            return marketMovers.metals.slice(0, 8);
+        // Use metals from marketMoversState if available, or fallback to filtering from gainers/losers
+        if (marketMoversState && marketMoversState.metals) {
+            return marketMoversState.metals.slice(0, 8);
         }
 
         // Fallback to filtering from gainers/losers
