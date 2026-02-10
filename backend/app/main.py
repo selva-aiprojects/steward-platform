@@ -135,32 +135,15 @@ async def market_feed():
     import random
     import yfinance as yf
 
-    # Multi-exchange Watchlist (NSE, BSE, MCX) - converted to yfinance format
+    # Multi-exchange Watchlist (Major indices and top stocks only - excluding commodities/currencies for ticker)
     watchlist = [
-        # NSE (Nifty 50 highlights) - converted to yfinance format (SYMBOL.NS)
+        # Top NSE stocks
         'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
         'SBIN.NS', 'ITC.NS', 'LT.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
-        'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'MARUTI.NS', 'TATAMOTORS.NS',
-        'BHARTIARTL.NS', 'ADANIENT.NS', 'ADANIPORTS.NS', 'ASIANPAINT.NS',
-        'ULTRACEMCO.NS', 'WIPRO.NS', 'TECHM.NS', 'HCLTECH.NS', 'ONGC.NS',
-        'POWERGRID.NS', 'NTPC.NS', 'COALINDIA.NS', 'SUNPHARMA.NS',
-        'DRREDDY.NS', 'CIPLA.NS', 'HINDUNILVR.NS',
-        # BSE (using .BO for Bombay Stock Exchange)
+        'BAJFINANCE.NS', 'MARUTI.NS',
+        # Major indices
+        '^NSEI',  # NIFTY 50 index
         '^BSESN',  # SENSEX index
-        # Commodities (using appropriate yfinance symbols)
-        'GC=F',  # Gold futures
-        'SI=F',  # Silver futures
-        'CL=F',  # Crude Oil
-        'NG=F',  # Natural Gas
-        'HG=F',  # Copper
-        'ALI=F', # Aluminum
-        'ZNC=F', # Zinc
-        'HG=F',  # Nickel (using copper as placeholder since nickel futures may not be available)
-        # Currency pairs
-        'INR=X',  # USD/INR
-        'EURINR=X',  # EUR/INR
-        'GBPINR=X',  # GBP/INR
-        'JPYINR=X'   # JPY/INR
     ]
 
     # Store history in memory (simple deque-like structure)
@@ -197,12 +180,23 @@ async def market_feed():
                     for ticker_symbol in watchlist:
                         try:
                             ticker = yf.Ticker(ticker_symbol)
-                            hist = ticker.history(period="1d", interval="1m")
+                            hist = ticker.history(period="5d")  # Changed to 5d to ensure we have previous close data
 
                             if not hist.empty:
                                 current_price = hist['Close'].iloc[-1]
-                                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
-                                change_pct = ((current_price - prev_close) / prev_close) * 100
+                                # Use previous day's close for comparison
+                                if len(hist) > 1:
+                                    prev_close = hist['Close'].iloc[-2]
+                                elif 'previousClose' in ticker.info:
+                                    prev_close = ticker.info['previousClose']
+                                else:
+                                    # If no previous data, use current price to avoid division by zero
+                                    prev_close = current_price
+
+                                if prev_close != 0:
+                                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                                else:
+                                    change_pct = 0
 
                                 # Determine exchange from ticker symbol
                                 if '.NS' in ticker_symbol:

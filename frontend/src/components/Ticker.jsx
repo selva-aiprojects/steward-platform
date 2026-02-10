@@ -36,12 +36,8 @@ export function Ticker() {
                 { symbol: 'KOTAKBANK', exchange: 'NSE', price: 1800.00, change: -0.2, type: 'down' },
                 { symbol: 'BAJFINANCE', exchange: 'NSE', price: 7200.00, change: 1.5, type: 'up' },
                 { symbol: 'MARUTI', exchange: 'NSE', price: 8500.00, change: 0.8, type: 'up' },
-                { symbol: 'SENSEX', exchange: 'BSE', price: 72150.00, change: 0.6, type: 'up' },
                 { symbol: 'NIFTY', exchange: 'NSE', price: 22340.00, change: 0.7, type: 'up' },
-                { symbol: 'GOLD', exchange: 'MCX', price: 62450.00, change: 0.3, type: 'up' },
-                { symbol: 'SILVER', exchange: 'MCX', price: 74200.00, change: -0.1, type: 'down' },
-                { symbol: 'CRUDEOIL', exchange: 'MCX', price: 6985.00, change: -0.4, type: 'down' },
-                { symbol: 'NATURALGAS', exchange: 'MCX', price: 280.00, change: 1.2, type: 'up' }
+                { symbol: 'SENSEX', exchange: 'BSE', price: 72150.00, change: 0.6, type: 'up' }
             ]);
         }
     }, []);
