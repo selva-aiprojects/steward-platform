@@ -4,11 +4,13 @@ import { useAppData } from "../context/AppDataContext";
 
 export function MarketTicker() {
     const { marketMovers, loading } = useAppData() || {};
-    const [allItems, setAllItems] = useState([]);
+    const [nseItems, setNseItems] = useState([]);
+    const [bseItems, setBseItems] = useState([]);
 
     useEffect(() => {
         if (!marketMovers) {
-            setAllItems([]);
+            setNseItems([]);
+            setBseItems([]);
             return;
         }
 
@@ -19,11 +21,19 @@ export function MarketTicker() {
             (s) => s && s.symbol && s.exchange && Number.isFinite(Number(s.price))
         );
 
-        const sortedItems = [...all].sort((a, b) =>
-            String(a.symbol).localeCompare(String(b.symbol))
-        );
+        // Separate items by exchange - handle different exchange naming conventions
+        const nseFiltered = all.filter(item => {
+            const exchange = item.exchange ? item.exchange.toUpperCase() : '';
+            return exchange.includes('NSE') || exchange.includes('XNSE') || exchange === 'NATIONAL STOCK EXCHANGE OF INDIA';
+        });
 
-        setAllItems(sortedItems);
+        const bseFiltered = all.filter(item => {
+            const exchange = item.exchange ? item.exchange.toUpperCase() : '';
+            return exchange.includes('BSE') || exchange.includes('XBOM') || exchange === 'BOMBAY STOCK EXCHANGE';
+        });
+
+        setNseItems(nseFiltered);
+        setBseItems(bseFiltered);
     }, [marketMovers]);
 
     const formatPrice = (price) => {
@@ -32,7 +42,7 @@ export function MarketTicker() {
         return num.toLocaleString("en-IN", { maximumFractionDigits: 2 });
     };
 
-    if (loading || allItems.length === 0) return null;
+    if (loading) return null;
 
     const TickerItem = ({ item }) => {
         const change = Number(
@@ -43,19 +53,19 @@ export function MarketTicker() {
         return (
             <div className="h-full flex items-center mx-1.5 px-2 py-1 border border-slate-600/50 rounded-md bg-slate-800/70 shadow-sm min-w-fit">
                 <div className="flex items-center gap-1 mr-1">
-          <span className="font-black text-slate-100 text-[9px] tracking-tight">
-            {item.symbol}
-          </span>
+                    <span className="font-black text-slate-100 text-[9px] tracking-tight">
+                        {item.symbol}
+                    </span>
                     {item.exchange && (
                         <span className="text-[7px] text-slate-300 uppercase font-bold">
-              {item.exchange}
-            </span>
+                            {item.exchange}
+                        </span>
                     )}
                 </div>
                 <div className="flex items-center gap-0.5">
-          <span className="font-bold text-slate-200 text-[9px]">
-            ₹{formatPrice(item.price)}
-          </span>
+                    <span className="font-bold text-slate-200 text-[9px]">
+                        ₹{formatPrice(item.price)}
+                    </span>
                     <div
                         className={`flex items-center gap-0.5 ${
                             isUp ? "text-emerald-400" : "text-red-400"
@@ -63,36 +73,39 @@ export function MarketTicker() {
                     >
                         {isUp ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
                         <span className="font-black text-[7px]">
-              {isUp ? "+" : ""}
+                            {isUp ? "+" : ""}
                             {change.toFixed(2)}%
-            </span>
+                        </span>
                     </div>
                 </div>
             </div>
         );
     };
 
-    return (
-        <div className="w-full bg-slate-900 overflow-hidden flex flex-col shadow-lg">
+    // Function to render a ticker row
+    const renderTickerRow = (items, exchangeLabel) => {
+        if (items.length === 0) return null;
+
+        return (
             <div className="flex items-center h-[40px] text-[10px]">
                 <div className="flex items-center gap-2 px-3 bg-slate-800 h-full min-w-[80px]">
                     <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                     <span className="font-black text-white uppercase tracking-tight text-[9px]">
-            LIVE
-          </span>
+                        {exchangeLabel}
+                    </span>
                 </div>
 
                 <div className="flex-1 overflow-hidden h-full ticker-container">
                     <div className="flex items-center h-full">
                         <div className="flex animate-ticker-marquee whitespace-nowrap h-full items-center justify-start">
                             {/* First copy */}
-                            {allItems.map((item, index) => (
-                                <TickerItem key={`header-${item.symbol}-${index}`} item={item} />
+                            {items.map((item, index) => (
+                                <TickerItem key={`ticker-${exchangeLabel}-${item.symbol}-${index}`} item={item} />
                             ))}
                             {/* Second copy for seamless loop */}
-                            {allItems.map((item, index) => (
+                            {items.map((item, index) => (
                                 <TickerItem
-                                    key={`header-duplicate-${item.symbol}-${index}`}
+                                    key={`ticker-duplicate-${exchangeLabel}-${item.symbol}-${index}`}
                                     item={item}
                                 />
                             ))}
@@ -100,6 +113,30 @@ export function MarketTicker() {
                     </div>
                 </div>
             </div>
-        </div>
+        );
+    };
+
+    return (
+        <>
+            <div className="w-full bg-slate-900 overflow-hidden flex flex-col shadow-lg">
+                {/* NSE Row */}
+                {renderTickerRow(nseItems, "LIVE NSE")}
+
+                {/* BSE Row */}
+                {renderTickerRow(bseItems, "LIVE BSE")}
+            </div>
+            <style jsx>{`
+                @keyframes ticker-marquee {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(-100%); }
+                }
+                .animate-ticker-marquee {
+                    animation: ticker-marquee 60s linear infinite;
+                    display: inline-flex;
+                    height: 100%;
+                    width: auto;
+                }
+            `}</style>
+        </>
     );
 }
