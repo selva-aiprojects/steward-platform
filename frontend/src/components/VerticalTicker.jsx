@@ -2,17 +2,18 @@ import React, { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [displayItems, setDisplayItems] = useState([]);
 
   useEffect(() => {
-    if (items.length <= 1) return; // Don't animate if there's only one item or none
-    
-    const interval = setInterval(() => {
-      setCurrentIndex(prevIndex => (prevIndex + 1) % items.length);
-    }, 3000); // Change item every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [items.length]);
+    // If we have items, duplicate them to ensure continuous scrolling
+    if (items && items.length > 0) {
+      // Create a longer list by duplicating items to ensure smooth continuous scrolling
+      const extendedItems = [...items, ...items, ...items]; // Triple the items for smooth scrolling
+      setDisplayItems(extendedItems);
+    } else {
+      setDisplayItems([]);
+    }
+  }, [items]);
 
   if (!items || items.length === 0) {
     return (
@@ -25,24 +26,13 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
     );
   }
 
-  // Get 3 items to show: current, next, and one more ahead
-  const getItem = (offset) => {
-    if (items.length === 0) return null;
-    const index = (currentIndex + offset) % items.length;
-    return items[index];
-  };
-
-  const currentItem = getItem(0);
-  const nextItem = getItem(1);
-  const thirdItem = getItem(2);
-
   const formatPrice = (price) => {
     const num = Number(price);
     if (!Number.isFinite(num)) return "--";
     return num.toLocaleString("en-IN", { maximumFractionDigits: 2 });
   };
 
-  const ItemDisplay = ({ item, isNext = false }) => {
+  const ItemDisplay = ({ item, index }) => {
     if (!item) return null;
 
     // Handle different data structures for currencies/commodities vs stocks
@@ -53,7 +43,10 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
     const isUp = change >= 0;
 
     return (
-      <div className={`flex items-center justify-between p-3 rounded-lg border ${isNext ? 'bg-slate-50 border-slate-100' : 'bg-slate-100 border-slate-200'} transition-all duration-500`}>
+      <div
+        key={`item-${index}`}
+        className="flex items-center justify-between p-3 rounded-lg border bg-slate-100 border-slate-200 mb-2 transition-all duration-300 last:mb-0"
+      >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="flex flex-col min-w-0">
             <span className="font-black text-slate-900 text-[10px] truncate">{symbol}</span>
@@ -77,7 +70,7 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm h-64 flex flex-col">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm h-64 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-heading font-black text-slate-900 text-sm">{title}</h3>
         <div className="flex items-center gap-1.5">
@@ -87,25 +80,27 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
           </span>
         </div>
       </div>
-      
-      <div className="flex-1 flex flex-col justify-center space-y-2">
-        {currentItem && <ItemDisplay item={currentItem} isNext={false} />}
-        {nextItem && <ItemDisplay item={nextItem} isNext={true} />}
-        {thirdItem && <ItemDisplay item={thirdItem} isNext={true} />}
-      </div>
-      
-      <div className="mt-auto pt-3 flex justify-center">
-        <div className="flex gap-1">
-          {items.map((_, idx) => (
-            <div
-              key={idx}
-              className={`h-0.5 w-2.5 rounded-full transition-all ${
-                idx === currentIndex ? 'bg-primary' : 'bg-slate-200'
-              }`}
-            />
-          ))}
+
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full">
+          <div className="vertical-ticker-content animate-vertical-ticker">
+            {displayItems.map((item, index) => (
+              <ItemDisplay key={`ticker-item-${index}`} item={item} index={index} />
+            ))}
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes vertical-ticker {
+          0% { transform: translateY(100%); }
+          100% { transform: translateY(-100%); }
+        }
+        .animate-vertical-ticker {
+          animation: vertical-ticker 60s linear infinite;
+          display: inline-block;
+        }
+      `}</style>
     </div>
   );
 };
