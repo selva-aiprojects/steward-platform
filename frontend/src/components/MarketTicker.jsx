@@ -124,11 +124,20 @@ export function MarketTicker() {
     const renderTickerRow = (items, exchangeLabel) => {
         if (items.length === 0) return null;
 
-        // Calculate animation duration based on number of items for consistent speed
-        const baseDuration = 15; // Base duration in seconds
-        const itemsCount = items.length;
-        // More items = longer duration to maintain consistent speed
-        const calculatedDuration = Math.max(15, baseDuration + (itemsCount * 0.5));
+        // Ensure we have enough items for smooth continuous scrolling
+        const minItemsForSmoothScroll = 20; // Minimum items for smooth animation
+        let displayItems = [...items];
+
+        // If we don't have enough items, duplicate them to ensure smooth scrolling
+        while (displayItems.length < minItemsForSmoothScroll) {
+            displayItems = [...displayItems, ...items];
+        }
+
+        // Limit to a reasonable number to prevent performance issues
+        displayItems = displayItems.slice(0, 40);
+
+        // Calculate animation duration to ensure consistent scrolling speed
+        const baseDuration = 20; // Base duration in seconds for consistent speed
 
         return (
             <div className="flex items-center h-[40px] text-[10px]">
@@ -143,18 +152,10 @@ export function MarketTicker() {
                     <div className="flex items-center h-full">
                         <div
                             className="flex animate-ticker-marquee whitespace-nowrap h-full items-center justify-start"
-                            style={{ animationDuration: `${calculatedDuration}s` }}
+                            style={{ animationDuration: `${baseDuration}s` }}
                         >
-                            {/* First copy */}
-                            {items.map((item, index) => (
+                            {displayItems.map((item, index) => (
                                 <TickerItem key={`ticker-${exchangeLabel}-${item.symbol}-${index}`} item={item} />
-                            ))}
-                            {/* Second copy for seamless loop */}
-                            {items.map((item, index) => (
-                                <TickerItem
-                                    key={`ticker-duplicate-${exchangeLabel}-${item.symbol}-${index}`}
-                                    item={item}
-                                />
                             ))}
                         </div>
                     </div>
