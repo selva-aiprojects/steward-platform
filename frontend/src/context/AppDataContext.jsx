@@ -196,8 +196,11 @@ export const AppDataProvider = ({ children }) => {
         };
 
         const onMarketMovers = (data) => {
-            if (data && data.gainers && data.losers) {
-                setMarketMovers(data);
+            if (data && typeof data === 'object') {
+                // Ensure consistent structure with gainers and losers arrays
+                const gainers = Array.isArray(data.gainers) ? data.gainers : [];
+                const losers = Array.isArray(data.losers) ? data.losers : [];
+                setMarketMovers({ gainers, losers });
             }
         };
 
