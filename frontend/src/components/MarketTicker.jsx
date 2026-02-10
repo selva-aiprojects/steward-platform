@@ -86,6 +86,12 @@ export function MarketTicker() {
     const renderTickerRow = (items, exchangeLabel) => {
         if (items.length === 0) return null;
 
+        // Calculate animation duration based on number of items for consistent speed
+        const baseDuration = 15; // Base duration in seconds
+        const itemsCount = items.length;
+        // More items = longer duration to maintain consistent speed
+        const calculatedDuration = Math.max(15, baseDuration + (itemsCount * 0.5));
+
         return (
             <div className="flex items-center h-[40px] text-[10px]">
                 <div className="flex items-center gap-2 px-3 bg-slate-800 h-full min-w-[80px]">
@@ -97,7 +103,10 @@ export function MarketTicker() {
 
                 <div className="flex-1 overflow-hidden h-full ticker-container">
                     <div className="flex items-center h-full">
-                        <div className="flex animate-ticker-marquee whitespace-nowrap h-full items-center justify-start">
+                        <div
+                            className="flex animate-ticker-marquee whitespace-nowrap h-full items-center justify-start"
+                            style={{ animationDuration: `${calculatedDuration}s` }}
+                        >
                             {/* First copy */}
                             {items.map((item, index) => (
                                 <TickerItem key={`ticker-${exchangeLabel}-${item.symbol}-${index}`} item={item} />
@@ -125,13 +134,13 @@ export function MarketTicker() {
                 {/* BSE Row */}
                 {renderTickerRow(bseItems, "LIVE BSE")}
             </div>
-            <style jsx>{`
+            <style jsx={true}>{`
                 @keyframes ticker-marquee {
                     from { transform: translateX(100%); }
                     to { transform: translateX(-100%); }
                 }
                 .animate-ticker-marquee {
-                    animation: ticker-marquee 60s linear infinite;
+                    animation: ticker-marquee 30s linear infinite;
                     display: inline-flex;
                     height: 100%;
                     width: auto;
