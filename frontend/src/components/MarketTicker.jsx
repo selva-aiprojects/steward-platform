@@ -134,7 +134,7 @@ export function MarketTicker() {
                 {/* BSE Row */}
                 {renderTickerRow(bseItems, "LIVE BSE")}
             </div>
-            <style jsx={true}>{`
+            <style>{`
                 @keyframes ticker-marquee {
                     from { transform: translateX(100%); }
                     to { transform: translateX(-100%); }
