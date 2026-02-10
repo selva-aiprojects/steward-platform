@@ -81,11 +81,21 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full">
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 flex flex-col">
           <div className="vertical-ticker-content animate-vertical-ticker">
             {displayItems.map((item, index) => (
-              <ItemDisplay key={`ticker-item-${index}`} item={item} index={index} />
+              <div key={`ticker-item-${index}`} className="mb-2 last:mb-0">
+                <ItemDisplay item={item} index={index} />
+              </div>
+            ))}
+          </div>
+          {/* Duplicate content for seamless loop */}
+          <div className="vertical-ticker-content animate-vertical-ticker duplicate">
+            {displayItems.map((item, index) => (
+              <div key={`ticker-item-duplicate-${index}`} className="mb-2 last:mb-0">
+                <ItemDisplay item={item} index={index} />
+              </div>
             ))}
           </div>
         </div>
@@ -98,7 +108,9 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
         }
         .animate-vertical-ticker {
           animation: vertical-ticker 60s linear infinite;
-          display: inline-block;
+        }
+        .animate-vertical-ticker.duplicate {
+          animation-delay: -30s; /* Start halfway through the animation for seamless loop */
         }
       `}</style>
     </div>
