@@ -71,7 +71,7 @@ export function Dashboard() {
         }
     };
 
-    const currentStewardPrediction = stewardPrediction || {
+    const currentStewardPrediction = stewardPredictionState || {
         prediction: '',
         decision: '',
         confidence: 0,
@@ -80,7 +80,7 @@ export function Dashboard() {
     };
 
     // Live movers
-    const mm = marketMovers || { gainers: [], losers: [] };
+    const mm = marketMoversState || { gainers: [], losers: [] };
     const gainers = Array.isArray(mm.gainers) ? mm.gainers : [];
     const losers = Array.isArray(mm.losers) ? mm.losers : [];
 
@@ -616,7 +616,7 @@ export function Dashboard() {
                             <div className="space-y-4">
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                                     <p className="text-xs text-slate-700 leading-relaxed">
-                                        {stewardPrediction?.prediction ||
+                                        {currentStewardPrediction?.prediction ||
                                             'AI is analyzing market conditions and generating insights...'}
                                     </p>
                                 </div>
