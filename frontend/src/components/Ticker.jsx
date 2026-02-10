@@ -57,10 +57,10 @@ export function Ticker() {
     if (tickers.length === 0) return null;
 
     return (
-        <div className="w-full bg-slate-900 overflow-hidden h-6 flex items-center text-[7px]">
-            <div className="flex items-center gap-1.5 px-2 bg-slate-800 h-full min-w-[50px]">
-                <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-                <span className="font-black text-white uppercase tracking-tight">LIVE</span>
+        <div className="w-full bg-slate-900 overflow-hidden h-[15px] flex items-center text-[6px]">
+            <div className="flex items-center gap-1 px-1.5 bg-slate-800 h-full min-w-[40px]">
+                <div className="h-0.5 w-0.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="font-black text-white uppercase tracking-tighter">LIVE</span>
             </div>
 
             {/* Ticker Animation Container */}
@@ -84,7 +84,7 @@ export function Ticker() {
                     100% { transform: translateX(-100%); }
                 }
                 .animate-ticker-marquee {
-                    animation: ticker-marquee 45s linear infinite;
+                    animation: ticker-marquee 40s linear infinite;
                     display: inline-block;
                     height: 100%;
                 }
@@ -103,18 +103,18 @@ function TickerItem({ item }) {
         ? item.price.toLocaleString()
         : item.price;
     return (
-        <div className="h-full flex items-center mx-3 px-1.5 py-0.5 border border-slate-700/50 rounded-sm bg-slate-800/30">
-            <div className="flex items-center gap-0.5 mr-1.5">
+        <div className="h-full flex items-center mx-1.5 px-1 py-0.25 border border-slate-700/50 rounded-sm bg-slate-800/30">
+            <div className="flex items-center gap-0.5 mr-1">
                 <span className="font-bold text-slate-200">{item.symbol}</span>
                 {item.exchange && (
-                    <span className="text-[6px] text-slate-400 uppercase">{item.exchange}</span>
+                    <span className="text-[5px] text-slate-400 uppercase">{item.exchange}</span>
                 )}
             </div>
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.25">
                 <span className="font-bold text-slate-300">₹{priceLabel || '--'}</span>
-                <div className={`flex items-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {isUp ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                    <span className="font-black">{changeLabel}</span>
+                <div className={`flex items-center gap-0.25 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {isUp ? <TrendingUp size={6} /> : <TrendingDown size={6} />}
+                    <span className="font-black text-[5.5px]">{changeLabel}</span>
                 </div>
             </div>
         </div>
