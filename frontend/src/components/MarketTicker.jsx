@@ -18,7 +18,7 @@ export function MarketTicker() {
         const losers = Array.isArray(marketMovers.losers) ? marketMovers.losers : [];
 
         const all = [...gainers, ...losers].filter(
-            (s) => s && s.symbol && s.exchange && Number.isFinite(Number(s.price))
+            (s) => s && s.symbol && Number.isFinite(Number(s.price))
         );
 
         // Separate items by exchange with fallback logic
@@ -167,10 +167,10 @@ export function MarketTicker() {
         <>
             <div className="w-full bg-slate-900 overflow-hidden flex flex-col shadow-lg">
                 {/* NSE Row */}
-                {renderTickerRow(nseItems, "LIVE NSE")}
+                {renderTickerRow(nseItems, "NSE ")}
 
                 {/* BSE Row */}
-                {renderTickerRow(bseItems, "LIVE BSE")}
+                {renderTickerRow(bseItems, "BSE ")}
             </div>
             <style>{`
                 @keyframes ticker-marquee {
