@@ -9,6 +9,8 @@ import {
     Zap
 } from 'lucide-react';
 import CompactTicker from '../components/CompactTicker';
+import CurrencyCard from '../components/CurrencyCard';
+import CommoditiesCard from '../components/CommoditiesCard';
 import {
     AreaChart,
     Area,
@@ -96,6 +98,21 @@ export function Dashboard() {
                     s &&
                     s.symbol &&
                     String(s.symbol).toUpperCase().endsWith('INR') &&
+                    Number.isFinite(Number(s.price))
+            )
+            .slice(0, 8);
+    })();
+
+    // Commodities: from live movers only (MCX exchange)
+    const commoditiesItems = (() => {
+        const all = [...gainers, ...losers];
+        return all
+            .filter(
+                (s) =>
+                    s &&
+                    s.symbol &&
+                    s.exchange &&
+                    String(s.exchange).toUpperCase() === 'MCX' &&
                     Number.isFinite(Number(s.price))
             )
             .slice(0, 8);
@@ -458,55 +475,21 @@ export function Dashboard() {
                 </div>
 
                 {/* Compact Live Ticker Strip */}
-                <CompactTicker stocks={groupedStocks} title="LIVE MARKET DATA" height="h-12" />
+                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-heading font-black text-slate-900 text-sm">Live Market Ticker</h3>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            NSE | BSE
+                        </span>
+                    </div>
+                    <CompactTicker stocks={groupedStocks} title="" height="h-16" />
+                </div>
 
-                {/* FX + IPO cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="p-6 bg-white border border-slate-100 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-heading font-black text-slate-900 text-base">Currencies</h3>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                FX PAIRS
-              </span>
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto pb-2">
-                            {currencyItems.length === 0 ? (
-                                <span className="text-[10px] font-bold text-slate-400">No FX data</span>
-                            ) : (
-                                currencyItems.map((item, i) => {
-                                    const change = Number(item.change || 0);
-                                    const isUp = change >= 0;
-                                    const price = Number(item.price);
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="min-w-[180px] px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-800"
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-slate-700">
-                          {item.symbol.slice(0, -3)} INR
-                        </span>
-                                                <span
-                                                    className={`text-[10px] font-black ${
-                                                        isUp ? 'text-emerald-400' : 'text-red-400'
-                                                    }`}
-                                                >
-                          {isUp ? '+' : ''}
-                                                    {change.toFixed(2)}%
-                        </span>
-                                            </div>
-                                            <div className="text-sm font-bold">
-                                                ₹{' '}
-                                                {Number.isFinite(price) && price !== 0
-                                                    ? price.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-                                                    : '--'}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </Card>
+                {/* Currency and Commodities cards */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <CurrencyCard currencies={currencyItems} />
+
+                    <CommoditiesCard commodities={commoditiesItems} />
 
                     <Card className="p-6 bg-white border border-slate-100 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
