@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../services/api';
-import { ArrowUp, ArrowDown, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export function Ticker() {
     const [updates, setUpdates] = useState({});
@@ -57,28 +57,35 @@ export function Ticker() {
     if (tickers.length === 0) return null;
 
     return (
-        <div className="w-full bg-slate-900 border-b border-slate-800 overflow-hidden h-10 flex items-center relative z-20">
-            <div className="flex items-center gap-2 px-4 bg-slate-900 z-10 h-full border-r border-slate-800 shadow-xl">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">Market Live</span>
+        <div className="w-full bg-slate-900 border-b border-slate-800 overflow-hidden h-8 flex items-center relative z-20">
+            <div className="flex items-center gap-2 px-3 bg-slate-900 z-10 h-full border-r border-slate-800">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[9px] font-black text-white uppercase tracking-wider whitespace-nowrap">LIVE</span>
             </div>
 
             {/* Ticker Animation Container */}
-            <div className="flex animate-marquee hover:pause-animation">
-                {/* First Set */}
-                <div className="flex items-center gap-8 pr-8">
-                    {tickers.map((item) => (
-                        <TickerItem key={`${item.symbol}-1`} item={item} />
+            <div className="flex flex-1 overflow-hidden">
+                <div className="flex animate-ticker-marquee whitespace-nowrap flex-1">
+                    {tickers.map((item, index) => (
+                        <TickerItem key={`${item.symbol}-${index}`} item={item} />
                     ))}
-                </div>
-                {/* Duplicate Set for Seamless Loop */}
-                <div className="flex items-center gap-8 pr-8">
-                    {tickers.map((item) => (
-                        <TickerItem key={`${item.symbol}-2`} item={item} />
+                    {/* Duplicate items for seamless loop */}
+                    {tickers.map((item, index) => (
+                        <TickerItem key={`duplicate-${item.symbol}-${index}`} item={item} />
                     ))}
                 </div>
             </div>
 
+            <style jsx>{`
+                @keyframes ticker-marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-ticker-marquee {
+                    animation: ticker-marquee 60s linear infinite;
+                    display: inline-block;
+                }
+            `}</style>
         </div>
     );
 }
@@ -93,17 +100,21 @@ function TickerItem({ item }) {
         ? item.price.toLocaleString()
         : item.price;
     return (
-        <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity cursor-default">
-            <div className="flex items-center gap-2">
-                {item.exchange && (
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.exchange}</span>
-                )}
-                <span className="text-[11px] font-bold text-slate-300">{item.symbol}</span>
+        <div className="flex items-center gap-1.5 mx-4 px-2 py-1 border border-slate-700 rounded-md bg-slate-800/50">
+            <div className="flex flex-col">
+                <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-bold text-slate-200">{item.symbol}</span>
+                    {item.exchange && (
+                        <span className="text-[7px] font-black text-slate-400 uppercase">{item.exchange}</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-1">
+                    <span className="text-[8px] font-bold text-slate-300">₹{priceLabel || '--'}</span>
+                </div>
             </div>
-            <div className={`flex items-center gap-1 text-[11px] font-black ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                <span>INR {priceLabel || '--'}</span>
-                {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                <span>{changeLabel}</span>
+            <div className={`flex items-center gap-0.5 min-w-[40px] justify-center px-1 rounded ${isUp ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                <span className="text-[8px] font-black">{changeLabel}</span>
             </div>
         </div>
     );
