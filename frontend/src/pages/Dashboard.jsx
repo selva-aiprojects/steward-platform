@@ -9,8 +9,7 @@ import {
     Zap
 } from 'lucide-react';
 import CompactTicker from '../components/CompactTicker';
-import CurrencyCard from '../components/CurrencyCard';
-import CommoditiesCard from '../components/CommoditiesCard';
+import VerticalTicker from '../components/VerticalTicker';
 import {
     AreaChart,
     Area,
@@ -485,11 +484,11 @@ export function Dashboard() {
                     <CompactTicker stocks={groupedStocks} title="" height="h-16" />
                 </div>
 
-                {/* Currency and Commodities cards */}
+                {/* Currency and Commodities vertical tickers */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <CurrencyCard currencies={currencyItems} />
+                    <VerticalTicker items={currencyItems} title="Live Currencies" type="currencies" />
 
-                    <CommoditiesCard commodities={commoditiesItems} />
+                    <VerticalTicker items={commoditiesItems} title="Live Commodities" type="commodities" />
 
                     <Card className="p-6 bg-white border border-slate-100 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
