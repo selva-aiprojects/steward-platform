@@ -60,12 +60,104 @@ def get_market_status() -> Any:
 async def get_market_movers() -> Any:
     """
     Get top gainers and losers.
-    Fetches live data from yfinance.
+    Fetches live data from MarketStack API and yfinance as fallback.
     """
     import yfinance as yf
+    import requests
     from app.core.config import settings
 
-    # Define the watchlist similar to the WebSocket implementation
+    # Initialize variables for MarketStack data
+    marketstack_gainers = []
+    marketstack_losers = []
+
+    # Try MarketStack API first
+    if settings.MARKETSTACK_API_KEY:
+        try:
+            # MarketStack API endpoint for live data
+            # Note: MarketStack primarily supports US stocks, so we'll use some international symbols
+            url = "http://api.marketstack.com/v1/live"
+            params = {
+                'access_key': settings.MARKETSTACK_API_KEY,
+                'symbols': 'AAPL,MSFT,GOOGL,AMZN,TSLA,NVDA,JPM,BAC,WMT,DIS'  # US stocks that MarketStack supports
+            }
+
+            response = requests.get(url, params=params)
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if 'error' not in data and 'data' in data and data['data']:
+                    raw_quotes = {}
+                    for item in data['data']:
+                        symbol = item['symbol']
+                        raw_quotes[symbol] = {
+                            'last_price': item['last'],
+                            'change': item['change_percent'],
+                            'exchange': 'NASDAQ',  # Correct exchange for US stocks
+                            'symbol': symbol
+                        }
+
+                    # Process quotes for gainers/losers
+                    quotes = {}
+                    for symbol, data in raw_quotes.items():
+                        quotes[symbol] = data
+
+                    # Identify Gainers and Losers
+                    valid_quotes = {s: q for s, q in quotes.items() if q.get('last_price') is not None}
+
+                    if valid_quotes:
+                        # Calculate changes for each quote
+                        quotes_with_changes = {}
+                        for s, q in valid_quotes.items():
+                            change_pct = q.get('change', 0)
+                            quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
+
+                        sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
+
+                        top_gainers = sorted_movers[:15]  # Top 15
+                        top_losers = sorted_movers[-15:]  # Bottom 15
+
+                        # Format movers for frontend
+                        gainers_data = []
+                        for s, q in top_gainers:
+                            exchange = q.get('exchange', 'NSE')
+                            gainers_data.append({
+                                'symbol': s,
+                                'exchange': exchange,
+                                'price': q.get('last_price', 0),
+                                'change': round(q['calculated_change'], 2),
+                                'last_price': q.get('last_price', 0)
+                            })
+
+                        losers_data = []
+                        for s, q in top_losers:
+                            exchange = q.get('exchange', 'NSE')
+                            losers_data.append({
+                                'symbol': s,
+                                'exchange': exchange,
+                                'price': q.get('last_price', 0),
+                                'change': round(q['calculated_change'], 2),
+                                'last_price': q.get('last_price', 0)
+                            })
+
+                        # Store MarketStack data but continue to get Indian stocks from yfinance as primary
+                        marketstack_gainers = gainers_data
+                        marketstack_losers = losers_data
+                    else:
+                        marketstack_gainers = []
+                        marketstack_losers = []
+                else:
+                    marketstack_gainers = []
+                    marketstack_losers = []
+            else:
+                marketstack_gainers = []
+                marketstack_losers = []
+        except Exception as e:
+            logger.error(f"Error fetching data from MarketStack: {e}")
+            marketstack_gainers = []
+            marketstack_losers = []
+
+    # Primary source for Indian stocks using yfinance
     watchlist = [
         # NSE (Nifty 50 highlights) - converted to yfinance format (SYMBOL.NS)
         'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
@@ -156,8 +248,8 @@ async def get_market_movers() -> Any:
 
             sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
 
-            top_gainers = sorted_movers[:10]  # Top 10
-            top_losers = sorted_movers[-10:]  # Bottom 10
+            top_gainers = sorted_movers[:15]  # Top 15
+            top_losers = sorted_movers[-15:]  # Bottom 15
 
             # Format movers for frontend
             gainers_data = []
@@ -184,9 +276,45 @@ async def get_market_movers() -> Any:
                     'last_price': q.get('last_price', 0)
                 })
 
+            # Combine MarketStack data with yfinance data to provide more variety
+            combined_gainers = marketstack_gainers + gainers_data
+            combined_losers = marketstack_losers + losers_data
+
+            # For ticker display, we want more variety of stocks, not just top gainers/losers
+            # Combine all available stocks for a richer ticker experience
+            all_available_stocks = list(quotes_with_changes.items())
+
+            # Create a more diverse set for the ticker display
+            diversified_stocks = []
+
+            # Include top gainers
+            diversified_stocks.extend(top_gainers[:5])
+            # Include top losers
+            diversified_stocks.extend(top_losers[:5])
+            # Include some middle performers to diversify
+            middle_idx = len(all_available_stocks) // 2
+            diversified_stocks.extend(all_available_stocks[max(0, middle_idx-2):min(len(all_available_stocks), middle_idx+3)])
+
+            # Format diversified stocks
+            diversified_data = []
+            for s, q in diversified_stocks:
+                exchange = q.get('exchange', 'NSE')
+                diversified_data.append({
+                    'symbol': s,
+                    'exchange': exchange,
+                    'price': q.get('last_price', 0),
+                    'change': round(q['calculated_change'], 2),
+                    'last_price': q.get('last_price', 0)
+                })
+
+            # Combine with any MarketStack data
+            final_gainers = marketstack_gainers + diversified_data[:10]
+            final_losers = marketstack_losers + diversified_data[10:20]
+
+            # Return more stocks for a richer ticker experience
             return {
-                "gainers": gainers_data,
-                "losers": losers_data
+                "gainers": final_gainers[:15],
+                "losers": final_losers[:15]
             }
         else:
             # Return mock data if no valid quotes
@@ -196,30 +324,82 @@ async def get_market_movers() -> Any:
                     {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1450.0, "change": 0.8, "last_price": 1450.0},
                     {"symbol": "INFY", "exchange": "NSE", "price": 1540.0, "change": 1.1, "last_price": 1540.0},
                     {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2850.0, "change": 0.9, "last_price": 2850.0},
-                    {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1042.0, "change": 0.7, "last_price": 1042.0}
+                    {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1042.0, "change": 0.7, "last_price": 1042.0},
+                    {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": 0.8, "last_price": 580.0},
+                    {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": 0.9, "last_price": 1125.0},
+                    {"symbol": "LT", "exchange": "NSE", "price": 2200.0, "change": 0.6, "last_price": 2200.0},
+                    {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1800.0, "change": 0.5, "last_price": 1800.0},
+                    {"symbol": "MARUTI", "exchange": "NSE", "price": 8500.0, "change": 0.4, "last_price": 8500.0},
+                    {"symbol": "WIPRO", "exchange": "NSE", "price": 750.0, "change": 0.3, "last_price": 750.0},
+                    {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 950.0, "change": 0.2, "last_price": 950.0},
+                    {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 750.0, "change": 0.1, "last_price": 750.0},
+                    {"symbol": "ITC", "exchange": "NSE", "price": 438.0, "change": 0.15, "last_price": 438.0},
+                    {"symbol": "COALINDIA", "exchange": "NSE", "price": 280.0, "change": 0.25, "last_price": 280.0}
                 ],
                 "losers": [
                     {"symbol": "TCS", "exchange": "NSE", "price": 3450.0, "change": -0.5, "last_price": 3450.0},
                     {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": -0.8, "last_price": 580.0},
                     {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": -0.4, "last_price": 1125.0},
                     {"symbol": "WIPRO", "exchange": "NSE", "price": 420.0, "change": -1.2, "last_price": 420.0},
-                    {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 1340.0, "change": -0.6, "last_price": 1340.0}
+                    {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 1340.0, "change": -0.6, "last_price": 1340.0},
+                    {"symbol": "RELIANCE", "exchange": "NSE", "price": 2980.0, "change": -0.3, "last_price": 2980.0},
+                    {"symbol": "INFY", "exchange": "NSE", "price": 1535.0, "change": -0.2, "last_price": 1535.0},
+                    {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1445.0, "change": -0.1, "last_price": 1445.0},
+                    {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1040.0, "change": -0.15, "last_price": 1040.0},
+                    {"symbol": "LT", "exchange": "NSE", "price": 2195.0, "change": -0.2, "last_price": 2195.0},
+                    {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1795.0, "change": -0.3, "last_price": 1795.0},
+                    {"symbol": "MARUTI", "exchange": "NSE", "price": 8495.0, "change": -0.1, "last_price": 8495.0},
+                    {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 745.0, "change": -0.2, "last_price": 745.0},
+                    {"symbol": "ITC", "exchange": "NSE", "price": 435.0, "change": -0.3, "last_price": 435.0},
+                    {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2845.0, "change": -0.1, "last_price": 2845.0}
                 ]
             }
 
     except Exception as e:
         logger.error(f"Error fetching market movers: {e}")
-        # Return mock data if API call fails
+        # Return mock data if API call fails, but include any MarketStack data if available
+        mock_gainers = [
+            {"symbol": "RELIANCE", "exchange": "NSE", "price": 2987.5, "change": 1.2, "last_price": 2987.5},
+            {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1450.0, "change": 0.8, "last_price": 1450.0},
+            {"symbol": "INFY", "exchange": "NSE", "price": 1540.0, "change": 1.1, "last_price": 1540.0},
+            {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2850.0, "change": 0.9, "last_price": 2850.0},
+            {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1042.0, "change": 0.7, "last_price": 1042.0},
+            {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": 0.8, "last_price": 580.0},
+            {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": 0.9, "last_price": 1125.0},
+            {"symbol": "LT", "exchange": "NSE", "price": 2200.0, "change": 0.6, "last_price": 2200.0},
+            {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1800.0, "change": 0.5, "last_price": 1800.0},
+            {"symbol": "MARUTI", "exchange": "NSE", "price": 8500.0, "change": 0.4, "last_price": 8500.0},
+            {"symbol": "WIPRO", "exchange": "NSE", "price": 750.0, "change": 0.3, "last_price": 750.0},
+            {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 950.0, "change": 0.2, "last_price": 950.0},
+            {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 750.0, "change": 0.1, "last_price": 750.0},
+            {"symbol": "ITC", "exchange": "NSE", "price": 438.0, "change": 0.15, "last_price": 438.0},
+            {"symbol": "COALINDIA", "exchange": "NSE", "price": 280.0, "change": 0.25, "last_price": 280.0}
+        ]
+        mock_losers = [
+            {"symbol": "TCS", "exchange": "NSE", "price": 3450.0, "change": -0.5, "last_price": 3450.0},
+            {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": -0.8, "last_price": 580.0},
+            {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": -0.4, "last_price": 1125.0},
+            {"symbol": "WIPRO", "exchange": "NSE", "price": 420.0, "change": -1.2, "last_price": 420.0},
+            {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 1340.0, "change": -0.6, "last_price": 1340.0},
+            {"symbol": "RELIANCE", "exchange": "NSE", "price": 2980.0, "change": -0.3, "last_price": 2980.0},
+            {"symbol": "INFY", "exchange": "NSE", "price": 1535.0, "change": -0.2, "last_price": 1535.0},
+            {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1445.0, "change": -0.1, "last_price": 1445.0},
+            {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1040.0, "change": -0.15, "last_price": 1040.0},
+            {"symbol": "LT", "exchange": "NSE", "price": 2195.0, "change": -0.2, "last_price": 2195.0},
+            {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1795.0, "change": -0.3, "last_price": 1795.0},
+            {"symbol": "MARUTI", "exchange": "NSE", "price": 8495.0, "change": -0.1, "last_price": 8495.0},
+            {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 745.0, "change": -0.2, "last_price": 745.0},
+            {"symbol": "ITC", "exchange": "NSE", "price": 435.0, "change": -0.3, "last_price": 435.0},
+            {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2845.0, "change": -0.1, "last_price": 2845.0}
+        ]
+
+        # Combine with any MarketStack data that was retrieved
+        combined_gainers = marketstack_gainers + mock_gainers
+        combined_losers = marketstack_losers + mock_losers
+
         return {
-            "gainers": [
-                {"symbol": "RELIANCE", "exchange": "NSE", "price": 2987.5, "change": 1.2, "last_price": 2987.5},
-                {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1450.0, "change": 0.8, "last_price": 1450.0},
-                {"symbol": "INFY", "exchange": "NSE", "price": 1540.0, "change": 1.1, "last_price": 1540.0}
-            ],
-            "losers": [
-                {"symbol": "TCS", "exchange": "NSE", "price": 3450.0, "change": -0.5, "last_price": 3450.0},
-                {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": -0.8, "last_price": 580.0}
-            ]
+            "gainers": combined_gainers[:15],
+            "losers": combined_losers[:15]
         }
 
 

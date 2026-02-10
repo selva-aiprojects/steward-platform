@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     HUGGINGFACE_API_KEY: Optional[str] = None
+
+    # Market Data API Keys
+    MARKETSTACK_API_KEY: Optional[str] = None
     
     model_config = SettingsConfigDict(
         env_file=".env",

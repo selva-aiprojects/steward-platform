@@ -33,6 +33,7 @@ class DataIntegrationService:
             'kaggle': self.fetch_kaggle_data,
             'alpha_vantage': self.fetch_alpha_vantage_data,
             'yfinance': self.fetch_yfinance_data,
+            'marketstack': self.fetch_marketstack_data,
             'custom': self.fetch_custom_data
         }
     
@@ -255,7 +256,83 @@ class DataIntegrationService:
         except Exception as e:
             logger.error(f"Error fetching Yahoo Finance data for {symbol}: {e}")
             return pd.DataFrame()
-    
+
+    async def fetch_marketstack_data(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> pd.DataFrame:
+        """
+        Fetch data from MarketStack API
+        """
+        try:
+            import requests
+            from app.core.config import settings
+
+            if not settings.MARKETSTACK_API_KEY:
+                logger.error("MarketStack API key not configured")
+                return pd.DataFrame()
+
+            # Format dates for MarketStack API
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+
+            # MarketStack API endpoint for historical data
+            url = "http://api.marketstack.com/v1/eod"
+            params = {
+                'access_key': settings.MARKETSTACK_API_KEY,
+                'symbols': symbol,
+                'date_from': start_str,
+                'date_to': end_str,
+                'limit': 1000  # Maximum allowed by MarketStack
+            }
+
+            response = requests.get(url, params=params)
+
+            if response.status_code != 200:
+                logger.error(f"MarketStack API error: {response.status_code} - {response.text}")
+                return pd.DataFrame()
+
+            data = response.json()
+
+            if 'error' in data:
+                logger.error(f"MarketStack API error: {data['error']}")
+                return pd.DataFrame()
+
+            if 'data' not in data or not data['data']:
+                logger.warning(f"No data found for {symbol} in MarketStack")
+                return pd.DataFrame()
+
+            # Convert the response to a DataFrame
+            stocks_data = []
+            for item in data['data']:
+                stock_record = {
+                    'timestamp': pd.to_datetime(item['date']),
+                    'symbol': item['symbol'],
+                    'open_price': item['open'],
+                    'high_price': item['high'],
+                    'low_price': item['low'],
+                    'close_price': item['close'],
+                    'volume': item['volume'],
+                    'exchange': 'MARKETSTACK'
+                }
+                stocks_data.append(stock_record)
+
+            if not stocks_data:
+                logger.warning(f"No parsed data for {symbol} from MarketStack")
+                return pd.DataFrame()
+
+            df = pd.DataFrame(stocks_data)
+            df.sort_values('timestamp', inplace=True)
+            df.reset_index(drop=True, inplace=True)
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error fetching MarketStack data for {symbol}: {e}")
+            return pd.DataFrame()
+
     async def fetch_custom_data(
         self, 
         file_path: str, 

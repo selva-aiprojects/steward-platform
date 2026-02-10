@@ -2,110 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* Ticker Animation */
-@keyframes scroll {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-
-.animate-scroll {
-  animation: scroll 30s linear infinite;
-  will-change: transform;
-}
-
-.animate-scroll:hover {
-  animation-play-state: paused;
-}
-
-/* Improve performance for ticker */
-.ticker-container {
-  contain: layout style paint;
-}
-
+/* ==== Design Tokens (brand) ==== */
 @layer base {
   :root {
     /* Brand - Light Mode */
-    --background: 210 40% 98%;
-    /* #F8FAFC */
-    --foreground: 211 75% 17%;
-    /* #0A2A4D (Navy) */
+    --background: 210 40% 98%;           /* #F8FAFC */
+    --foreground: 211 75% 17%;          /* #0A2A4D */
 
-    --bg-sidebar: 211 75% 17%;
-    /* Navy #0A2A4D */
+    --bg-sidebar: 211 75% 17%;          /* Navy #0A2A4D */
     --bg-sidebar-gradient: linear-gradient(180deg, #0A2A4D 0%, #020617 100%);
 
     --card: 0 0% 100%;
@@ -114,19 +18,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 211 75% 17%;
 
-    --primary: 129 62% 46%;
-    /* #2DBD42 (Green) */
+    --primary: 129 62% 46%;             /* #2DBD42 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 211 75% 17%;
-    /* Navy as Secondary */
     --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215 16% 47%;
 
     --accent: 210 20% 98%;
-    /* Light Grey/Blue tint */
     --accent-foreground: 211 75% 17%;
 
     --destructive: 0 84.2% 60.2%;
@@ -135,27 +36,21 @@
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 211 75% 17%;
-    /* Navy Ring */
-
     --radius: 0.75rem;
-    /* 12px from kit */
   }
 
   .dark {
     /* Brand - Dark Mode */
     --background: 222 47% 11%;
-    /* Dark Navy #0A2A4D base or #020617 */
     --foreground: 210 40% 98%;
 
     --card: 217 33% 17%;
-    /* Darker Navy #1e293b approx */
     --card-foreground: 210 40% 98%;
 
     --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 129 62% 46%;
-    /* Green #2DBD42 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 17%;
@@ -173,7 +68,6 @@
     --border: 217 33% 25%;
     --input: 217 33% 17%;
     --ring: 129 62% 46%;
-    /* Green Ring */
   }
 }
 
@@ -194,4 +88,34 @@
   h6 {
     font-family: 'Sora', sans-serif;
   }
+}
+
+/* ==== Ticker animation (gap‑free) ==== */
+@keyframes ticker-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* Move left by half the content width; second copy fills the gap */
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker-marquee {
+  animation-name: ticker-marquee;
+  animation-duration: 15s; /* adjust for speed */
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  display: inline-flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.animate-ticker-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Optional: small perf hint for the strip */
+.ticker-container {
+  contain: layout style paint;
 }

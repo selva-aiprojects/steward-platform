@@ -58,6 +58,7 @@ async def get_current_user(
 
 # Backwards-compatible alias for endpoints expecting get_current_active_user
 async def get_current_active_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    return await get_current_user(db=db)
+    return await get_current_user(credentials=credentials, db=db)

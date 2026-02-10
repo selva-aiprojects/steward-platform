@@ -343,7 +343,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 mb-4">Gainers</h3>
                     <div className="space-y-3">
-                        {(marketMovers && marketMovers.length ? marketMovers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) >= 0).slice(0, 5).map((m, i) => {
+                        {(marketMovers && typeof marketMovers === 'object' && Array.isArray(marketMovers.gainers) ? marketMovers.gainers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) >= 0).slice(0, 5).map((m, i) => {
                             const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
                             const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
                                 ? m.change
@@ -361,7 +361,7 @@ export function Reports() {
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 mb-4">Losers</h3>
                     <div className="space-y-3">
-                        {(marketMovers && marketMovers.length ? marketMovers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) < 0).slice(0, 5).map((m, i) => {
+                        {(marketMovers && typeof marketMovers === 'object' && Array.isArray(marketMovers.losers) ? marketMovers.losers : fallbackMovers).filter(m => (typeof m.change === 'string' ? parseFloat(m.change) : m.change) < 0).slice(0, 5).map((m, i) => {
                             const changeValue = typeof m.change === 'string' ? parseFloat(m.change) : (m.change ?? 0);
                             const changeLabel = typeof m.change === 'string' && m.change.toString().includes('%')
                                 ? m.change

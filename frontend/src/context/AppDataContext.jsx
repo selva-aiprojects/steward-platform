@@ -105,10 +105,16 @@ export const AppDataProvider = ({ children }) => {
 
             if (moversData) {
                 if (Array.isArray(moversData)) {
+                    // If it's an array, treat it as gainers
                     setMarketMovers({ gainers: moversData, losers: [] });
-                } else if (moversData.gainers) {
-                    setMarketMovers(moversData);
+                } else if (moversData.gainers !== undefined || moversData.losers !== undefined) {
+                    // If it has gainers/losers properties, use as-is but ensure structure
+                    setMarketMovers({
+                        gainers: Array.isArray(moversData.gainers) ? moversData.gainers : [],
+                        losers: Array.isArray(moversData.losers) ? moversData.losers : []
+                    });
                 } else {
+                    // Default case
                     setMarketMovers({ gainers: [], losers: [] });
                 }
             }

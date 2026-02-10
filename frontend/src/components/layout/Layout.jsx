@@ -78,7 +78,7 @@ export function Layout({ children }) {
                         </>
                     )}
 
-                    <NavLink to="/reports" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                    <NavLink to="/reports" end onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                         <BarChart2 size={18} className={`${location.pathname === '/reports' ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'} transition-colors`} />
                         <span>Reports</span>
                     </NavLink>

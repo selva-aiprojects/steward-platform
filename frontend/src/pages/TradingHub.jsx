@@ -298,9 +298,11 @@ export function TradingHub() {
           symbol: w.symbol, 
           exchange: w.exchange || 'NSE' 
         }));
-        const fromMovers = (marketMovers || []).map(m => ({ 
-          symbol: m.symbol, 
-          exchange: m.exchange || 'NSE' 
+        const allMovers = marketMovers && typeof marketMovers === 'object' ?
+          [...(marketMovers.gainers || []), ...(marketMovers.losers || [])] : [];
+        const fromMovers = allMovers.map(m => ({
+          symbol: m.symbol,
+          exchange: m.exchange || 'NSE'
         }));
         const fromProjections = (projections || []).map(p => ({ 
           symbol: p.ticker, 
