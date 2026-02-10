@@ -117,6 +117,23 @@ export function Dashboard() {
             .slice(0, 8);
     })();
 
+    // Metals: from live movers (specific metal symbols like GC=F, SI=F)
+    const metalsItems = (() => {
+        const all = [...gainers, ...losers];
+        return all
+            .filter(
+                (s) =>
+                    s &&
+                    s.symbol &&
+                    Number.isFinite(Number(s.price)) &&
+                    (String(s.symbol).toUpperCase().includes('GC=F') || // Gold
+                     String(s.symbol).toUpperCase().includes('SI=F') || // Silver
+                     String(s.symbol).toUpperCase().includes('XAU') || // Gold in other formats
+                     String(s.symbol).toUpperCase().includes('XAG')) // Silver in other formats
+            )
+            .slice(0, 8);
+    })();
+
     // IPO news: from live marketNews only
     const ipoNews = (() => {
         const news = Array.isArray(marketNews) ? marketNews : [];
@@ -484,38 +501,44 @@ export function Dashboard() {
                     <CompactTicker stocks={groupedStocks} title="" height="h-16" />
                 </div>
 
-                {/* Currency and Commodities vertical tickers */}
+                {/* Currency, Commodities, and Metals vertical tickers */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <VerticalTicker items={currencyItems} title="Live Currencies" type="currencies" />
 
                     <VerticalTicker items={commoditiesItems} title="Live Commodities" type="commodities" />
 
-                    <Card className="p-6 bg-white border border-slate-100 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-heading font-black text-slate-900 text-base">New IPOs</h3>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                LISTINGS
-              </span>
-                        </div>
-                        <div className="space-y-3">
-                            {ipoNews.length === 0 ? (
-                                <div className="text-xs text-slate-400 italic">No IPO news available</div>
-                            ) : (
-                                ipoNews.map((n, i) => (
-                                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                        <p className="text-sm font-bold text-slate-900">
-                                            {n.title || n.headline || 'IPO Announcement'}
-                                        </p>
-                                        {n.date && (
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                {n.date}
+                    <VerticalTicker items={metalsItems} title="Live Metals" type="metals" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-3">
+                        <Card className="p-6 bg-white border border-slate-100 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-heading font-black text-slate-900 text-base">New IPOs</h3>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    LISTINGS
+                  </span>
+                            </div>
+                            <div className="space-y-3">
+                                {ipoNews.length === 0 ? (
+                                    <div className="text-xs text-slate-400 italic">No IPO news available</div>
+                                ) : (
+                                    ipoNews.map((n, i) => (
+                                        <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {n.title || n.headline || 'IPO Announcement'}
                                             </p>
-                                        )}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </Card>
+                                            {n.date && (
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    {n.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </Card>
+                    </div>
                 </div>
 
                 {/* Chart + AI Analyst + Top Movers */}
