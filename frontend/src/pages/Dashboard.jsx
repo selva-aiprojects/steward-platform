@@ -117,7 +117,7 @@ export function Dashboard() {
             .slice(0, 8);
     })();
 
-    // Metals: from live movers (specific metal symbols like GC=F, SI=F)
+    // Metals: from live movers (specific metal symbols like GC=F, SI=F, GOLD, SILVER, etc.)
     const metalsItems = (() => {
         const all = [...gainers, ...losers];
         return all
@@ -126,10 +126,20 @@ export function Dashboard() {
                     s &&
                     s.symbol &&
                     Number.isFinite(Number(s.price)) &&
-                    (String(s.symbol).toUpperCase().includes('GC=F') || // Gold
-                     String(s.symbol).toUpperCase().includes('SI=F') || // Silver
-                     String(s.symbol).toUpperCase().includes('XAU') || // Gold in other formats
-                     String(s.symbol).toUpperCase().includes('XAG')) // Silver in other formats
+                    (String(s.symbol).toUpperCase().includes('GC=F') || // Gold futures
+                     String(s.symbol).toUpperCase().includes('SI=F') || // Silver futures
+                     String(s.symbol).toUpperCase().includes('HG=F') || // Copper futures
+                     String(s.symbol).toUpperCase().includes('CL=F') || // Crude oil (energy metal)
+                     String(s.symbol).toUpperCase().includes('XAU') || // Gold in forex format
+                     String(s.symbol).toUpperCase().includes('XAG') || // Silver in forex format
+                     String(s.symbol).toUpperCase().includes('GOLD') || // Gold in other formats
+                     String(s.symbol).toUpperCase().includes('SILVER') || // Silver in other formats
+                     String(s.symbol).toUpperCase().includes('ALUMINIUM') || // Industrial metals
+                     String(s.symbol).toUpperCase().includes('ZINC') ||
+                     String(s.symbol).toUpperCase().includes('COPPER') ||
+                     String(s.symbol).toUpperCase().includes('NICKEL') ||
+                     String(s.symbol).toUpperCase().includes('LEAD') ||
+                     String(s.symbol).toUpperCase().includes('TIN'))
             )
             .slice(0, 8);
     })();
