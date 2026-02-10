@@ -331,95 +331,109 @@ export function Users() {
                                 <ArrowDownRight className="rotate-[-45deg]" size={24} />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Full Name</label>
-                                <input
-                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                    value={newUser.full_name}
-                                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Email</label>
-                                <input
-                                    type="email"
-                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                    value={newUser.email}
-                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Password</label>
-                                <input
-                                    type="password"
-                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                    value={newUser.password}
-                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={async (e) => {
+                            e.preventDefault(); // Prevent default form submission behavior
+                            try {
+                                const created = await createUser(newUser);
+                                if (created) {
+                                    setShowCreateModal(false);
+                                    setNewUser({
+                                        full_name: '',
+                                        email: '',
+                                        password: '',
+                                        role: 'TRADER',
+                                        trading_mode: 'AUTO',
+                                        risk_tolerance: 'MODERATE'
+                                    });
+                                    await refreshAllData();
+                                } else {
+                                    alert('Failed to create user.');
+                                }
+                            } catch (error) {
+                                console.error('Error creating user:', error);
+                                alert('Failed to create user: ' + error.message);
+                            }
+                        }}>
+                            <div className="p-6 space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Role</label>
-                                    <select
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Full Name</label>
+                                    <input
                                         className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                        value={newUser.role}
-                                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                                    >
-                                        <option value="SUPERADMIN">SUPERADMIN</option>
-                                        <option value="BUSINESS_OWNER">BUSINESS_OWNER</option>
-                                        <option value="TRADER">TRADER</option>
-                                        <option value="AUDITOR">AUDITOR</option>
-                                    </select>
+                                        value={newUser.full_name}
+                                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                        required
+                                    />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Trading Mode</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Email</label>
+                                    <input
+                                        type="email"
+                                        className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                        value={newUser.email}
+                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Password</label>
+                                    <input
+                                        type="password"
+                                        className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Role</label>
+                                        <select
+                                            className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                            value={newUser.role}
+                                            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                            required
+                                        >
+                                            <option value="SUPERADMIN">SUPERADMIN</option>
+                                            <option value="BUSINESS_OWNER">BUSINESS_OWNER</option>
+                                            <option value="TRADER">TRADER</option>
+                                            <option value="AUDITOR">AUDITOR</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Trading Mode</label>
+                                        <select
+                                            className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                            value={newUser.trading_mode}
+                                            onChange={(e) => setNewUser({ ...newUser, trading_mode: e.target.value })}
+                                            required
+                                        >
+                                            <option value="AUTO">AUTO</option>
+                                            <option value="MANUAL">MANUAL</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Risk Tolerance</label>
                                     <select
                                         className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                        value={newUser.trading_mode}
-                                        onChange={(e) => setNewUser({ ...newUser, trading_mode: e.target.value })}
+                                        value={newUser.risk_tolerance}
+                                        onChange={(e) => setNewUser({ ...newUser, risk_tolerance: e.target.value })}
+                                        required
                                     >
-                                        <option value="AUTO">AUTO</option>
-                                        <option value="MANUAL">MANUAL</option>
+                                        <option value="LOW">LOW</option>
+                                        <option value="MODERATE">MODERATE</option>
+                                        <option value="HIGH">HIGH</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Risk Tolerance</label>
-                                <select
-                                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                    value={newUser.risk_tolerance}
-                                    onChange={(e) => setNewUser({ ...newUser, risk_tolerance: e.target.value })}
+                                <button
+                                    type="submit"
+                                    disabled={!newUser.full_name || !newUser.email || !newUser.password}
+                                    className="w-full py-4 bg-[#0A2A4D] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0A2A4D]/90 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20"
                                 >
-                                    <option value="LOW">LOW</option>
-                                    <option value="MODERATE">MODERATE</option>
-                                    <option value="HIGH">HIGH</option>
-                                </select>
+                                    Create User
+                                </button>
                             </div>
-                            <button
-                                onClick={async () => {
-                                    const created = await createUser(newUser);
-                                    if (created) {
-                                        setShowCreateModal(false);
-                                        setNewUser({
-                                            full_name: '',
-                                            email: '',
-                                            password: '',
-                                            role: 'TRADER',
-                                            trading_mode: 'AUTO',
-                                            risk_tolerance: 'MODERATE'
-                                        });
-                                        await refreshAllData();
-                                    } else {
-                                        alert('Failed to create user.');
-                                    }
-                                }}
-                                disabled={!newUser.full_name || !newUser.email || !newUser.password}
-                                className="w-full py-4 bg-[#0A2A4D] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0A2A4D]/90 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20"
-                            >
-                                Create User
-                            </button>
-                        </div>
+                        </form>
                     </Card>
                 </div>
             )}
