@@ -91,6 +91,7 @@ class Settings(BaseSettings):
     ZERODHA_ACCESS_TOKEN: Optional[str] = None
     
     # AI Keys
+    # These will be loaded from encrypted secrets or environment variables
     GROQ_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
@@ -105,6 +106,21 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        # Load secrets from encrypted storage if not set in environment
+        from app.utils.secrets_manager import secrets_manager
+        
+        if not self.GROQ_API_KEY:
+            self.__dict__['GROQ_API_KEY'] = secrets_manager.get_secret('GROQ_API_KEY')
+        if not self.OPENAI_API_KEY:
+            self.__dict__['OPENAI_API_KEY'] = secrets_manager.get_secret('OPENAI_API_KEY')
+        if not self.ANTHROPIC_API_KEY:
+            self.__dict__['ANTHROPIC_API_KEY'] = secrets_manager.get_secret('ANTHROPIC_API_KEY')
+        if not self.HUGGINGFACE_API_KEY:
+            self.__dict__['HUGGINGFACE_API_KEY'] = secrets_manager.get_secret('HUGGINGFACE_API_KEY')
 
     @field_validator("EXECUTION_MODE", mode="before")
     @classmethod
