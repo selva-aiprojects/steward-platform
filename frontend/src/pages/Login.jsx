@@ -63,7 +63,7 @@ export function Login() {
     const quickLogin = async (role) => {
         const credentials = {
             admin: { email: 'admin@stocksteward.ai', password: 'admin123' },
-            trader: { email: 'trader@stocksteward.ai', password: 'trader123' },
+            trader: { email: 'alex@stocksteward.ai', password: 'trader123' },
             auditor: { email: 'auditor@stocksteward.ai', password: 'audit123' },
             'business-owner': { email: 'owner@stocksteward.ai', password: 'owner123' }
         };
@@ -128,7 +128,7 @@ export function Login() {
                     </label>
 
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-                        Demo Logins: admin@stocksteward.ai / admin123 · owner@stocksteward.ai / owner123 · trader@stocksteward.ai / trader123 · auditor@stocksteward.ai / audit123
+                        Demo Logins: admin@stocksteward.ai / admin123 · owner@stocksteward.ai / owner123 · alex@stocksteward.ai / trader123 · sarah.c@sky.net / trader123 · tony@starkintl.ai / trader123 · bruce@waynecorp.com / trader123 · nat@shield.gov / trader123 · auditor@stocksteward.ai / audit123
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-widest">
                         <button type="button" data-testid="login-admin" onClick={() => quickLogin('admin')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
