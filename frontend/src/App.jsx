@@ -25,8 +25,22 @@ const AuthWrapper = ({ children }) => {
 };
 
 const RequireAuth = ({ children }) => {
-  const { user, loading } = useUser();
+  const { user, loading, login } = useUser();
   const location = useLocation();
+
+  // Development bypass: Auto-login with admin user if no user exists
+  if (process.env.NODE_ENV === 'development' && !loading && !user) {
+    // Simulate a logged-in admin user
+    const devUser = {
+      id: 999,
+      name: 'Development Admin',
+      email: 'admin@stocksteward.ai',
+      role: 'SUPERADMIN',
+      avatar: 'DA'
+    };
+    login(devUser);
+    return children;
+  }
 
   // If loading, show nothing or spinner
   if (loading) return null;

@@ -170,7 +170,7 @@ async def get_market_movers() -> Any:
         # NSE (Nifty 50 highlights) - converted to yfinance format (SYMBOL.NS)
         'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
         'SBIN.NS', 'ITC.NS', 'LT.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
-        'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'MARUTI.NS', 'TATAMOTORS.NS',
+        'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'MARUTI.NS',
         'BHARTIARTL.NS', 'ADANIENT.NS', 'ADANIPORTS.NS', 'ASIANPAINT.NS',
         'ULTRACEMCO.NS', 'WIPRO.NS', 'TECHM.NS', 'HCLTECH.NS', 'ONGC.NS',
         'POWERGRID.NS', 'NTPC.NS', 'COALINDIA.NS', 'SUNPHARMA.NS',
@@ -456,7 +456,7 @@ async def get_currency_movers() -> Any:
     if not marketstack_currencies:
         try:
             import yfinance as yf
-            currency_symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'CHFIND=X', 'SGDINR=X']
+            currency_symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'SGDINR=X']  # Removed CHFIND=X as it causes errors
 
             currency_data = []
             for symbol in currency_symbols:
@@ -546,7 +546,7 @@ async def get_metals_movers() -> Any:
     if not marketstack_metals:
         try:
             import yfinance as yf
-            metal_symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'AL=F', 'ZN=F', 'NI=F']  # Gold, Silver, Copper, Platinum, Palladium, Aluminum, Zinc, Nickel
+            metal_symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'ZN=F']  # Gold, Silver, Copper, Platinum, Palladium, Zinc - removed problematic symbols
 
             metal_data = []
             for symbol in metal_symbols:
@@ -636,7 +636,7 @@ async def get_commodity_movers() -> Any:
     if not marketstack_commodities:
         try:
             import yfinance as yf
-            commodity_symbols = ['CL=F', 'NG=F', 'HO=F', 'GC=F', 'SI=F', 'HG=F', 'AL=F', 'ZN=F', 'NI=F', 'PB=F', 'SN=F', 'CO=F']  # Various commodities
+            commodity_symbols = ['CL=F', 'NG=F', 'GC=F', 'SI=F', 'HG=F', 'ZN=F']  # Various commodities - removed problematic symbols
 
             commodity_data = []
             for symbol in commodity_symbols:

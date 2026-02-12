@@ -126,9 +126,9 @@ async def market_feed():
     prediction_history = []
 
     while True:
-        # 30-60 second cycle for comprehensive analysis to avoid rate limits
-        # Using 8s for demo responsiveness
-        await asyncio.sleep(8 if settings.EXECUTION_MODE == "LIVE_TRADING" else 3)
+        # Reduced cycle for better responsiveness
+        # Using 2s for demo responsiveness
+        await asyncio.sleep(2 if settings.EXECUTION_MODE == "LIVE_TRADING" else 1)
 
         try:
             # Setup Groq once per cycle (if key exists)
@@ -350,6 +350,20 @@ async def market_feed():
                 else:
                     print("No valid quotes received, using mock data")
                     # Use mock data as fallback
+                    mock_gainers = [
+                        {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.50, 'change': 2.34},
+                        {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': 1.87},
+                        {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': 1.45},
+                        {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': 1.23},
+                        {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': 0.98}
+                    ]
+                    mock_losers = [
+                        {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': -0.75},
+                        {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': -1.23},
+                        {'symbol': 'LT', 'exchange': 'NSE', 'price': 2200.00, 'change': -1.56},
+                        {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': -2.10},
+                        {'symbol': 'KOTAKBANK', 'exchange': 'NSE', 'price': 1800.00, 'change': -2.34}
+                    ]
                     last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
                     await sio.emit('market_movers', last_market_movers, room='market_data')
             else:
@@ -359,6 +373,20 @@ async def market_feed():
                     'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
                 ])
                 # Update global state for REST compatibility
+                mock_gainers = [
+                    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.50, 'change': 2.34},
+                    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': 1.87},
+                    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': 1.45},
+                    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': 1.23},
+                    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': 0.98}
+                ]
+                mock_losers = [
+                    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': -0.75},
+                    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': -1.23},
+                    {'symbol': 'LT', 'exchange': 'NSE', 'price': 2200.00, 'change': -1.56},
+                    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': -2.10},
+                    {'symbol': 'KOTAKBANK', 'exchange': 'NSE', 'price': 1800.00, 'change': -2.34}
+                ]
                 last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
 
                 await sio.emit('market_movers', last_market_movers, room='market_data')
