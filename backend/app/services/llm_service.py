@@ -7,35 +7,57 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
-        self.api_key = settings.GROQ_API_KEY
         self.client = None
+        self.api_key = None  # Will be loaded dynamically when needed
         self.available_models = [
             "llama-3.3-70b-versatile",  # Updated model
             "llama-3.1-8b-instant",
             "llama3-groq-70b-8192-tool-use-preview",
             "llama3-groq-8b-8192-tool-use-preview"
         ]
-
-        if self.api_key:
+        
+        # Initialize client if API key is available at startup
+        self._initialize_client_if_key_available()
+    
+    def _initialize_client_if_key_available(self):
+        """Initialize the client if API key is available"""
+        api_key = self._get_api_key()
+        if api_key and not self.client:
             try:
-                self.client = Groq(api_key=self.api_key)
+                self.client = Groq(api_key=api_key)
+                self.api_key = api_key
                 logger.info("Groq client initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Groq client: {e}")
-        else:
-            # Fallback to direct os.getenv if pydantic-settings failed for some reason
-            direct_key = os.getenv("GROQ_API_KEY")
-            if direct_key:
-                self.api_key = direct_key
-                try:
-                    self.client = Groq(api_key=direct_key)
-                    logger.info("Groq client initialized successfully with direct key")
-                except Exception as e:
-                    logger.error(f"Failed to initialize Groq client with direct key: {e}")
-            else:
-                logger.warning("GROQ_API_KEY not configured. LLM service will operate in offline mode.")
+                self.client = None
+    
+    def _get_api_key(self):
+        """Get API key from various sources"""
+        # Try to get API key from settings first
+        api_key = settings.GROQ_API_KEY
+        
+        # If not in settings, try to load from encrypted storage
+        if not api_key:
+            try:
+                from app.utils.secrets_manager import secrets_manager
+                api_key = secrets_manager.get_secret('GROQ_API_KEY')
+                if api_key:
+                    logger.info("GROQ_API_KEY loaded from encrypted storage")
+            except Exception as e:
+                logger.error(f"Error loading API key from encrypted storage: {e}")
+        
+        # If still not found, try environment variable
+        if not api_key:
+            api_key = os.getenv("GROQ_API_KEY")
+        
+        return api_key
 
     def get_chat_response(self, message: str, context: str = "") -> str:
+        # Try to initialize client if not available
+        if not self.client:
+            self._initialize_client_if_key_available()
+        
+        # If still no client after initialization attempt, use offline response
         if not self.client:
             # Graceful Fallback for Demo/Audit without API Key
             logger.warning("Groq client not available, using offline response")
@@ -78,6 +100,26 @@ class LLMService:
 
         except Exception as e:
             logger.error(f"Groq API error: {e}")
+            # Try to reinitialize client in case of error
+            self.client = None
+            self._initialize_client_if_key_available()
+            if self.client:
+                # Retry once after reinitializing
+                try:
+                    completion = self.client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": message}
+                        ],
+                        model=self.available_models[0],
+                        max_tokens=300,
+                        temperature=0.7
+                    )
+                    response = completion.choices[0].message.content.strip()
+                    logger.info(f"Successfully generated response using model: {self.available_models[0]} after reinitialization")
+                    return response
+                except:
+                    pass
             return f"I encountered an error processing your request: {str(e)}. Using offline mode."
 
     def _generate_offline_response(self, message: str, context: str = "") -> str:
@@ -187,4 +229,5 @@ class LLMService:
         finally:
             db.close()
 
+# Create a global instance, but it will initialize the client dynamically when needed
 llm_service = LLMService()

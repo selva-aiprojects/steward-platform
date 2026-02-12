@@ -28,10 +28,20 @@ class EnhancedLLMService:
         self.clients = {}
         self.available_models = {}
         
-        # Groq client
-        if settings.GROQ_API_KEY:
+        # Groq client - try multiple sources for API key
+        groq_api_key = settings.GROQ_API_KEY
+        if not groq_api_key:
             try:
-                self.clients['groq'] = Groq(api_key=settings.GROQ_API_KEY)
+                from app.utils.secrets_manager import secrets_manager
+                groq_api_key = secrets_manager.get_secret('GROQ_API_KEY')
+            except Exception as e:
+                logger.error(f"Error loading GROQ_API_KEY from encrypted storage: {e}")
+        if not groq_api_key:
+            groq_api_key = os.getenv("GROQ_API_KEY")
+        
+        if groq_api_key:
+            try:
+                self.clients['groq'] = Groq(api_key=groq_api_key)
                 self.available_models['groq'] = [
                     "llama-3.3-70b-versatile",
                     "llama3-groq-70b-8192-tool-use-preview",
@@ -41,12 +51,22 @@ class EnhancedLLMService:
                 logger.info("Groq client initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Groq client: {e}")
+
+        # OpenAI client - try multiple sources for API key
+        openai_api_key = settings.OPENAI_API_KEY
+        if not openai_api_key:
+            try:
+                from app.utils.secrets_manager import secrets_manager
+                openai_api_key = secrets_manager.get_secret('OPENAI_API_KEY')
+            except Exception as e:
+                logger.error(f"Error loading OPENAI_API_KEY from encrypted storage: {e}")
+        if not openai_api_key:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
         
-        # OpenAI client
-        if settings.OPENAI_API_KEY:
+        if openai_api_key:
             try:
                 from openai import OpenAI
-                self.clients['openai'] = OpenAI(api_key=settings.OPENAI_API_KEY)
+                self.clients['openai'] = OpenAI(api_key=openai_api_key)
                 self.available_models['openai'] = [
                     "gpt-4-turbo",
                     "gpt-4",
@@ -55,12 +75,22 @@ class EnhancedLLMService:
                 logger.info("OpenAI client initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
+
+        # Anthropic client - try multiple sources for API key
+        anthropic_api_key = settings.ANTHROPIC_API_KEY
+        if not anthropic_api_key:
+            try:
+                from app.utils.secrets_manager import secrets_manager
+                anthropic_api_key = secrets_manager.get_secret('ANTHROPIC_API_KEY')
+            except Exception as e:
+                logger.error(f"Error loading ANTHROPIC_API_KEY from encrypted storage: {e}")
+        if not anthropic_api_key:
+            anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         
-        # Anthropic client
-        if settings.ANTHROPIC_API_KEY:
+        if anthropic_api_key:
             try:
                 import anthropic
-                self.clients['anthropic'] = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+                self.clients['anthropic'] = anthropic.Anthropic(api_key=anthropic_api_key)
                 self.available_models['anthropic'] = [
                     "claude-3-opus-20240229",
                     "claude-3-sonnet-20240229",

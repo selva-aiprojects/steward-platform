@@ -30,7 +30,13 @@ Testing and validation documentation:
 - **[Test Plan](./docs/testing/TEST_PLAN.md)** - Testing strategy and approach
 - **[Test Results Summary](./docs/testing/TEST_RESULTS_SUMMARY.md)** - Summary of test results
 
-### 5. System Documentation
+### 5. Security & Operations
+Security-focused documentation:
+
+- **[Secrets Management Implementation](./docs/security/SECRETS_MANAGEMENT_UPDATE.md)** - Secure storage and management of API keys and sensitive data
+- **[Testing Plan with Seeded Data](./docs/security/TESTING_PLAN_WITH_SEEDED_DATA.md)** - Comprehensive testing approach for platform validation
+
+### 6. System Documentation
 Additional system-level documentation:
 
 - **[Architecture Workflow Documentation](./ARCHITECTURE_WORKFLOW_DOCUMENTATION.md)** - System architecture and workflow details
