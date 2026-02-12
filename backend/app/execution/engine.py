@@ -418,33 +418,14 @@ class ExecutionEngine:
         Get current market price for a symbol (simulated)
         """
         # In a real implementation, this would fetch from market data feed
-        # For now, return a simulated price
-        base_prices = {
-            'RELIANCE': 2987.50,
-            'TCS': 3450.00,
-            'HDFCBANK': 1450.00,
-            'INFY': 1540.00,
-            'ICICIBANK': 1042.00,
-            'SBIN': 580.00,
-            'ITC': 438.00,
-            'LT': 2200.00,
-            'AXISBANK': 1125.00,
-            'KOTAKBANK': 1800.00,
-            'BAJFINANCE': 7200.00,
-            'MARUTI': 8500.00,
-            'SENSEX': 72150.00,
-            'NIFTY': 22340.00,
-            'GOLD': 62450.00,
-            'SILVER': 74200.00,
-            'CRUDEOIL': 6985.00,
-            'NATURALGAS': 280.00
-        }
+        # Fetch live price from TrueData API
+        from app.services.true_data_service import true_data_service
+        live_price = await true_data_service.get_quote(symbol, exchange)
+        if live_price and 'last_price' in live_price:
+            return live_price['last_price']
         
-        base_price = base_prices.get(symbol, 1000.0)
-        
-        # Add some random fluctuation
-        fluctuation = random.uniform(-0.02, 0.02)  # ±2%
-        return base_price * (1 + fluctuation)
+        # If TrueData API fails, return None to indicate no price available
+        return None
     
     def _calculate_slippage(self, quantity: int, price: float, side: str) -> float:
         """

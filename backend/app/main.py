@@ -57,32 +57,8 @@ socket_app = socketio.ASGIApp(sio, app)
 last_market_movers = {'gainers': [], 'losers': []}
 last_steward_prediction = {"prediction": "Initializing...", "history": []}
 
-# Mock data for fallback mode
-mock_gainers = [
-    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.5, 'change': 1.2},
-    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.0, 'change': 0.8},
-    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.0, 'change': 0.6},
-    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.0, 'change': 1.1},
-    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.0, 'change': 0.9},
-    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.0, 'change': 0.7},
-    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.0, 'change': 0.5},
-    {'symbol': 'SENSEX', 'exchange': 'BSE', 'price': 72420.0, 'change': 0.6},
-    {'symbol': 'NIFTY', 'exchange': 'NSE', 'price': 22340.0, 'change': 0.8},
-    {'symbol': 'GOLD', 'exchange': 'MCX', 'price': 62450.0, 'change': 0.9}
-]
-
-mock_losers = [
-    {'symbol': 'WIPRO', 'exchange': 'NSE', 'price': 420.0, 'change': -1.2},
-    {'symbol': 'TATASTEEL', 'exchange': 'NSE', 'price': 115.0, 'change': -2.3},
-    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.0, 'change': -1.5},
-    {'symbol': 'NTPC', 'exchange': 'NSE', 'price': 310.0, 'change': -0.8},
-    {'symbol': 'POWERGRID', 'exchange': 'NSE', 'price': 275.0, 'change': -0.7},
-    {'symbol': 'BAJAJFINSV', 'exchange': 'NSE', 'price': 1680.0, 'change': -0.9},
-    {'symbol': 'SUNPHARMA', 'exchange': 'NSE', 'price': 1340.0, 'change': -0.6},
-    {'symbol': 'CRUDEOIL', 'exchange': 'MCX', 'price': 6985.0, 'change': -0.9},
-    {'symbol': 'SILVER', 'exchange': 'MCX', 'price': 74200.0, 'change': -0.5},
-    {'symbol': 'BOM500002', 'exchange': 'BSE', 'price': 1790.0, 'change': -0.4}
-]
+# Note: Using TrueData API for live market data - no hardcoded fallback values
+# The system will fetch live data from TrueData API and only show actual market prices
 
 @sio.event
 async def connect(sid, environ):

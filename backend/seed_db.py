@@ -96,9 +96,9 @@ def seed_db():
 
             # Seed Holdings (INR 10,000 invested across 3 equities)
             holdings_seed = [
-                {"symbol": "RELIANCE", "qty": 1, "price": 2500.0},
-                {"symbol": "TCS", "qty": 1, "price": 3500.0},
-                {"symbol": "HDFCBANK", "qty": 5, "price": 800.0},
+                {"symbol": "RELIANCE", "qty": 1, "price": 0.0},  # Will be updated with live data
+                {"symbol": "TCS", "qty": 1, "price": 0.0},      # Will be updated with live data
+                {"symbol": "HDFCBANK", "qty": 5, "price": 0.0},  # Will be updated with live data
             ]
             for h in holdings_seed:
                 holding = Holding(

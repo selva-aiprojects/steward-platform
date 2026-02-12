@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 from app.core.config import settings
 import random
 import logging
+import requests
+import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Import TrueData service
+from app.services.true_data_service import true_data_service
 
 @router.get("/status")
 def get_market_status() -> Any:
@@ -320,89 +325,34 @@ async def get_market_movers() -> Any:
                 "losers": final_losers[:15]
             }
         else:
-            # Return mock data if no valid quotes
+            # Return empty arrays if no valid quotes (no hardcoded fallbacks)
             return {
-                "gainers": [
-                    {"symbol": "RELIANCE", "exchange": "NSE", "price": 2987.5, "change": 1.2, "last_price": 2987.5},
-                    {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1450.0, "change": 0.8, "last_price": 1450.0},
-                    {"symbol": "INFY", "exchange": "NSE", "price": 1540.0, "change": 1.1, "last_price": 1540.0},
-                    {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2850.0, "change": 0.9, "last_price": 2850.0},
-                    {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1042.0, "change": 0.7, "last_price": 1042.0},
-                    {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": 0.8, "last_price": 580.0},
-                    {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": 0.9, "last_price": 1125.0},
-                    {"symbol": "LT", "exchange": "NSE", "price": 2200.0, "change": 0.6, "last_price": 2200.0},
-                    {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1800.0, "change": 0.5, "last_price": 1800.0},
-                    {"symbol": "MARUTI", "exchange": "NSE", "price": 8500.0, "change": 0.4, "last_price": 8500.0},
-                    {"symbol": "WIPRO", "exchange": "NSE", "price": 750.0, "change": 0.3, "last_price": 750.0},
-                    {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 950.0, "change": 0.2, "last_price": 950.0},
-                    {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 750.0, "change": 0.1, "last_price": 750.0},
-                    {"symbol": "ITC", "exchange": "NSE", "price": 438.0, "change": 0.15, "last_price": 438.0},
-                    {"symbol": "COALINDIA", "exchange": "NSE", "price": 280.0, "change": 0.25, "last_price": 280.0}
-                ],
-                "losers": [
-                    {"symbol": "TCS", "exchange": "NSE", "price": 3450.0, "change": -0.5, "last_price": 3450.0},
-                    {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": -0.8, "last_price": 580.0},
-                    {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": -0.4, "last_price": 1125.0},
-                    {"symbol": "WIPRO", "exchange": "NSE", "price": 420.0, "change": -1.2, "last_price": 420.0},
-                    {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 1340.0, "change": -0.6, "last_price": 1340.0},
-                    {"symbol": "RELIANCE", "exchange": "NSE", "price": 2980.0, "change": -0.3, "last_price": 2980.0},
-                    {"symbol": "INFY", "exchange": "NSE", "price": 1535.0, "change": -0.2, "last_price": 1535.0},
-                    {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1445.0, "change": -0.1, "last_price": 1445.0},
-                    {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1040.0, "change": -0.15, "last_price": 1040.0},
-                    {"symbol": "LT", "exchange": "NSE", "price": 2195.0, "change": -0.2, "last_price": 2195.0},
-                    {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1795.0, "change": -0.3, "last_price": 1795.0},
-                    {"symbol": "MARUTI", "exchange": "NSE", "price": 8495.0, "change": -0.1, "last_price": 8495.0},
-                    {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 745.0, "change": -0.2, "last_price": 745.0},
-                    {"symbol": "ITC", "exchange": "NSE", "price": 435.0, "change": -0.3, "last_price": 435.0},
-                    {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2845.0, "change": -0.1, "last_price": 2845.0}
-                ]
+                "gainers": [],
+                "losers": []
             }
 
     except Exception as e:
         logger.error(f"Error fetching market movers: {e}")
-        # Return mock data if API call fails, but include any MarketStack data if available
-        mock_gainers = [
-            {"symbol": "RELIANCE", "exchange": "NSE", "price": 2987.5, "change": 1.2, "last_price": 2987.5},
-            {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1450.0, "change": 0.8, "last_price": 1450.0},
-            {"symbol": "INFY", "exchange": "NSE", "price": 1540.0, "change": 1.1, "last_price": 1540.0},
-            {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2850.0, "change": 0.9, "last_price": 2850.0},
-            {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1042.0, "change": 0.7, "last_price": 1042.0},
-            {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": 0.8, "last_price": 580.0},
-            {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": 0.9, "last_price": 1125.0},
-            {"symbol": "LT", "exchange": "NSE", "price": 2200.0, "change": 0.6, "last_price": 2200.0},
-            {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1800.0, "change": 0.5, "last_price": 1800.0},
-            {"symbol": "MARUTI", "exchange": "NSE", "price": 8500.0, "change": 0.4, "last_price": 8500.0},
-            {"symbol": "WIPRO", "exchange": "NSE", "price": 750.0, "change": 0.3, "last_price": 750.0},
-            {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 950.0, "change": 0.2, "last_price": 950.0},
-            {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 750.0, "change": 0.1, "last_price": 750.0},
-            {"symbol": "ITC", "exchange": "NSE", "price": 438.0, "change": 0.15, "last_price": 438.0},
-            {"symbol": "COALINDIA", "exchange": "NSE", "price": 280.0, "change": 0.25, "last_price": 280.0}
-        ]
-        mock_losers = [
-            {"symbol": "TCS", "exchange": "NSE", "price": 3450.0, "change": -0.5, "last_price": 3450.0},
-            {"symbol": "SBIN", "exchange": "NSE", "price": 580.0, "change": -0.8, "last_price": 580.0},
-            {"symbol": "AXISBANK", "exchange": "NSE", "price": 1125.0, "change": -0.4, "last_price": 1125.0},
-            {"symbol": "WIPRO", "exchange": "NSE", "price": 420.0, "change": -1.2, "last_price": 420.0},
-            {"symbol": "SUNPHARMA", "exchange": "NSE", "price": 1340.0, "change": -0.6, "last_price": 1340.0},
-            {"symbol": "RELIANCE", "exchange": "NSE", "price": 2980.0, "change": -0.3, "last_price": 2980.0},
-            {"symbol": "INFY", "exchange": "NSE", "price": 1535.0, "change": -0.2, "last_price": 1535.0},
-            {"symbol": "HDFCBANK", "exchange": "NSE", "price": 1445.0, "change": -0.1, "last_price": 1445.0},
-            {"symbol": "ICICIBANK", "exchange": "NSE", "price": 1040.0, "change": -0.15, "last_price": 1040.0},
-            {"symbol": "LT", "exchange": "NSE", "price": 2195.0, "change": -0.2, "last_price": 2195.0},
-            {"symbol": "KOTAKBANK", "exchange": "NSE", "price": 1795.0, "change": -0.3, "last_price": 1795.0},
-            {"symbol": "MARUTI", "exchange": "NSE", "price": 8495.0, "change": -0.1, "last_price": 8495.0},
-            {"symbol": "TATAMOTORS", "exchange": "NSE", "price": 745.0, "change": -0.2, "last_price": 745.0},
-            {"symbol": "ITC", "exchange": "NSE", "price": 435.0, "change": -0.3, "last_price": 435.0},
-            {"symbol": "HINDUNILVR", "exchange": "NSE", "price": 2845.0, "change": -0.1, "last_price": 2845.0}
-        ]
-
-        # Combine with any MarketStack data that was retrieved
-        combined_gainers = marketstack_gainers + mock_gainers
-        combined_losers = marketstack_losers + mock_losers
-
+        # Try TrueData API as fallback if other sources fail
+        try:
+            true_data_result = true_data_service.get_top_movers(count=15)
+            if true_data_result and true_data_result.get("gainers") and true_data_result.get("losers"):
+                # Combine with any MarketStack data that was retrieved
+                combined_gainers = marketstack_gainers + true_data_result["gainers"]
+                combined_losers = marketstack_losers + true_data_result["losers"]
+                
+                return {
+                    "gainers": combined_gainers[:15],
+                    "losers": combined_losers[:15]
+                }
+        except Exception as td_error:
+            logger.error(f"Error fetching data from TrueData: {td_error}")
+        
+        # If all data sources fail, return empty arrays instead of hardcoded mock data
+        logger.warning("All data sources failed - returning empty arrays")
         return {
-            "gainers": combined_gainers[:15],
-            "losers": combined_losers[:15]
+            "gainers": [],
+            "losers": []
         }
 
 
