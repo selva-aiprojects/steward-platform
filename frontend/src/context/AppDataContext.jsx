@@ -56,7 +56,7 @@ export const AppDataProvider = ({ children }) => {
                 fetchWatchlist(viewId),
                 fetchTrades(viewId),
                 fetchProjections(),
-                fetchStrategies(),
+                fetchStrategies(viewId),
                 fetchMarketMovers(),
                 fetchExchangeStatus(),
                 fetchUser(viewId),
@@ -93,7 +93,7 @@ export const AppDataProvider = ({ children }) => {
             if (!hasLoaded || (Array.isArray(projData) && projData.length > 0)) {
                 setProjections(Array.isArray(projData) ? projData : []);
             }
-            if (!hasLoaded || (Array.isArray(strategiesData) && strategiesData.length > 0)) {
+            if (!hasLoaded) {
                 setStrategies(Array.isArray(strategiesData) ? strategiesData : []);
             }
 
