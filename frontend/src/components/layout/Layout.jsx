@@ -75,6 +75,10 @@ export function Layout({ children }) {
                                 <Activity size={18} className={`${location.pathname === '/investment' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
                                 <span>Investment</span>
                             </NavLink>
+                            <NavLink to="/strategies" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <Zap size={18} className={`${location.pathname === '/strategies' ? 'text-purple-400' : 'text-slate-400 group-hover:text-purple-400'} transition-colors`} />
+                                <span>Strategy Selection</span>
+                            </NavLink>
                         </>
                     )}
 

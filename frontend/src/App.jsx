@@ -17,6 +17,7 @@ import { AppDataProvider } from "./context/AppDataContext"
 import { useNavigate, useLocation, Navigate } from "react-router-dom"
 import InvestmentDashboard from "./pages/InvestmentDashboard"
 import InvestmentReports from "./pages/InvestmentReports"
+import StrategySelectionPage from "./pages/StrategySelection"
 
 // Inner components for Auth Logic to be inside Router context
 const AuthWrapper = ({ children }) => {
@@ -69,6 +70,7 @@ function App() {
               <Route path="/support" element={<RequireAuth><Layout><Support /></Layout></RequireAuth>} />
               <Route path="/investment" element={<RequireAuth><Layout><InvestmentDashboard /></Layout></RequireAuth>} />
               <Route path="/reports/investment" element={<RequireAuth><Layout><InvestmentReports /></Layout></RequireAuth>} />
+              <Route path="/strategies" element={<RequireAuth><Layout><StrategySelectionPage /></Layout></RequireAuth>} />
             </Routes>
           </AppDataProvider>
         </AuthWrapper>
