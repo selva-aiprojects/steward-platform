@@ -213,7 +213,20 @@ export const AppDataProvider = ({ children }) => {
             socket.emit('join_stream', { role: user?.role || 'TRADER', userId: user?.id });
         };
 
-        const onMarketUpdate = (data) => {};
+        const onMarketUpdate = (data) => {
+            // Handle live market updates
+            if (data && typeof data === 'object') {
+                // Update marketMovers with live data if available
+                if (data.gainers || data.losers) {
+                    setMarketMovers(prev => ({
+                        ...prev,
+                        gainers: Array.isArray(data.gainers) ? data.gainers : prev.gainers || [],
+                        losers: Array.isArray(data.losers) ? data.losers : prev.losers || []
+                    }));
+                }
+                // Update other market data as needed
+            }
+        };
 
         const onStewardPrediction = (data) => {
             if (data && typeof data === 'object') {
@@ -227,10 +240,12 @@ export const AppDataProvider = ({ children }) => {
 
         const onMarketMovers = (data) => {
             if (data && typeof data === 'object') {
-                // Ensure consistent structure with gainers and losers arrays
-                const gainers = Array.isArray(data.gainers) ? data.gainers : [];
-                const losers = Array.isArray(data.losers) ? data.losers : [];
-                setMarketMovers({ gainers, losers });
+                // Update only gainers and losers, preserve other data
+                setMarketMovers(prev => ({
+                    ...prev,
+                    gainers: Array.isArray(data.gainers) ? data.gainers : prev.gainers || [],
+                    losers: Array.isArray(data.losers) ? data.losers : prev.losers || []
+                }));
             }
         };
 
