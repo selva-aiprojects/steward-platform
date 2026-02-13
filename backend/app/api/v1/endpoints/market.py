@@ -7,6 +7,7 @@ import yfinance as yf
 import time
 import asyncio
 from datetime import datetime, timezone
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,107 @@ def _with_market_meta(payload: Dict[str, Any], source: str, status: str, as_of: 
     data["status"] = status
     data["as_of"] = as_of or _now_iso()
     return data
+
+
+def _last_two_valid(values: list[Any]) -> tuple[Optional[float], Optional[float]]:
+    valid: list[float] = []
+    for v in values or []:
+        if v is None:
+            continue
+        try:
+            valid.append(float(v))
+        except Exception:
+            continue
+    if not valid:
+        return None, None
+    if len(valid) == 1:
+        return valid[0], valid[0]
+    return valid[-1], valid[-2]
+
+
+async def _fetch_chart_quote(client: httpx.AsyncClient, symbol: str) -> Optional[Dict[str, Any]]:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": "5d", "interval": "1d"}
+    r = await client.get(url, params=params)
+    r.raise_for_status()
+    payload = r.json() or {}
+    result = ((payload.get("chart") or {}).get("result") or [None])[0]
+    if not result:
+        return None
+    closes = ((((result.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or [])
+    current, previous = _last_two_valid(closes)
+    if current is None:
+        return None
+    previous = previous or current
+    change = 0.0 if previous == 0 else ((current - previous) / previous) * 100
+    return {"last_price": current, "change": change}
+
+
+async def _chart_quotes(symbols: list[str], timeout_s: int = 4) -> Dict[str, Dict[str, Any]]:
+    quotes: Dict[str, Dict[str, Any]] = {}
+    timeout = httpx.Timeout(timeout_s)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+        tasks = [_fetch_chart_quote(client, s) for s in symbols]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    for symbol, result in zip(symbols, results):
+        if isinstance(result, Exception) or not result:
+            continue
+        quotes[symbol] = result
+    return quotes
+
+
+async def _quote_batch(symbols: list[str], timeout_s: int = 4) -> Dict[str, Dict[str, Any]]:
+    timeout = httpx.Timeout(timeout_s)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    params = {"symbols": ",".join(symbols)}
+    out: Dict[str, Dict[str, Any]] = {}
+    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+        r = await client.get("https://query1.finance.yahoo.com/v7/finance/quote", params=params)
+        r.raise_for_status()
+        payload = r.json() or {}
+    rows = (((payload.get("quoteResponse") or {}).get("result")) or [])
+    for row in rows:
+        symbol = row.get("symbol")
+        if not symbol:
+            continue
+        current = row.get("regularMarketPrice")
+        prev = row.get("regularMarketPreviousClose")
+        try:
+            current_f = float(current)
+            prev_f = float(prev) if prev is not None else current_f
+        except Exception:
+            continue
+        change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
+        out[symbol] = {"last_price": current_f, "change": change}
+    return out
+
+
+def _chart_quotes_sync(symbols: list[str], timeout_s: int = 3) -> Dict[str, Dict[str, Any]]:
+    quotes: Dict[str, Dict[str, Any]] = {}
+    timeout = httpx.Timeout(timeout_s)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    with httpx.Client(timeout=timeout, headers=headers) as client:
+        for symbol in symbols:
+            try:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+                params = {"range": "5d", "interval": "1d"}
+                r = client.get(url, params=params)
+                r.raise_for_status()
+                payload = r.json() or {}
+                result = ((payload.get("chart") or {}).get("result") or [None])[0]
+                if not result:
+                    continue
+                closes = ((((result.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or [])
+                current, previous = _last_two_valid(closes)
+                if current is None:
+                    continue
+                previous = previous or current
+                change = 0.0 if previous == 0 else ((current - previous) / previous) * 100
+                quotes[symbol] = {"last_price": current, "change": change}
+            except Exception:
+                continue
+    return quotes
 
 
 async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 4):
@@ -185,7 +287,7 @@ async def get_market_movers() -> Any:
         return cached_movers
     stale_movers = _cache_store.get("movers", {}).get("value")
 
-    # Primary source for Indian stocks using yfinance (Batch download is MUCH faster)
+    # Primary source for Indian stocks using Yahoo chart API (more reliable on Render).
     watchlist = [
         'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
         'SBIN.NS', 'ITC.NS', 'LT.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
@@ -198,39 +300,16 @@ async def get_market_movers() -> Any:
 
     try:
         started = time.time()
-        # Fetch data for all tickers in one batch request
-        import pandas as pd
-        data = await _yf_download(watchlist, period="5d", timeout_s=4)
-        
-        raw_quotes = {}
-        for ticker_symbol in watchlist:
-            try:
-                # Handle single vs multi-index dataframe from yf.download
-                if isinstance(data.columns, pd.MultiIndex):
-                    if ticker_symbol in data.columns.levels[0]:
-                        hist = data[ticker_symbol]
-                else:
-                    hist = data # Single ticker case
-
-                if not hist.empty and 'Close' in hist:
-                    current_price = hist['Close'].iloc[-1]
-                    if len(hist) > 1:
-                        prev_close = hist['Close'].iloc[-2]
-                    else:
-                        prev_close = current_price
-                    
-                    if prev_close != 0:
-                        change_pct = ((current_price - prev_close) / prev_close) * 100
-                        clean_symbol = ticker_symbol.replace('.NS', '')
-                        raw_quotes[clean_symbol] = {
-                            'last_price': current_price,
-                            'change': change_pct,
-                            'exchange': 'NSE',
-                            'symbol': clean_symbol
-                        }
-            except Exception as ticker_err:
-                logger.debug(f"Error processing {ticker_symbol}: {ticker_err}")
-                continue
+        chart_quotes = await _quote_batch(watchlist, timeout_s=4)
+        raw_quotes: Dict[str, Dict[str, Any]] = {}
+        for ticker_symbol, quote in chart_quotes.items():
+            clean_symbol = ticker_symbol.replace('.NS', '')
+            raw_quotes[clean_symbol] = {
+                'last_price': quote['last_price'],
+                'change': quote['change'],
+                'exchange': 'NSE',
+                'symbol': clean_symbol
+            }
 
         # Identify Gainers and Losers
         quotes_with_changes = {}
@@ -265,17 +344,56 @@ async def get_market_movers() -> Any:
         }, source="yahoo_finance", status="LIVE")
         
         if result["gainers"] or result["losers"]:
-            _record_provider_result("yahoo_finance", True, (time.time() - started) * 1000)
+            _record_provider_result("yahoo_chart_api", True, (time.time() - started) * 1000)
             _cache_set("movers", result)
             return result
 
-        # If batch fetch returned no usable rows, attempt fallback.
-        _record_provider_result("yahoo_finance", False, (time.time() - started) * 1000, "Empty movers payload")
-        raise RuntimeError("Empty movers payload from primary feed")
+        # If primary fetch returned no usable rows, attempt yfinance fallback.
+        _record_provider_result("yahoo_chart_api", False, (time.time() - started) * 1000, "Empty movers payload")
+        raise RuntimeError("Empty movers payload from chart API")
 
     except Exception as e:
-        logger.error(f"Error fetching market movers: {e}")
-        _record_provider_result("yahoo_finance", False, error=str(e))
+        logger.error(f"Error fetching market movers from chart API: {e}")
+        _record_provider_result("yahoo_chart_api", False, error=str(e))
+        # yfinance fallback
+        try:
+            yf_started = time.time()
+            import pandas as pd
+            data = await _yf_download(watchlist, period="5d", timeout_s=4)
+            raw_quotes = {}
+            for ticker_symbol in watchlist:
+                if isinstance(data.columns, pd.MultiIndex):
+                    if ticker_symbol not in data.columns.levels[0]:
+                        continue
+                    hist = data[ticker_symbol]
+                else:
+                    hist = data
+                if hist.empty or 'Close' not in hist:
+                    continue
+                current_price = hist['Close'].iloc[-1]
+                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+                if prev_close == 0:
+                    continue
+                change_pct = ((current_price - prev_close) / prev_close) * 100
+                clean_symbol = ticker_symbol.replace('.NS', '')
+                raw_quotes[clean_symbol] = {
+                    'last_price': current_price,
+                    'change': change_pct,
+                    'exchange': 'NSE',
+                    'symbol': clean_symbol
+                }
+            sorted_movers = sorted(raw_quotes.items(), key=lambda x: x[1]['change'], reverse=True)
+            gainers = [{'symbol': q['symbol'], 'exchange': q['exchange'], 'price': round(q['last_price'], 2), 'change': round(q['change'], 2), 'last_price': round(q['last_price'], 2)} for _, q in sorted_movers[:15]]
+            losers = [{'symbol': q['symbol'], 'exchange': q['exchange'], 'price': round(q['last_price'], 2), 'change': round(q['change'], 2), 'last_price': round(q['last_price'], 2)} for _, q in sorted_movers[-15:]]
+            fallback = _with_market_meta({"gainers": gainers, "losers": sorted(losers, key=lambda x: x['change'])}, source="yahoo_finance", status="LIVE")
+            if fallback["gainers"] or fallback["losers"]:
+                _record_provider_result("yahoo_finance", True, (time.time() - yf_started) * 1000)
+                _cache_set("movers", fallback)
+                return fallback
+            _record_provider_result("yahoo_finance", False, (time.time() - yf_started) * 1000, "Empty movers payload")
+        except Exception as yf_error:
+            _record_provider_result("yahoo_finance", False, error=str(yf_error))
+
         # Try TrueData API as fallback if other sources fail
         if settings.TRUEDATA_API_KEY:
             try:
@@ -357,6 +475,26 @@ def get_macro_indicators() -> Any:
             "sentiment": "BULLISH" if last_macro_indicators['usd_inr'] < 83.5 else "NEUTRAL",
             "volatility_label": "STABLE"
         }, source="socket_feed", status="LIVE")
+
+    # API fallback for macro cards so pilot users don't see blank tiles.
+    try:
+        macro_symbols = ['USDINR=X', 'GC=F', 'CL=F']
+        started = time.time()
+        quotes = _chart_quotes_sync(macro_symbols, timeout_s=3)
+        if quotes:
+            payload = _with_market_meta({
+                "usd_inr": round((quotes.get('USDINR=X') or {}).get('last_price', 0), 2) or None,
+                "gold": round((quotes.get('GC=F') or {}).get('last_price', 0), 2) or None,
+                "crude": round((quotes.get('CL=F') or {}).get('last_price', 0), 2) or None,
+                "10y_yield": None,
+                "sentiment": "NEUTRAL",
+                "volatility_label": "LIVE"
+            }, source="yahoo_chart_api", status="LIVE")
+            _record_provider_result("yahoo_chart_api_macro", True, (time.time() - started) * 1000)
+            return payload
+        _record_provider_result("yahoo_chart_api_macro", False, (time.time() - started) * 1000, "Empty macro payload")
+    except Exception as e:
+        _record_provider_result("yahoo_chart_api_macro", False, error=str(e))
 
     # No mock fallback: return explicit unavailable state until real data arrives.
     return _with_market_meta({
