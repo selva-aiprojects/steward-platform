@@ -227,11 +227,13 @@ export const AppDataProvider = ({ children }) => {
 
         const onMarketMovers = (data) => {
             if (data && typeof data === 'object') {
-                // Update only gainers and losers, preserve other data
                 setMarketMovers(prev => ({
                     ...prev,
                     gainers: Array.isArray(data.gainers) ? data.gainers : prev.gainers || [],
-                    losers: Array.isArray(data.losers) ? data.losers : prev.losers || []
+                    losers: Array.isArray(data.losers) ? data.losers : prev.losers || [],
+                    currencies: Array.isArray(data.currencies) ? data.currencies : prev.currencies || [],
+                    metals: Array.isArray(data.metals) ? data.metals : prev.metals || [],
+                    commodities: Array.isArray(data.commodities) ? data.commodities : prev.commodities || []
                 }));
             }
         };

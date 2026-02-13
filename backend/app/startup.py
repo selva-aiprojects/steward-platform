@@ -73,75 +73,63 @@ async def initialize_services():
 
 async def perform_health_checks():
     """
-    Perform comprehensive health checks on all services
+    Perform comprehensive health checks on all services in parallel for optimization
     """
-    logger.info("Performing health checks...")
+    logger.info("Performing optimized health checks...")
     
     health_status = {
         "database": False,
         "kite_connect": False,
         "llm_services": [],
         "data_integrations": [],
-        "socket_service": False
+        "socket_service": True # Mark True as it's initialized in main.py
     }
     
-    # Check database
-    try:
-        # Use the sync database engine for health check
-        from app.core.database import engine
-        from sqlalchemy import text
+    # 1. Database Check
+    async def check_db():
+        try:
+            from app.core.database import engine
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return True
+        except Exception as e:
+            logger.error(f"DB health check failed: {e}")
+            return False
 
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1"))
-            health_status["database"] = True
-    except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-    
-    # Check Kite connection
-    try:
-        if kite_service.validate_connection():
-            health_status["kite_connect"] = True
-    except Exception as e:
-        logger.error(f"KiteConnect health check failed: {e}")
-    
-    # Check LLM providers
-    try:
-        available_providers = enhanced_llm_service.get_available_providers()
-        for provider in available_providers:
-            try:
-                # Test basic connectivity using the test_connection method
-                test_result = await enhanced_llm_service.test_connection(provider)
-                if test_result:
-                    health_status["llm_services"].append(provider)
-            except Exception as e:
-                logger.error(f"LLM provider {provider} health check failed: {e}")
-    except Exception as e:
-        logger.error(f"LLM health checks failed: {e}")
-    
-    # Check data integrations
-    try:
-        if hasattr(data_integration_service, 'get_available_sources'):
-            available_sources = await data_integration_service.get_available_sources()
-            # Test basic connectivity using the verify_connections method
+    # 2. Kite Check
+    async def check_kite():
+        try:
+            return kite_service.validate_connection()
+        except: return False
+
+    # 3. LLM Checks (Parallel)
+    async def check_llm():
+        available = enhanced_llm_service.get_available_providers()
+        results = await asyncio.gather(*[enhanced_llm_service.test_connection(p) for p in available])
+        return [p for p, success in zip(available, results) if success]
+
+    # 4. Data Integration Checks
+    async def check_data():
+        try:
+            available = await data_integration_service.get_available_sources()
             connection_status = await data_integration_service.verify_connections()
-            for source in available_sources:
-                try:
-                    if connection_status.get(source, False):
-                        health_status["data_integrations"].append(source)
-                except Exception as e:
-                    logger.error(f"Data source {source} health check failed: {e}")
-    except Exception as e:
-        logger.error(f"Data integration health checks failed: {e}")
+            return [src for src in available if connection_status.get(src, False)]
+        except: return []
+
+    # Run all major checks in parallel
+    db_ok, kite_ok, active_llms, active_data = await asyncio.gather(
+        check_db(), check_kite(), check_llm(), check_data()
+    )
+
+    health_status.update({
+        "database": db_ok,
+        "kite_connect": kite_ok,
+        "llm_services": active_llms,
+        "data_integrations": active_data
+    })
     
-    # Check socket service - just mark as available since it's initialized in main.py
-    try:
-        # Socket service is initialized in main.py with the sio variable
-        # For now, we'll assume it's available if the app reaches this point
-        health_status["socket_service"] = True
-    except Exception as e:
-        logger.error(f"Socket service health check failed: {e}")
-    
-    logger.info(f"Health check results: {health_status}")
+    logger.info(f"Parallel health check results: {health_status}")
     return health_status
 
 

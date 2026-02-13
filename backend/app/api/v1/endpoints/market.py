@@ -264,14 +264,11 @@ async def get_currency_movers() -> Any:
     """
     Get top currency movers using yfinance batch download with 5-minute cache.
     """
-    import time
-    global _currency_cache, _currency_cache_time
-    if '_currency_cache' not in globals():
-        _currency_cache = None
-        _currency_cache_time = 0
+    # Prioritize shared global state
+    if last_market_movers.get('currencies'):
+        return {"currencies": last_market_movers['currencies']}
 
-    if _currency_cache and (time.time() - _currency_cache_time < 600):
-        return _currency_cache
+    import time
 
     try:
         import yfinance as yf
@@ -316,14 +313,11 @@ async def get_metals_movers() -> Any:
     """
     Get top metals movers using yfinance batch download with 5-minute cache.
     """
-    import time
-    global _metals_cache, _metals_cache_time
-    if '_metals_cache' not in globals():
-        _metals_cache = None
-        _metals_cache_time = 0
+    # Prioritize shared global state
+    if last_market_movers.get('metals'):
+        return {"metals": last_market_movers['metals']}
 
-    if _metals_cache and (time.time() - _metals_cache_time < 600):
-        return _metals_cache
+    import time
 
     try:
         import yfinance as yf
@@ -368,14 +362,11 @@ async def get_commodity_movers() -> Any:
     """
     Get top commodity movers using yfinance batch download with 5-minute cache.
     """
-    import time
-    global _commodity_cache, _commodity_cache_time
-    if '_commodity_cache' not in globals():
-        _commodity_cache = None
-        _commodity_cache_time = 0
+    # Prioritize shared global state
+    if last_market_movers.get('commodities'):
+        return {"commodities": last_market_movers['commodities']}
 
-    if _commodity_cache and (time.time() - _commodity_cache_time < 600):
-        return _commodity_cache
+    import time
 
     try:
         import yfinance as yf

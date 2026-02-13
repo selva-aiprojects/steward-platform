@@ -1,190 +1,96 @@
-import React, { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { useAppData } from "../context/AppDataContext";
 
 export function MarketTicker() {
     const { marketMovers, loading } = useAppData() || {};
-    const [nseItems, setNseItems] = useState([]);
-    const [bseItems, setBseItems] = useState([]);
 
-    useEffect(() => {
-        if (!marketMovers) {
-            setNseItems([]);
-            setBseItems([]);
-            return;
-        }
-
+    const tickerItems = useMemo(() => {
+        if (!marketMovers) return [];
         const gainers = Array.isArray(marketMovers.gainers) ? marketMovers.gainers : [];
         const losers = Array.isArray(marketMovers.losers) ? marketMovers.losers : [];
 
-        const all = [...gainers, ...losers].filter(
-            (s) => s && s.symbol && Number.isFinite(Number(s.price))
-        );
-
-        // Separate items by exchange with fallback logic
-        const nseFiltered = [];
-        const bseFiltered = [];
-        const otherItems = []; // For items without clear exchange designation
-
-        all.forEach(item => {
-            const exchange = item.exchange ? item.exchange.toUpperCase() : '';
-            if (exchange.includes('NSE') || exchange.includes('XNSE') || exchange === 'NATIONAL STOCK EXCHANGE OF INDIA') {
-                nseFiltered.push(item);
-            } else if (exchange.includes('BSE') || exchange.includes('XBOM') || exchange === 'BOMBAY STOCK EXCHANGE') {
-                bseFiltered.push(item);
-            } else {
-                // If exchange is not clearly identified, distribute evenly or use as fallback
-                otherItems.push(item);
-            }
-        });
-
-        // If we don't have enough items for each exchange, use otherItems as fallback
-        if (nseFiltered.length < 5 && otherItems.length > 0) {
-            const needed = 5 - nseFiltered.length;
-            const additionalNse = otherItems.splice(0, needed);
-            nseFiltered.push(...additionalNse);
-        }
-
-        if (bseFiltered.length < 5 && otherItems.length > 0) {
-            const needed = 5 - bseFiltered.length;
-            const additionalBse = otherItems.splice(0, needed);
-            bseFiltered.push(...additionalBse);
-        }
-
-        // If still not enough items, duplicate existing ones to ensure continuous scrolling
-        if (nseFiltered.length > 0 && nseFiltered.length < 10) {
-            const duplicatesNeeded = 10 - nseFiltered.length;
-            const duplicates = [];
-            for (let i = 0; i < duplicatesNeeded; i++) {
-                duplicates.push({...nseFiltered[i % nseFiltered.length], id: `dup-nse-${i}`});
-            }
-            nseFiltered.push(...duplicates);
-        }
-
-        if (bseFiltered.length > 0 && bseFiltered.length < 10) {
-            const duplicatesNeeded = 10 - bseFiltered.length;
-            const duplicates = [];
-            for (let i = 0; i < duplicatesNeeded; i++) {
-                duplicates.push({...bseFiltered[i % bseFiltered.length], id: `dup-bse-${i}`});
-            }
-            bseFiltered.push(...duplicates);
-        }
-
-        setNseItems(nseFiltered);
-        setBseItems(bseFiltered);
+        // Merge and sort slightly to mix items for a "dynamic" look
+        const combined = [...gainers, ...losers];
+        return combined.filter(s => s && s.symbol && s.price);
     }, [marketMovers]);
 
     const formatPrice = (price) => {
         const num = Number(price);
-        if (!Number.isFinite(num)) return "--";
-        return num.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+        return num.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     };
 
-    if (loading) return null;
-
-    const TickerItem = ({ item }) => {
-        const change = Number(
-            item.change_pct !== undefined ? item.change_pct : item.change ?? 0
-        );
-        const isUp = change >= 0;
-
-        return (
-            <div className="h-full flex items-center mx-1.5 px-2 py-1 border border-slate-600/50 rounded-md bg-slate-800/70 shadow-sm min-w-fit">
-                <div className="flex items-center gap-1 mr-1">
-                    <span className="font-black text-slate-100 text-[9px] tracking-tight">
-                        {item.symbol}
-                    </span>
-                    {item.exchange && (
-                        <span className="text-[7px] text-slate-300 uppercase font-bold">
-                            {item.exchange}
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-center gap-0.5">
-                    <span className="font-bold text-slate-200 text-[9px]">
-                        ₹{formatPrice(item.price)}
-                    </span>
-                    <div
-                        className={`flex items-center gap-0.5 ${
-                            isUp ? "text-emerald-400" : "text-red-400"
-                        }`}
-                    >
-                        {isUp ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                        <span className="font-black text-[7px]">
-                            {isUp ? "+" : ""}
-                            {change.toFixed(2)}%
-                        </span>
-                    </div>
-                </div>
+    if (loading || tickerItems.length === 0) return (
+        <div className="h-10 bg-[#0a0f18] border-b border-white/5 flex items-center px-4">
+            <div className="flex items-center gap-2">
+                <Activity size={14} className="text-blue-500 animate-pulse" />
+                <span className="text-[10px] uppercase font-black tracking-widest text-slate-500">Connecting to Exchange Node...</span>
             </div>
-        );
-    };
+        </div>
+    );
 
-    // Function to render a ticker row
-    const renderTickerRow = (items, exchangeLabel) => {
-        if (items.length === 0) return null;
-
-        // Ensure we have enough items for smooth continuous scrolling
-        const minItemsForSmoothScroll = 20; // Minimum items for smooth animation
-        let displayItems = [...items];
-
-        // If we don't have enough items, duplicate them to ensure smooth scrolling
-        while (displayItems.length < minItemsForSmoothScroll) {
-            displayItems = [...displayItems, ...items];
-        }
-
-        // Limit to a reasonable number to prevent performance issues
-        displayItems = displayItems.slice(0, 40);
-
-        // Calculate animation duration to ensure consistent scrolling speed
-        const baseDuration = 20; // Base duration in seconds for consistent speed
-
-        return (
-            <div className="flex items-center h-[40px] text-[10px]">
-                <div className="flex items-center gap-2 px-3 bg-slate-800 h-full min-w-[80px]">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="font-black text-white uppercase tracking-tight text-[9px]">
-                        {exchangeLabel}
-                    </span>
-                </div>
-
-                <div className="flex-1 overflow-hidden h-full ticker-container">
-                    <div className="flex items-center h-full">
-                        <div
-                            className="flex animate-ticker-marquee whitespace-nowrap h-full items-center justify-start"
-                            style={{ animationDuration: `${baseDuration}s` }}
-                        >
-                            {displayItems.map((item, index) => (
-                                <TickerItem key={`ticker-${exchangeLabel}-${item.symbol}-${index}`} item={item} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
+    // Duplicate for seamless loop
+    const displayItems = [...tickerItems, ...tickerItems, ...tickerItems];
 
     return (
-        <>
-            <div className="w-full bg-slate-900 overflow-hidden flex flex-col shadow-lg">
-                {/* NSE Row */}
-                {renderTickerRow(nseItems, "NSE ")}
-
-                {/* BSE Row */}
-                {renderTickerRow(bseItems, "BSE ")}
+        <div className="w-full bg-[#0a0f18] border-y border-white/5 h-10 flex items-center overflow-hidden relative shadow-2xl z-50">
+            {/* Live Indicator Hook */}
+            <div className="absolute left-0 top-0 bottom-0 z-10 bg-gradient-to-r from-[#0a0f18] to-transparent w-32 pointer-events-none flex items-center pl-4">
+                <div className="flex items-center gap-2 bg-blue-600/10 border border-blue-500/20 px-2 py-0.5 rounded backdrop-blur-md">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-blue-400 tracking-tighter uppercase whitespace-nowrap">Market Live</span>
+                </div>
             </div>
+
+            <div className="ticker-wrapper flex items-center flex-nowrap animate-marquee">
+                {displayItems.map((item, idx) => {
+                    const change = Number(item.change_pct ?? item.change ?? 0);
+                    const isUp = change >= 0;
+                    return (
+                        <div key={`${item.symbol}-${idx}`} className="flex items-center gap-4 px-6 border-r border-white/5 h-full whitespace-nowrap group hover:bg-white/5 transition-colors cursor-default">
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-black tracking-tight text-white/90 group-hover:text-blue-400 transition-colors uppercase">
+                                        {item.symbol}
+                                    </span>
+                                    <span className="text-[8px] font-bold text-slate-500 bg-slate-800/50 px-1 rounded uppercase">
+                                        {item.exchange || 'NSE'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-slate-200 tabular-nums font-mono">
+                                    ₹{formatPrice(item.price)}
+                                </span>
+                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${isUp ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                    {isUp ? <TrendingUp size={10} strokeWidth={3} /> : <TrendingDown size={10} strokeWidth={3} />}
+                                    <span className="text-[10px] font-black tracking-tighter tabular-nums">
+                                        {isUp ? '+' : ''}{change.toFixed(2)}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
             <style>{`
-                @keyframes ticker-marquee {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(-100%); }
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-33.33%); }
                 }
-                .animate-ticker-marquee {
-                    animation: ticker-marquee 30s linear infinite;
-                    display: inline-flex;
-                    height: 100%;
-                    width: auto;
+                .animate-marquee {
+                    animation: marquee 40s linear infinite;
+                    will-change: transform;
+                }
+                .ticker-wrapper:hover {
+                    animation-play-state: paused;
                 }
             `}</style>
-        </>
+        </div>
     );
 }

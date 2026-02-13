@@ -157,93 +157,119 @@ async def market_feed():
                 else:
                     market_feed.groq_client = None
             
+            # 0. Sync Heartbeat
+            print("MARKET FEED HEARTBEAT - SYNCING REAL DATA")
             groq_client = market_feed.groq_client
 
-            # 1. Attempt real fetch using yfinance batch download (For both LIVE and PAPER modes)
+            # 1. Attempt real fetch using yfinance batch download
             import pandas as pd
+            import numpy as np
             real_data_success = False
             raw_quotes = {}
             
+            # Robust type conversion for JSON serialization
+            def safe_float(v):
+                try:
+                    if v is None or (isinstance(v, float) and np.isnan(v)): return 0.0
+                    return float(v)
+                except: return 0.0
+
             try:
+                # Use a 5d period to get current and previous day's close for change calculation
                 data = yf.download(watchlist, period="5d", group_by='ticker', progress=False)
                 
+                # Use current exchange rate for commodity localization (USD -> INR)
+                # Fallback to 83.5 if USDINR fetch fails
+                usd_inr_rate = 83.5
+                if 'USDINR=X' in data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else False:
+                    try:
+                        usd_inr_rate = data['USDINR=X']['Close'].iloc[-1]
+                    except: pass
+
                 for ticker_symbol in watchlist:
                     try:
-                        # Handle multi-index dataframe from yf.download (group_by='ticker')
                         if isinstance(data.columns, pd.MultiIndex):
-                            # Ticker is Level 0, Attribute (Open, Close, etc) is Level 1
                             if ticker_symbol in data.columns.levels[0]:
                                 ticker_df = data[ticker_symbol].dropna(subset=['Close'])
                                 if not ticker_df.empty:
+                                    # Use fast_info for more immediate 'last' price if available, else iloc[-1]
                                     current_price = ticker_df['Close'].iloc[-1]
-                                    prev_batch_price = ticker_df['Close'].iloc[-2] if len(ticker_df) > 1 else current_price
-                                    change_pct = ((current_price - prev_batch_price) / prev_batch_price * 100) if prev_batch_price != 0 else 0
+                                    prev_price = ticker_df['Close'].iloc[-2] if len(ticker_df) > 1 else current_price
                                     
-                                    # Localize Commodities
+                                    # Refined Change Calculation (Daily % Change)
+                                    change_pct = ((current_price - prev_price) / prev_price * 100) if prev_price != 0 else 0
+                                    
+                                    # RAW DATA ONLY - No Baselines
+                                    # Localize Commodities (Standard conversion for Indian Market)
                                     if ticker_symbol == 'GC=F': 
-                                        current_price = (current_price / 31.1035) * 83.5 * 10 
+                                        # GC=F is USD per Ounce. Indian Gold is INR per 10 Grams.
+                                        # 1 Ounce = 31.1035 Grams. Adding ~15% for Import Duty/GST to match Indian Market
+                                        current_price = (current_price / 31.1035) * usd_inr_rate * 10 * 1.15
                                     elif ticker_symbol == 'CL=F': 
-                                        current_price = current_price * 83.5 
+                                        # CL=F is USD per Barrel. Indian Crude is INR per Barrel.
+                                        current_price = current_price * usd_inr_rate
+
+                                    # Correct Exchange Labeling
+                                    if '^NSEI' in ticker_symbol or '.NS' in ticker_symbol:
+                                        exchange = 'NSE'
+                                    elif '^BSESN' in ticker_symbol or '.BO' in ticker_symbol:
+                                        exchange = 'BSE'
+                                    elif ticker_symbol.endswith('=X'):
+                                        exchange = 'FOREX'
+                                    elif ticker_symbol.endswith('=F'):
+                                        exchange = 'MCX'
+                                    else:
+                                        exchange = 'NSE'
 
                                     raw_quotes[ticker_symbol] = {
-                                        'last_price': float(current_price),
-                                        'change': float(change_pct),
-                                        'exchange': 'NSE' if '.NS' in ticker_symbol else 'BSE' if ('.BO' in ticker_symbol or ticker_symbol.startswith('^')) else 'FOREX' if ticker_symbol.endswith('=X') else 'MCX' if ticker_symbol.endswith('=F') else 'NSE',
+                                        'last_price': safe_float(current_price),
+                                        'change': safe_float(change_pct),
+                                        'exchange': exchange,
                                         'symbol': clean_ticker_symbol(ticker_symbol)
                                     }
-                        else:
-                            # Single ticker or flattened columns
-                            if not data.empty and 'Close' in data.columns:
-                                current_price = data['Close'].iloc[-1]
-                                raw_quotes[ticker_symbol] = {
-                                    'last_price': float(current_price),
-                                    'change': 0.0,
-                                    'exchange': 'NSE',
-                                    'symbol': clean_ticker_symbol(ticker_symbol)
-                                }
                     except Exception as ticker_err:
                         logger.debug(f"Error processing {ticker_symbol}: {ticker_err}")
                         continue
                 
                 if raw_quotes:
                     real_data_success = True
-                    logger.info(f"Successfully fetched {len(raw_quotes)} real-time quotes")
+                    logger.info(f"Broadcast: Real-time data sync completed for {len(raw_quotes)} instruments")
             except Exception as e:
                 logger.error(f"yfinance batch fetch failed: {e}")
 
             if real_data_success:
-                # 2. Process quotes for gainers/losers
-                quotes_to_sort = []
-                for ticker_symbol, q_data in raw_quotes.items():
-                    # Only include stocks (NSE/BSE) in gainers/losers, not macro
-                    if '.NS' in ticker_symbol or '.BO' in ticker_symbol:
-                        quotes_to_sort.append(q_data)
+                # 2. Update Global State (Categories)
+                quotes_list = list(raw_quotes.values())
+                # Gainers/Losers are filtered to show only Stocks (NSE/BSE)
+                gainers_data = sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'], reverse=True)[:10]
+                losers_data = sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'])[:10]
+                
+                currencies = [q for q in quotes_list if q['exchange'] == 'FOREX']
+                metals = [q for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts in ['GC=F', 'SI=F', 'HG=F']]
+                commodities = [q for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts not in ['GC=F', 'SI=F', 'HG=F']]
 
-                if quotes_to_sort:
-                    sorted_movers = sorted(quotes_to_sort, key=lambda x: x['change'], reverse=True)
-                    gainers_data = sorted_movers[:10]
-                    losers_data = sorted(sorted_movers[-10:], key=lambda x: x['change']) # Most negative first
+                # 3. Update Macro Indicators State
+                from app.core.state import last_macro_indicators
+                last_macro_indicators.update({
+                    "usd_inr": safe_float(usd_inr_rate),
+                    "gold": safe_float(raw_quotes.get('GC=F', {}).get('last_price', 0)),
+                    "crude": safe_float(raw_quotes.get('CL=F', {}).get('last_price', 0)),
+                    "sentiment": "BULLISH" if len(gainers_data) > len(losers_data) else "BEARISH",
+                    "volatility_level": "MODERATE"
+                })
 
-                    # Update global state - mutate to maintain reference
-                    last_market_movers.update({
-                        'gainers': gainers_data,
-                        'losers': losers_data
-                    })
-                    await sio.emit('market_movers', last_market_movers, room='market_data')
-            else:
-                # ABSOLUTE FALLBACK - If both fetch and existing data fail
-                if not last_market_movers.get('gainers'):
-                    logger.warning("No real data available, using mock baseline")
-                    mock_gainers = [
-                        {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2985.50, 'change': 1.2},
-                        {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3850.20, 'change': 0.8},
-                        {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1640.45, 'change': 0.5}
-                    ]
-                    last_market_movers.update({'gainers': mock_gainers, 'losers': []})
-                    await sio.emit('market_movers', last_market_movers, room='market_data')
-                else:
-                    logger.info("Maintaining last known good prices during API outage")
-                    await sio.emit('market_movers', last_market_movers, room='market_data')
+                # Update global movers - mutate to maintain reference
+                last_market_movers.update({
+                    'gainers': gainers_data,
+                    'losers': losers_data,
+                    'currencies': currencies,
+                    'metals': metals,
+                    'commodities': commodities
+                })
+                
+                # Emit updates
+                await sio.emit('market_movers', last_market_movers, room='market_data')
+                await sio.emit('macro_indicators', last_macro_indicators, room='market_data')
 
             # 3. Always update Ticker Batch (from raw_quotes if success, else legacy state)
             ticker_batch = []
