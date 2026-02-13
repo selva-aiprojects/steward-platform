@@ -4,6 +4,32 @@
 
 StockSteward AI is a sophisticated algorithmic trading platform that combines artificial intelligence with advanced trading strategies to provide automated investment stewardship. The platform enables users to develop, backtest, and execute trading strategies with comprehensive risk management and real-time market analysis.
 
+## Pilot Updates (February 2026)
+
+Recent pilot-focused updates now in the platform:
+
+- Live market ticker and dashboard cards consume real-time socket updates with explicit `source`, `status`, and `as_of` metadata.
+- Top Movers now supports clear Gainers and Losers separation with 5 items each.
+- Dashboard "Launch Strategy" flow is aligned to Strategy Selection (`/strategies`).
+- Strategy confirmation now includes direct navigation back to Dashboard and Portfolio.
+- Market depth endpoint now returns live-price-anchored bid/ask ladders (not fixed demo constants).
+- Pilot bootstrap and test seeding endpoints are available to populate existing users with usable strategy/trade progress.
+
+### Pilot Seeding Endpoints
+
+Use these endpoints with `SUPERADMIN` or `BUSINESS_OWNER` headers:
+
+1. Bootstrap strategy progress for existing users:
+   - `POST /api/v1/strategies/pilot/bootstrap`
+   - optional query: `?user_id=<id>`
+
+2. Seed manual paper orders for dashboard/report validation:
+   - `POST /api/v1/trades/paper/seed-all?orders_per_user=3`
+
+Required headers:
+- `X-User-Id`
+- `X-User-Role`
+
 ## Key Features
 
 ### 1. Advanced Backtesting Engine

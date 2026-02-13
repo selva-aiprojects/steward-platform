@@ -93,6 +93,21 @@ sudo apt-get install libffi-dev libssl-dev
 
 ## Docker Build Issues
 
+### 0. yfinance and websockets dependency conflict on Render
+**Error**:
+- `Cannot install ... yfinance==1.1.0 and websockets==12.0`
+- `yfinance 1.1.0 depends on websockets>=13.0`
+
+**Fix**:
+- Update requirements pins to a compatible set:
+
+```txt
+yfinance==1.1.0
+websockets==13.1
+```
+
+If Dockerfile copies `requirements-production.txt`, make sure that file has the same compatible pin.
+
 ### 1. TA-Lib Compilation Failure in Docker
 **Problem**: TA-Lib fails to compile in Docker container
 
@@ -183,6 +198,29 @@ USER appuser
 2. Check internet connectivity
 3. Verify broker API status
 4. Check rate limiting
+
+### 4. Uvicorn bind failure on local port
+**Error**:
+- `[Errno 10048] ... only one usage of each socket address ...`
+
+**Cause**:
+- Another process is already listening on the same port.
+
+**Fix**:
+```powershell
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
+```
+
+If local machine keeps stale listeners, run backend on a clean port and align frontend env:
+
+```powershell
+python -u -m uvicorn app.main:socket_app --host 0.0.0.0 --port 8100 --log-level info
+```
+
+```env
+REACT_APP_API_URL=http://localhost:8100
+```
 
 ## Database Connection Issues
 
