@@ -9,6 +9,7 @@ import asyncio
 import random
 import os
 import logging
+import httpx
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,7 @@ async def market_feed():
     import os
     import random
     import yfinance as yf
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
     # Multi-exchange Watchlist (Major indices and top stocks only - excluding commodities/currencies for ticker)
@@ -148,6 +150,32 @@ async def market_feed():
     failure_streak = 0
     last_heartbeat_log = 0.0
 
+    async def fetch_quote_batch(symbols: list[str], timeout_s: int = 6) -> dict[str, dict[str, float]]:
+        timeout = httpx.Timeout(timeout_s)
+        headers = {"User-Agent": "Mozilla/5.0"}
+        params = {"symbols": ",".join(symbols)}
+        url = "https://query1.finance.yahoo.com/v7/finance/quote"
+        quotes: dict[str, dict[str, float]] = {}
+        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            rows = ((response.json().get("quoteResponse") or {}).get("result")) or []
+
+        for row in rows:
+            symbol = row.get("symbol")
+            if not symbol:
+                continue
+            current = row.get("regularMarketPrice")
+            prev = row.get("regularMarketPreviousClose")
+            try:
+                current_f = float(current)
+                prev_f = float(prev) if prev is not None else current_f
+            except Exception:
+                continue
+            change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
+            quotes[symbol] = {"last_price": current_f, "change": change}
+        return quotes
+
     while True:
         try:
             # Cache Groq client
@@ -169,84 +197,97 @@ async def market_feed():
                 last_heartbeat_log = time.time()
             groq_client = market_feed.groq_client
 
-            # 1. Attempt real fetch using yfinance batch download
-            import pandas as pd
-            import numpy as np
+            # 1. Attempt real fetch using Yahoo quote batch API (fast and stable on Render)
             real_data_success = False
             raw_quotes = {}
             
             # Robust type conversion for JSON serialization
             def safe_float(v):
                 try:
-                    if v is None or (isinstance(v, float) and np.isnan(v)): return 0.0
+                    if v is None:
+                        return 0.0
                     return float(v)
-                except: return 0.0
+                except:
+                    return 0.0
 
             try:
-                # Use a 5d period to get current and previous day's close for change calculation
-                data = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        yf.download,
-                        watchlist,
-                        period="5d",
-                        group_by='ticker',
-                        progress=False,
-                        auto_adjust=False,
-                        timeout=8,
-                        threads=False
-                    ),
-                    timeout=10
-                )
-                
-                # Use current exchange rate for commodity localization (USD -> INR)
-                # Fallback to 83.5 if USDINR fetch fails
+                quotes = await fetch_quote_batch(watchlist, timeout_s=6)
+                if not quotes:
+                    raise RuntimeError("Empty payload from quote batch API")
+            except Exception as quote_error:
+                logger.debug(f"Quote batch API fallback to yfinance: {quote_error}")
+                quotes = {}
+                try:
+                    import pandas as pd
+                    data = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            yf.download,
+                            watchlist,
+                            period="5d",
+                            group_by='ticker',
+                            progress=False,
+                            auto_adjust=False,
+                            timeout=8,
+                            threads=False
+                        ),
+                        timeout=10
+                    )
+                    for ticker_symbol in watchlist:
+                        try:
+                            if isinstance(data.columns, pd.MultiIndex):
+                                if ticker_symbol not in data.columns.levels[0]:
+                                    continue
+                                ticker_df = data[ticker_symbol].dropna(subset=['Close'])
+                            else:
+                                ticker_df = data.dropna(subset=['Close'])
+                            if ticker_df.empty:
+                                continue
+                            current_price = float(ticker_df['Close'].iloc[-1])
+                            prev_price = float(ticker_df['Close'].iloc[-2]) if len(ticker_df) > 1 else current_price
+                            change_pct = 0.0 if prev_price == 0 else ((current_price - prev_price) / prev_price * 100)
+                            quotes[ticker_symbol] = {"last_price": current_price, "change": change_pct}
+                        except Exception:
+                            continue
+                except Exception as yf_error:
+                    raise RuntimeError(f"Both quote-batch and yfinance failed: {yf_error}") from yf_error
+
+            try:
                 usd_inr_rate = 83.5
-                if 'USDINR=X' in data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else False:
-                    try:
-                        usd_inr_rate = data['USDINR=X']['Close'].iloc[-1]
-                    except: pass
+                if "USDINR=X" in quotes:
+                    usd_inr_rate = safe_float(quotes["USDINR=X"].get("last_price", usd_inr_rate))
 
                 for ticker_symbol in watchlist:
                     try:
-                        if isinstance(data.columns, pd.MultiIndex):
-                            if ticker_symbol in data.columns.levels[0]:
-                                ticker_df = data[ticker_symbol].dropna(subset=['Close'])
-                                if not ticker_df.empty:
-                                    # Use fast_info for more immediate 'last' price if available, else iloc[-1]
-                                    current_price = ticker_df['Close'].iloc[-1]
-                                    prev_price = ticker_df['Close'].iloc[-2] if len(ticker_df) > 1 else current_price
-                                    
-                                    # Refined Change Calculation (Daily % Change)
-                                    change_pct = ((current_price - prev_price) / prev_price * 100) if prev_price != 0 else 0
-                                    
-                                    # RAW DATA ONLY - No Baselines
-                                    # Localize Commodities (Standard conversion for Indian Market)
-                                    if ticker_symbol == 'GC=F': 
-                                        # GC=F is USD per Ounce. Indian Gold is INR per 10 Grams.
-                                        # 1 Ounce = 31.1035 Grams. Adding ~15% for Import Duty/GST to match Indian Market
-                                        current_price = (current_price / 31.1035) * usd_inr_rate * 10 * 1.15
-                                    elif ticker_symbol == 'CL=F': 
-                                        # CL=F is USD per Barrel. Indian Crude is INR per Barrel.
-                                        current_price = current_price * usd_inr_rate
+                        quote = quotes.get(ticker_symbol)
+                        if not quote:
+                            continue
 
-                                    # Correct Exchange Labeling
-                                    if '^NSEI' in ticker_symbol or '.NS' in ticker_symbol:
-                                        exchange = 'NSE'
-                                    elif '^BSESN' in ticker_symbol or '.BO' in ticker_symbol:
-                                        exchange = 'BSE'
-                                    elif ticker_symbol.endswith('=X'):
-                                        exchange = 'FOREX'
-                                    elif ticker_symbol.endswith('=F'):
-                                        exchange = 'MCX'
-                                    else:
-                                        exchange = 'NSE'
+                        current_price = safe_float(quote.get("last_price"))
+                        change_pct = safe_float(quote.get("change"))
 
-                                    raw_quotes[ticker_symbol] = {
-                                        'last_price': safe_float(current_price),
-                                        'change': safe_float(change_pct),
-                                        'exchange': exchange,
-                                        'symbol': clean_ticker_symbol(ticker_symbol)
-                                    }
+                        # Localize commodities to INR units for UI consistency.
+                        if ticker_symbol == 'GC=F':
+                            current_price = (current_price / 31.1035) * usd_inr_rate * 10 * 1.15
+                        elif ticker_symbol == 'CL=F':
+                            current_price = current_price * usd_inr_rate
+
+                        if '^NSEI' in ticker_symbol or '.NS' in ticker_symbol:
+                            exchange = 'NSE'
+                        elif '^BSESN' in ticker_symbol or '.BO' in ticker_symbol:
+                            exchange = 'BSE'
+                        elif ticker_symbol.endswith('=X'):
+                            exchange = 'FOREX'
+                        elif ticker_symbol.endswith('=F'):
+                            exchange = 'MCX'
+                        else:
+                            exchange = 'NSE'
+
+                        raw_quotes[ticker_symbol] = {
+                            'last_price': safe_float(current_price),
+                            'change': safe_float(change_pct),
+                            'exchange': exchange,
+                            'symbol': clean_ticker_symbol(ticker_symbol)
+                        }
                     except Exception as ticker_err:
                         logger.debug(f"Error processing {ticker_symbol}: {ticker_err}")
                         continue
@@ -257,7 +298,7 @@ async def market_feed():
                     logger.info(f"Broadcast: Real-time data sync completed for {len(raw_quotes)} instruments")
             except Exception as e:
                 failure_streak += 1
-                logger.warning(f"yfinance batch fetch failed: {e}")
+                logger.warning(f"Market quote batch fetch failed: {e}")
 
             if real_data_success:
                 # 2. Update Global State (Categories)
@@ -286,7 +327,7 @@ async def market_feed():
                     'currencies': currencies,
                     'metals': metals,
                     'commodities': commodities,
-                    'source': 'yahoo_finance',
+                    'source': 'yahoo_quote_api',
                     'status': 'LIVE',
                     'as_of': _now_iso()
                 })
