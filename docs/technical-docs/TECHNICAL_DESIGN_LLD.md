@@ -10,6 +10,69 @@
 7. [Performance Considerations](#performance-considerations)
 8. [Scalability Design](#scalability-design)
 9. [Monitoring and Logging](#monitoring-and-logging)
+10. [Recent Pilot-Oriented LLD Updates](#recent-pilot-oriented-lld-updates)
+
+## Recent Pilot-Oriented LLD Updates
+
+This section reflects production-aligned behavior implemented for pilot users.
+
+### A) Runtime entrypoint and websocket transport
+- Backend runtime entrypoint for local/prod socket support:
+  - `app.main:socket_app` (Socket.IO ASGI wrapper over FastAPI app)
+- Frontend consumes:
+  - REST APIs for snapshots and cards
+  - Socket streams (`market_movers`, `ticker_batch`, `market_update`, `steward_prediction`)
+
+### B) Market data reliability and metadata contract
+- All primary market endpoints now expose operational metadata fields:
+  - `source` (provider id)
+  - `status` (`LIVE` | `STALE` | `UNAVAILABLE`)
+  - `as_of` (ISO timestamp)
+- Added health endpoint for provider observability:
+  - `GET /api/v1/market/health`
+  - includes provider call/failure/latency stats
+
+### C) Market provider layering
+- Primary feed chain is designed with fallback/cooldown behavior:
+  1. Yahoo quote/chart paths
+  2. yfinance fallback
+  3. TrueData fallback (when key configured)
+- No mock values are injected into live market cards on failure; payloads are marked `UNAVAILABLE` or `STALE`.
+
+### D) Order book depth behavior
+- `GET /api/v1/market/depth` now derives bid/ask ladder from current live anchor price (`ltp`) instead of static constants.
+- Response includes `symbol`, `ltp`, `source`, `status`, `as_of`, `bids`, `asks`.
+
+### E) Strategy and pilot progress bootstrap
+- Strategy create path:
+  - `POST /api/v1/strategies/`
+  - creates strategy in `PAPER_TRADING` mode for pilot flow
+- Added pilot seeding endpoint for existing users:
+  - `POST /api/v1/strategies/pilot/bootstrap`
+  - role-gated: `SUPERADMIN` / `BUSINESS_OWNER`
+  - ensures first-time users can see strategy/portfolio progress
+
+### F) Manual paper-order seeding for dashboard/report validation
+- Added:
+  - `POST /api/v1/trades/paper/seed-all?orders_per_user=<n>`
+  - role-gated: `SUPERADMIN` / `BUSINESS_OWNER`
+  - creates executed paper trades across active trader-type users
+  - intended for dashboard, portfolio, reports, and investment-reports verification
+
+### G) Frontend flow alignment
+- Dashboard CTA `Launch Strategy` routes to `/strategies`.
+- Strategy confirmation includes direct navigation to:
+  - Dashboard (`/`)
+  - Portfolio (`/portfolio`)
+- Top Movers rendered in two explicit sections:
+  - Gainers (5)
+  - Losers (5)
+- Vertical tickers (currencies, commodities, metals) patch prices from socket `ticker_batch`.
+
+### H) Dependency constraints (deployment)
+- Current compatible pins for market stack:
+  - `yfinance==1.1.0`
+  - `websockets==13.1` (required by yfinance>=1.1.0)
 
 ## System Architecture
 
@@ -309,11 +372,14 @@ GET    /portfolio/{id}/performance - Get portfolio performance
 
 #### Market Data Endpoints
 ```
-GET    /market/gainers    - Get top gainers
-GET    /market/losers     - Get top losers
-GET    /market/quotes/{symbols} - Get quotes for symbols
-GET    /market/historical/{symbol} - Get historical data
-GET    /market/indicators/{symbol} - Get technical indicators
+GET    /market/movers      - Top gainers/losers with source/status/as_of
+GET    /market/currencies  - Live currency movers
+GET    /market/metals      - Live metals movers
+GET    /market/commodities - Live commodity movers
+GET    /market/macro       - Macro indicators (USDINR, gold, crude)
+GET    /market/depth       - Live anchored order book ladder
+GET    /market/health      - Provider latency/failure stats
+GET    /market/status      - Exchange session status
 ```
 
 #### Risk Management Endpoints
