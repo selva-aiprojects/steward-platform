@@ -458,9 +458,50 @@ def get_options_snapshot() -> Any:
 
 @router.get("/depth")
 def get_order_book_depth() -> Any:
-    bids = [{"price": round(2200 + i * 0.5, 2), "qty": random.randint(50, 500)} for i in range(5)]
-    asks = [{"price": round(2202 + i * 0.5, 2), "qty": random.randint(50, 500)} for i in range(5)]
-    return {"bids": bids, "asks": asks}
+    # Build depth from live movers so numbers are anchored to current market prices.
+    gainers = last_market_movers.get("gainers") or []
+    losers = last_market_movers.get("losers") or []
+    universe = gainers + losers
+
+    if universe:
+        anchor = universe[0]
+        symbol = anchor.get("symbol", "NIFTY")
+        ltp = float(anchor.get("price") or anchor.get("last_price") or 0)
+    else:
+        symbol = "NIFTY"
+        ltp = 0
+
+    if ltp <= 0:
+        return {
+            "symbol": symbol,
+            "source": "none",
+            "status": "UNAVAILABLE",
+            "bids": [],
+            "asks": [],
+        }
+
+    spread = max(0.05, round(ltp * 0.0006, 2))
+    tick = max(0.05, round(ltp * 0.0003, 2))
+    bids = []
+    asks = []
+
+    for level in range(5):
+        bid_price = round(ltp - spread - (level * tick), 2)
+        ask_price = round(ltp + spread + (level * tick), 2)
+        base_qty = max(20, int((1000 / max(1.0, ltp)) * 100))
+        qty_bias = (5 - level) * 7
+        bids.append({"price": bid_price, "qty": base_qty + qty_bias})
+        asks.append({"price": ask_price, "qty": base_qty + max(3, level * 5)})
+
+    return {
+        "symbol": symbol,
+        "ltp": round(ltp, 2),
+        "source": last_market_movers.get("source", "socket_feed"),
+        "status": last_market_movers.get("status", "LIVE"),
+        "as_of": last_market_movers.get("as_of"),
+        "bids": bids,
+        "asks": asks,
+    }
 
 
 @router.get("/macro")

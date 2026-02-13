@@ -377,7 +377,7 @@ export function Dashboard() {
                             </div>
 
                             <div className="flex gap-4 w-full md:w-auto">
-                                <Link to="/trading" className="flex-1 md:flex-none">
+                                <Link to="/strategies" className="flex-1 md:flex-none">
                                     <button className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
                                         <Activity size={14} />
                                         LAUNCH STRATEGY
@@ -698,38 +698,38 @@ export function Dashboard() {
                             <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-3">
                                 Source: {marketDataSource} | As of: {marketAsOfLabel}
                             </p>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <div>
                                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">
                                         Top Gainers
                                     </p>
-                                    {gainers.slice(0, 5).map((mover, i) => (
-                                        <div key={`g-${i}`} className="flex justify-between items-center py-1">
-                                            <div>
-                                                <p className="font-black text-slate-900">{mover.symbol}</p>
-                                                <p className="text-[10px] text-slate-500">
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {gainers.slice(0, 5).map((mover, i) => (
+                                            <div key={`g-${i}`} className="min-w-[140px] rounded-lg border border-emerald-100 bg-emerald-50/60 p-2">
+                                                <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
+                                                <p className="text-[10px] text-emerald-700 font-black">
                                                     +{formatNumber(mover.change || 0, 2)}%
                                                 </p>
+                                                <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
                                             </div>
-                                            <p className="font-black text-green-600">{formatPrice(mover.price)}</p>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                                 <div className="pt-2 border-t border-slate-100">
                                     <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">
                                         Top Losers
                                     </p>
-                                    {losers.slice(0, 5).map((mover, i) => (
-                                        <div key={`l-${i}`} className="flex justify-between items-center py-1">
-                                            <div>
-                                                <p className="font-black text-slate-900">{mover.symbol}</p>
-                                                <p className="text-[10px] text-slate-500">
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {losers.slice(0, 5).map((mover, i) => (
+                                            <div key={`l-${i}`} className="min-w-[140px] rounded-lg border border-rose-100 bg-rose-50/60 p-2">
+                                                <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
+                                                <p className="text-[10px] text-rose-700 font-black">
                                                     {formatNumber(mover.change || 0, 2)}%
                                                 </p>
+                                                <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
                                             </div>
-                                            <p className="font-black text-red-500">{formatPrice(mover.price)}</p>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                                 {gainers.length === 0 && losers.length === 0 && (
                                     <div className="text-xs text-slate-400 italic">

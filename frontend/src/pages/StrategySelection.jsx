@@ -11,6 +11,7 @@ import {
   ArrowRight, 
   CheckCircle 
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { launchStrategy } from '../services/api';
 
@@ -303,12 +304,18 @@ const StrategySelectionPage = () => {
             >
               Select Another Strategy
             </button>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
+            <Link
+              to="/"
               className="px-6 py-3 border border-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-50 transition-colors"
             >
               Go to Dashboard
-            </button>
+            </Link>
+            <Link
+              to="/portfolio"
+              className="px-6 py-3 border border-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+            >
+              Go to Portfolio
+            </Link>
           </div>
         </div>
       )}
