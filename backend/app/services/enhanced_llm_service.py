@@ -9,7 +9,6 @@ import logging
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 import pandas as pd
-from groq import Groq
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -26,78 +25,75 @@ class EnhancedLLMService:
     def __init__(self):
         # Initialize multiple LLM clients
         self.clients = {}
-        self.available_models = {}
-        
-        # Groq client - try multiple sources for API key
-        groq_api_key = settings.GROQ_API_KEY
-        if not groq_api_key:
-            try:
-                from app.utils.secrets_manager import secrets_manager
-                groq_api_key = secrets_manager.get_secret('GROQ_API_KEY')
-            except Exception as e:
-                logger.error(f"Error loading GROQ_API_KEY from encrypted storage: {e}")
-        if not groq_api_key:
-            groq_api_key = os.getenv("GROQ_API_KEY")
-        
-        if groq_api_key:
-            try:
-                self.clients['groq'] = Groq(api_key=groq_api_key)
-                self.available_models['groq'] = [
-                    "llama-3.3-70b-versatile",
-                    "llama-3.1-70b-versatile",
-                    "llama-3.1-8b-instant"
-                ]
-                logger.info("Groq client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize Groq client: {e}")
+        self.available_models = {
+            "groq": [
+                "llama-3.3-70b-versatile",
+                "llama-3.1-70b-versatile",
+                "llama-3.1-8b-instant"
+            ],
+            "openai": [
+                "gpt-4-turbo",
+                "gpt-4",
+                "gpt-3.5-turbo"
+            ],
+            "anthropic": [
+                "claude-3-opus-20240229",
+                "claude-3-sonnet-20240229",
+                "claude-3-haiku-20240307"
+            ],
+        }
+        self._init_errors = set()
 
-        # OpenAI client - try multiple sources for API key
-        openai_api_key = settings.OPENAI_API_KEY
-        if not openai_api_key:
-            try:
-                from app.utils.secrets_manager import secrets_manager
-                openai_api_key = secrets_manager.get_secret('OPENAI_API_KEY')
-            except Exception as e:
-                logger.error(f"Error loading OPENAI_API_KEY from encrypted storage: {e}")
-        if not openai_api_key:
-            openai_api_key = os.getenv("OPENAI_API_KEY")
-        
-        if openai_api_key:
-            try:
+    def _resolve_api_key(self, key_name: str) -> Optional[str]:
+        api_key = getattr(settings, key_name, None) or os.getenv(key_name)
+        if api_key:
+            return api_key
+        try:
+            from app.utils.secrets_manager import secrets_manager
+            return secrets_manager.get_secret(key_name)
+        except Exception as e:
+            logger.debug(f"Error loading {key_name} from encrypted storage: {e}")
+            return None
+
+    def _ensure_client(self, provider: str) -> bool:
+        if provider in self.clients:
+            return True
+
+        try:
+            if provider == "groq":
+                key = self._resolve_api_key("GROQ_API_KEY")
+                if not key:
+                    return False
+                from groq import Groq
+                self.clients["groq"] = Groq(api_key=key)
+                return True
+            if provider == "openai":
+                key = self._resolve_api_key("OPENAI_API_KEY")
+                if not key:
+                    return False
                 from openai import OpenAI
-                self.clients['openai'] = OpenAI(api_key=openai_api_key)
-                self.available_models['openai'] = [
-                    "gpt-4-turbo",
-                    "gpt-4",
-                    "gpt-3.5-turbo"
-                ]
-                logger.info("OpenAI client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
-
-        # Anthropic client - try multiple sources for API key
-        anthropic_api_key = settings.ANTHROPIC_API_KEY
-        if not anthropic_api_key:
-            try:
-                from app.utils.secrets_manager import secrets_manager
-                anthropic_api_key = secrets_manager.get_secret('ANTHROPIC_API_KEY')
-            except Exception as e:
-                logger.error(f"Error loading ANTHROPIC_API_KEY from encrypted storage: {e}")
-        if not anthropic_api_key:
-            anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-        
-        if anthropic_api_key:
-            try:
+                self.clients["openai"] = OpenAI(api_key=key)
+                return True
+            if provider == "anthropic":
+                key = self._resolve_api_key("ANTHROPIC_API_KEY")
+                if not key:
+                    return False
                 import anthropic
-                self.clients['anthropic'] = anthropic.Anthropic(api_key=anthropic_api_key)
-                self.available_models['anthropic'] = [
-                    "claude-3-opus-20240229",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-haiku-20240307"
-                ]
-                logger.info("Anthropic client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize Anthropic client: {e}")
+                self.clients["anthropic"] = anthropic.Anthropic(api_key=key)
+                return True
+            return False
+        except Exception as e:
+            error_key = (provider, str(e))
+            if error_key not in self._init_errors:
+                self._init_errors.add(error_key)
+                if "unexpected keyword argument 'proxies'" in str(e):
+                    logger.warning(
+                        "%s client init failed due to incompatible httpx version. Install `httpx<0.28`.",
+                        provider.upper(),
+                    )
+                else:
+                    logger.error(f"Failed to initialize {provider} client: {e}")
+            return False
     
     def get_financial_analysis_prompt(
         self,
@@ -250,7 +246,7 @@ class EnhancedLLMService:
         """
         Analyze using Groq (Llama models)
         """
-        if 'groq' not in self.clients:
+        if not self._ensure_client("groq"):
             return {
                 "error": "Groq client not initialized",
                 "fallback_response": "Market analysis pending: LLM service unavailable"
@@ -297,7 +293,7 @@ class EnhancedLLMService:
         """
         Analyze using OpenAI (GPT models)
         """
-        if 'openai' not in self.clients:
+        if not self._ensure_client("openai"):
             return {
                 "error": "OpenAI client not initialized",
                 "fallback_response": "Market analysis pending: LLM service unavailable"
@@ -344,7 +340,7 @@ class EnhancedLLMService:
         """
         Analyze using Anthropic (Claude models)
         """
-        if 'anthropic' not in self.clients:
+        if not self._ensure_client("anthropic"):
             return {
                 "error": "Anthropic client not initialized",
                 "fallback_response": "Market analysis pending: LLM service unavailable"

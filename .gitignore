@@ -57,5 +57,12 @@ build/
 __pycache__/
 .env
 venv/
+.venv/
 env/
 secrets.enc 
+
+# Local agent/dev artifacts
+.agent/
+backend/.env.local
+backend/requirements.localfix.txt
+backend/requirements.py313.txt

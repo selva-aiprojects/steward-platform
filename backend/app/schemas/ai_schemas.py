@@ -3,7 +3,7 @@ Enhanced AI Schemas for StockSteward AI
 Defines request/response models for enhanced LLM integration
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, List, Optional, Union
 from datetime import datetime
 from enum import Enum
@@ -58,6 +58,7 @@ class AnalysisResults(BaseModel):
     sentiment: str = Field(..., description="Sentiment analysis summary")
 
 class MarketAnalysisResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     recommendation: Recommendation
     confidence: float = Field(..., ge=0, le=100, description="Confidence score 0-100")
     target_price: Optional[float] = Field(None, description="Target price suggestion")

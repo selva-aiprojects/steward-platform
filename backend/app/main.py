@@ -124,6 +124,7 @@ async def market_feed():
     import os
     import random
     import yfinance as yf
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
     # Multi-exchange Watchlist (Major indices and top stocks only - excluding commodities/currencies for ticker)
     watchlist = [
@@ -144,6 +145,8 @@ async def market_feed():
     prediction_history = []
     last_ai_analysis_time = 0
     refresh_interval = 30
+    failure_streak = 0
+    last_heartbeat_log = 0.0
 
     while True:
         try:
@@ -159,8 +162,11 @@ async def market_feed():
                 else:
                     market_feed.groq_client = None
             
-            # 0. Sync Heartbeat
-            print("MARKET FEED HEARTBEAT - SYNCING REAL DATA")
+            # 0. Sync Heartbeat (throttled)
+            import time
+            if time.time() - last_heartbeat_log > 60:
+                logger.info("Market feed heartbeat: syncing live data")
+                last_heartbeat_log = time.time()
             groq_client = market_feed.groq_client
 
             # 1. Attempt real fetch using yfinance batch download
@@ -185,6 +191,7 @@ async def market_feed():
                         period="5d",
                         group_by='ticker',
                         progress=False,
+                        auto_adjust=False,
                         timeout=8,
                         threads=False
                     ),
@@ -246,9 +253,11 @@ async def market_feed():
                 
                 if raw_quotes:
                     real_data_success = True
+                    failure_streak = 0
                     logger.info(f"Broadcast: Real-time data sync completed for {len(raw_quotes)} instruments")
             except Exception as e:
-                logger.error(f"yfinance batch fetch failed: {e}")
+                failure_streak += 1
+                logger.warning(f"yfinance batch fetch failed: {e}")
 
             if real_data_success:
                 # 2. Update Global State (Categories)
@@ -262,7 +271,6 @@ async def market_feed():
                 commodities = [q for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts not in ['GC=F', 'SI=F', 'HG=F']]
 
                 # 3. Update Macro Indicators State
-                from app.core.state import last_macro_indicators
                 last_macro_indicators.update({
                     "usd_inr": safe_float(usd_inr_rate),
                     "gold": safe_float(raw_quotes.get('GC=F', {}).get('last_price', 0)),
@@ -370,7 +378,11 @@ async def market_feed():
             import traceback
             traceback.print_exc()
         finally:
-            await asyncio.sleep(refresh_interval if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
+            if settings.EXECUTION_MODE == "LIVE_TRADING":
+                sleep_seconds = refresh_interval
+            else:
+                sleep_seconds = min(30, 5 + (failure_streak * 5))
+            await asyncio.sleep(sleep_seconds)
 
 # Background System Telemetry (Admin Only)
 async def admin_feed():

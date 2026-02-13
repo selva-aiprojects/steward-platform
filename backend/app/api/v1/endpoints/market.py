@@ -14,6 +14,8 @@ router = APIRouter()
 MARKET_CACHE_TTL_SECONDS = 300
 _cache_store: Dict[str, Dict[str, Any]] = {}
 _provider_stats: Dict[str, Dict[str, Any]] = {}
+_yf_failure_streak = 0
+_yf_cooldown_until = 0.0
 
 
 def _now_iso() -> str:
@@ -60,19 +62,34 @@ def _with_market_meta(payload: Dict[str, Any], source: str, status: str, as_of: 
 
 
 async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 4):
+    global _yf_failure_streak, _yf_cooldown_until
+    now = time.time()
+    if now < _yf_cooldown_until:
+        raise RuntimeError("Yahoo Finance fetch on cooldown after repeated failures")
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
     # yfinance can occasionally block far beyond its own timeout argument.
-    return await asyncio.wait_for(
-        asyncio.to_thread(
-            yf.download,
-            symbols,
-            period=period,
-            group_by='ticker',
-            progress=False,
-            timeout=timeout_s,
-            threads=False
-        ),
-        timeout=timeout_s + 1
-    )
+    try:
+        data = await asyncio.wait_for(
+            asyncio.to_thread(
+                yf.download,
+                symbols,
+                period=period,
+                group_by='ticker',
+                progress=False,
+                auto_adjust=False,
+                timeout=timeout_s,
+                threads=False
+            ),
+            timeout=timeout_s + 1
+        )
+        _yf_failure_streak = 0
+        _yf_cooldown_until = 0.0
+        return data
+    except Exception:
+        _yf_failure_streak += 1
+        cooldown_seconds = min(30, 2 ** min(_yf_failure_streak, 5))
+        _yf_cooldown_until = time.time() + cooldown_seconds
+        raise
 
 
 def _cache_get(key: str) -> Any:

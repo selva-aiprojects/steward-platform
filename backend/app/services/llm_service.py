@@ -1,6 +1,5 @@
 import os
 import logging
-from groq import Groq
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,19 +14,22 @@ class LLMService:
             "llama-3.1-8b-instant"
         ]
         
-        # Initialize client if API key is available at startup
-        self._initialize_client_if_key_available()
+        # Lazily initialize on first request to avoid noisy startup failures.
     
     def _initialize_client_if_key_available(self):
         """Initialize the client if API key is available"""
         api_key = self._get_api_key()
         if api_key and not self.client:
             try:
+                from groq import Groq
                 self.client = Groq(api_key=api_key)
                 self.api_key = api_key
                 logger.info("Groq client initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize Groq client: {e}")
+                if "unexpected keyword argument 'proxies'" in str(e):
+                    logger.warning("Groq client init failed due to incompatible httpx version. Install `httpx<0.28`.")
+                else:
+                    logger.error(f"Failed to initialize Groq client: {e}")
                 self.client = None
     
     def _get_api_key(self):
