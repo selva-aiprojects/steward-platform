@@ -153,27 +153,43 @@ async def market_feed():
     async def fetch_quote_batch(symbols: list[str], timeout_s: int = 6) -> dict[str, dict[str, float]]:
         timeout = httpx.Timeout(timeout_s)
         headers = {"User-Agent": "Mozilla/5.0"}
-        params = {"symbols": ",".join(symbols)}
-        url = "https://query1.finance.yahoo.com/v7/finance/quote"
         quotes: dict[str, dict[str, float]] = {}
-        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
-            response = await client.get(url, params=params)
-            response.raise_for_status()
-            rows = ((response.json().get("quoteResponse") or {}).get("result")) or []
+        semaphore = asyncio.Semaphore(8)
 
-        for row in rows:
-            symbol = row.get("symbol")
-            if not symbol:
+        async def fetch_one(client: httpx.AsyncClient, symbol: str):
+            async with semaphore:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+                response = await client.get(url, params={"range": "5d", "interval": "1d"})
+                response.raise_for_status()
+                payload = response.json() or {}
+                result = ((payload.get("chart") or {}).get("result") or [None])[0]
+                if not result:
+                    return symbol, None
+                closes = ((((result.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or [])
+                values = []
+                for v in closes:
+                    if v is None:
+                        continue
+                    try:
+                        values.append(float(v))
+                    except Exception:
+                        continue
+                if not values:
+                    return symbol, None
+                current_f = values[-1]
+                prev_f = values[-2] if len(values) > 1 else current_f
+                change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
+                return symbol, {"last_price": current_f, "change": change}
+
+        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+            results = await asyncio.gather(*(fetch_one(client, s) for s in symbols), return_exceptions=True)
+
+        for result in results:
+            if isinstance(result, Exception):
                 continue
-            current = row.get("regularMarketPrice")
-            prev = row.get("regularMarketPreviousClose")
-            try:
-                current_f = float(current)
-                prev_f = float(prev) if prev is not None else current_f
-            except Exception:
-                continue
-            change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
-            quotes[symbol] = {"last_price": current_f, "change": change}
+            symbol, payload = result
+            if payload:
+                quotes[symbol] = payload
         return quotes
 
     while True:
@@ -303,13 +319,28 @@ async def market_feed():
             if real_data_success:
                 # 2. Update Global State (Categories)
                 quotes_list = list(raw_quotes.values())
+                def to_public_quote(q):
+                    price_val = safe_float(q.get("last_price", q.get("price", 0)))
+                    return {
+                        "symbol": q.get("symbol"),
+                        "exchange": q.get("exchange", "NSE"),
+                        "last_price": round(price_val, 2),
+                        "price": round(price_val, 2),
+                        "change": round(safe_float(q.get("change", 0)), 2),
+                    }
                 # Gainers/Losers are filtered to show only Stocks (NSE/BSE)
-                gainers_data = sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'], reverse=True)[:10]
-                losers_data = sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'])[:10]
+                gainers_data = [
+                    to_public_quote(q)
+                    for q in sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'], reverse=True)[:10]
+                ]
+                losers_data = [
+                    to_public_quote(q)
+                    for q in sorted([q for q in quotes_list if q['exchange'] in ['NSE', 'BSE']], key=lambda x: x['change'])[:10]
+                ]
                 
-                currencies = [q for q in quotes_list if q['exchange'] == 'FOREX']
-                metals = [q for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts in ['GC=F', 'SI=F', 'HG=F']]
-                commodities = [q for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts not in ['GC=F', 'SI=F', 'HG=F']]
+                currencies = [to_public_quote(q) for q in quotes_list if q['exchange'] == 'FOREX']
+                metals = [to_public_quote(q) for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts in ['GC=F', 'SI=F', 'HG=F']]
+                commodities = [to_public_quote(q) for ts, q in raw_quotes.items() if q['exchange'] == 'MCX' and ts not in ['GC=F', 'SI=F', 'HG=F']]
 
                 # 3. Update Macro Indicators State
                 last_macro_indicators.update({
