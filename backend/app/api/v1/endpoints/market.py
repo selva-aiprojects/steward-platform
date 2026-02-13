@@ -34,7 +34,8 @@ from app.core.state import (
     last_market_movers, 
     last_steward_prediction, 
     last_macro_indicators, 
-    clean_ticker_symbol
+    clean_ticker_symbol,
+    get_default_market_snapshot
 )
 
 @router.get("/status")
@@ -212,7 +213,11 @@ async def get_market_movers() -> Any:
 
         if stale_movers:
             return stale_movers
-        return {"gainers": [], "losers": []}
+        fallback = get_default_market_snapshot()
+        _cache_set("movers", {"gainers": fallback["gainers"], "losers": fallback["losers"]})
+        if not last_market_movers.get("gainers"):
+            last_market_movers.update(fallback)
+        return {"gainers": fallback["gainers"], "losers": fallback["losers"]}
 
 
 @router.get("/heatmap")
@@ -342,7 +347,9 @@ async def get_currency_movers() -> Any:
         logger.error(f"Error in batch currency fetch: {e}")
         if stale_currencies:
             return stale_currencies
-        return {"currencies": []}
+        fallback = {"currencies": get_default_market_snapshot()["currencies"]}
+        _cache_set("currencies", fallback)
+        return fallback
 
 
 @router.get("/metals")
@@ -404,7 +411,9 @@ async def get_metals_movers() -> Any:
         logger.error(f"Error in batch metals fetch: {e}")
         if stale_metals:
             return stale_metals
-        return {"metals": []}
+        fallback = {"metals": get_default_market_snapshot()["metals"]}
+        _cache_set("metals", fallback)
+        return fallback
 
 
 @router.get("/commodities")
@@ -466,4 +475,6 @@ async def get_commodity_movers() -> Any:
         logger.error(f"Error in batch commodity fetch: {e}")
         if stale_commodities:
             return stale_commodities
-        return {"commodities": []}
+        fallback = {"commodities": get_default_market_snapshot()["commodities"]}
+        _cache_set("commodities", fallback)
+        return fallback
