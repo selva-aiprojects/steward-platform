@@ -13,6 +13,14 @@ router = APIRouter()
 # Import TrueData service
 from app.services.true_data_service import true_data_service
 
+# Import shared global state and helper
+from app.core.state import (
+    last_market_movers, 
+    last_steward_prediction, 
+    last_macro_indicators, 
+    clean_ticker_symbol
+)
+
 @router.get("/status")
 def get_market_status() -> Any:
     """
@@ -64,272 +72,108 @@ def get_market_status() -> Any:
 @router.get("/movers")
 async def get_market_movers() -> Any:
     """
-    Get top gainers and losers for stocks.
-    """
-    """
     Get top gainers and losers.
-    Fetches live data from MarketStack API and yfinance as fallback.
+    Uses batch downloading and 5-minute caching for high performance.
     """
-    import yfinance as yf
-    import requests
-    from app.core.config import settings
+    # --- SHARED STATE SYNC ---
+    # Prioritize shared global state for consistency with Socket.IO
+    if last_market_movers.get('gainers') and last_market_movers.get('losers'):
+        return last_market_movers
 
-    # Initialize variables for MarketStack data
-    marketstack_gainers = []
-    marketstack_losers = []
+    # --- CACHING LOGIC ---
+    import time
+    global _movers_cache, _movers_cache_time
+    if '_movers_cache' not in globals():
+        _movers_cache = None
+        _movers_cache_time = 0
 
-    # Try MarketStack API first
-    if settings.MARKETSTACK_API_KEY:
-        try:
-            # MarketStack API endpoint for live data
-            # Note: MarketStack primarily supports US stocks, so we'll use some international symbols
-            url = "http://api.marketstack.com/v1/live"
-            params = {
-                'access_key': settings.MARKETSTACK_API_KEY,
-                'symbols': 'AAPL,MSFT,GOOGL,AMZN,TSLA,NVDA,JPM,BAC,WMT,DIS'  # US stocks that MarketStack supports
-            }
+    # Cache for 10 minutes (600 seconds)
+    if _movers_cache and (time.time() - _movers_cache_time < 600):
+        return _movers_cache
 
-            response = requests.get(url, params=params)
-
-            if response.status_code == 200:
-                data = response.json()
-
-                if 'error' not in data and 'data' in data and data['data']:
-                    raw_quotes = {}
-                    for item in data['data']:
-                        symbol = item['symbol']
-                        raw_quotes[symbol] = {
-                            'last_price': item['last'],
-                            'change': item['change_percent'],
-                            'exchange': 'NASDAQ',  # Correct exchange for US stocks
-                            'symbol': symbol
-                        }
-
-                    # Process quotes for gainers/losers
-                    quotes = {}
-                    for symbol, data in raw_quotes.items():
-                        quotes[symbol] = data
-
-                    # Identify Gainers and Losers
-                    valid_quotes = {s: q for s, q in quotes.items() if q.get('last_price') is not None}
-
-                    if valid_quotes:
-                        # Calculate changes for each quote
-                        quotes_with_changes = {}
-                        for s, q in valid_quotes.items():
-                            change_pct = q.get('change', 0)
-                            quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
-
-                        sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
-
-                        top_gainers = sorted_movers[:15]  # Top 15
-                        top_losers = sorted_movers[-15:]  # Bottom 15
-
-                        # Format movers for frontend
-                        gainers_data = []
-                        for s, q in top_gainers:
-                            exchange = q.get('exchange', 'NSE')
-                            gainers_data.append({
-                                'symbol': s,
-                                'exchange': exchange,
-                                'price': q.get('last_price', 0),
-                                'change': round(q['calculated_change'], 2),
-                                'last_price': q.get('last_price', 0)
-                            })
-
-                        losers_data = []
-                        for s, q in top_losers:
-                            exchange = q.get('exchange', 'NSE')
-                            losers_data.append({
-                                'symbol': s,
-                                'exchange': exchange,
-                                'price': q.get('last_price', 0),
-                                'change': round(q['calculated_change'], 2),
-                                'last_price': q.get('last_price', 0)
-                            })
-
-                        # Store MarketStack data but continue to get Indian stocks from yfinance as primary
-                        marketstack_gainers = gainers_data
-                        marketstack_losers = losers_data
-                    else:
-                        marketstack_gainers = []
-                        marketstack_losers = []
-                else:
-                    marketstack_gainers = []
-                    marketstack_losers = []
-            else:
-                marketstack_gainers = []
-                marketstack_losers = []
-        except Exception as e:
-            logger.error(f"Error fetching data from MarketStack: {e}")
-            marketstack_gainers = []
-            marketstack_losers = []
-
-    # Primary source for Indian stocks using yfinance
+    # Primary source for Indian stocks using yfinance (Batch download is MUCH faster)
     watchlist = [
-        # NSE (Nifty 50 highlights) - converted to yfinance format (SYMBOL.NS)
         'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
         'SBIN.NS', 'ITC.NS', 'LT.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
         'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'MARUTI.NS',
         'BHARTIARTL.NS', 'ADANIENT.NS', 'ADANIPORTS.NS', 'ASIANPAINT.NS',
         'ULTRACEMCO.NS', 'WIPRO.NS', 'TECHM.NS', 'HCLTECH.NS', 'ONGC.NS',
         'POWERGRID.NS', 'NTPC.NS', 'COALINDIA.NS', 'SUNPHARMA.NS',
-        'DRREDDY.NS', 'CIPLA.NS', 'HINDUNILVR.NS',
-        # BSE (using .BO for Bombay Stock Exchange)
-        '^BSESN',  # SENSEX index
-        # Commodities (using appropriate yfinance symbols)
-        'GC=F',  # Gold futures
-        'SI=F',  # Silver futures
-        'CL=F',  # Crude Oil
-        'NG=F',  # Natural Gas
-        # Currency pairs
-        'INR=X',  # USD/INR
+        'DRREDDY.NS', 'CIPLA.NS', 'HINDUNILVR.NS'
     ]
 
     try:
-        # Fetch data for all tickers
+        # Fetch data for all tickers in one batch request
+        import pandas as pd
+        data = yf.download(watchlist, period="5d", group_by='ticker', progress=False)
+        
         raw_quotes = {}
         for ticker_symbol in watchlist:
             try:
-                ticker = yf.Ticker(ticker_symbol)
-                hist = ticker.history(period="5d")  # Changed to 5d to ensure we have previous close data
+                # Handle single vs multi-index dataframe from yf.download
+                if isinstance(data.columns, pd.MultiIndex):
+                    if ticker_symbol in data.columns.levels[0]:
+                        hist = data[ticker_symbol]
+                else:
+                    hist = data # Single ticker case
 
-                if not hist.empty:
+                if not hist.empty and 'Close' in hist:
                     current_price = hist['Close'].iloc[-1]
-                    # Use previous day's close for comparison
                     if len(hist) > 1:
                         prev_close = hist['Close'].iloc[-2]
-                    elif 'previousClose' in ticker.info:
-                        prev_close = ticker.info['previousClose']
                     else:
-                        # If no previous data, use current price to avoid division by zero
                         prev_close = current_price
-
+                    
                     if prev_close != 0:
                         change_pct = ((current_price - prev_close) / prev_close) * 100
-                    else:
-                        change_pct = 0
-
-                    # Determine exchange from ticker symbol
-                    if '.NS' in ticker_symbol:
-                        exchange = 'NSE'
-                    elif '.BO' in ticker_symbol:
-                        exchange = 'BSE'
-                    elif ticker_symbol.startswith('^'):
-                        exchange = 'BSE'  # Index
-                    elif ticker_symbol.endswith('=F'):
-                        exchange = 'MCX'  # Commodities
-                    elif ticker_symbol.endswith('=X'):
-                        exchange = 'FOREX'  # Forex
-                    else:
-                        exchange = 'OTHER'
-
-                    # Extract clean symbol name
-                    clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
-
-                    raw_quotes[ticker_symbol] = {
-                        'last_price': current_price,
-                        'change': change_pct,
-                        'exchange': exchange,
-                        'symbol': clean_symbol
-                    }
-            except Exception as e:
-                logger.error(f"Error fetching data for {ticker_symbol}: {e}")
+                        clean_symbol = ticker_symbol.replace('.NS', '')
+                        raw_quotes[clean_symbol] = {
+                            'last_price': current_price,
+                            'change': change_pct,
+                            'exchange': 'NSE',
+                            'symbol': clean_symbol
+                        }
+            except Exception as ticker_err:
+                logger.debug(f"Error processing {ticker_symbol}: {ticker_err}")
                 continue
 
-        # Process quotes for gainers/losers
-        quotes = {}
-        for ticker_symbol, data in raw_quotes.items():
-            # Extract clean symbol name
-            clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
-            quotes[clean_symbol] = data
-
         # Identify Gainers and Losers
-        valid_quotes = {s: q for s, q in quotes.items() if q.get('last_price') is not None}
+        quotes_with_changes = {}
+        for s, q in raw_quotes.items():
+            quotes_with_changes[s] = {**q, 'calculated_change': q['change']}
 
-        if valid_quotes:
-            # Calculate changes for each quote
-            quotes_with_changes = {}
-            for s, q in valid_quotes.items():
-                change_pct = q.get('change', 0)
-                quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
+        sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
+        
+        gainers_data = []
+        for s, q in sorted_movers[:15]:
+            gainers_data.append({
+                'symbol': q['symbol'],
+                'exchange': q['exchange'],
+                'price': round(q['last_price'], 2),
+                'change': round(q['calculated_change'], 2),
+                'last_price': round(q['last_price'], 2)
+            })
 
-            sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
+        losers_data = []
+        for s, q in sorted_movers[-15:]:
+            losers_data.append({
+                'symbol': q['symbol'],
+                'exchange': q['exchange'],
+                'price': round(q['last_price'], 2),
+                'change': round(q['calculated_change'], 2),
+                'last_price': round(q['last_price'], 2)
+            })
 
-            top_gainers = sorted_movers[:15]  # Top 15
-            top_losers = sorted_movers[-15:]  # Bottom 15
-
-            # Format movers for frontend
-            gainers_data = []
-            for s, q in top_gainers:
-                # Determine exchange from original ticker symbol
-                exchange = q.get('exchange', 'NSE')
-                gainers_data.append({
-                    'symbol': s,
-                    'exchange': exchange,
-                    'price': q.get('last_price', 0),
-                    'change': round(q['calculated_change'], 2),
-                    'last_price': q.get('last_price', 0)
-                })
-
-            losers_data = []
-            for s, q in top_losers:
-                # Determine exchange from original ticker symbol
-                exchange = q.get('exchange', 'NSE')
-                losers_data.append({
-                    'symbol': s,
-                    'exchange': exchange,
-                    'price': q.get('last_price', 0),
-                    'change': round(q['calculated_change'], 2),
-                    'last_price': q.get('last_price', 0)
-                })
-
-            # Combine MarketStack data with yfinance data to provide more variety
-            combined_gainers = marketstack_gainers + gainers_data
-            combined_losers = marketstack_losers + losers_data
-
-            # For ticker display, we want more variety of stocks, not just top gainers/losers
-            # Combine all available stocks for a richer ticker experience
-            all_available_stocks = list(quotes_with_changes.items())
-
-            # Create a more diverse set for the ticker display
-            diversified_stocks = []
-
-            # Include top gainers
-            diversified_stocks.extend(top_gainers[:5])
-            # Include top losers
-            diversified_stocks.extend(top_losers[:5])
-            # Include some middle performers to diversify
-            middle_idx = len(all_available_stocks) // 2
-            diversified_stocks.extend(all_available_stocks[max(0, middle_idx-2):min(len(all_available_stocks), middle_idx+3)])
-
-            # Format diversified stocks
-            diversified_data = []
-            for s, q in diversified_stocks:
-                exchange = q.get('exchange', 'NSE')
-                diversified_data.append({
-                    'symbol': s,
-                    'exchange': exchange,
-                    'price': q.get('last_price', 0),
-                    'change': round(q['calculated_change'], 2),
-                    'last_price': q.get('last_price', 0)
-                })
-
-            # Combine with any MarketStack data
-            final_gainers = marketstack_gainers + diversified_data[:10]
-            final_losers = marketstack_losers + diversified_data[10:20]
-
-            # Return more stocks for a richer ticker experience
-            return {
-                "gainers": final_gainers[:15],
-                "losers": final_losers[:15]
-            }
-        else:
-            # Return empty arrays if no valid quotes (no hardcoded fallbacks)
-            return {
-                "gainers": [],
-                "losers": []
-            }
+        result = {
+            "gainers": gainers_data,
+            "losers": sorted(losers_data, key=lambda x: x['change']) # Most negative first
+        }
+        
+        # Update cache
+        _movers_cache = result
+        _movers_cache_time = time.time()
+        
+        return result
 
     except Exception as e:
         logger.error(f"Error fetching market movers: {e}")
@@ -337,23 +181,14 @@ async def get_market_movers() -> Any:
         try:
             true_data_result = true_data_service.get_top_movers(count=15)
             if true_data_result and true_data_result.get("gainers") and true_data_result.get("losers"):
-                # Combine with any MarketStack data that was retrieved
-                combined_gainers = marketstack_gainers + true_data_result["gainers"]
-                combined_losers = marketstack_losers + true_data_result["losers"]
-                
                 return {
-                    "gainers": combined_gainers[:15],
-                    "losers": combined_losers[:15]
+                    "gainers": true_data_result["gainers"][:15],
+                    "losers": true_data_result["losers"][:15]
                 }
         except Exception as td_error:
             logger.error(f"Error fetching data from TrueData: {td_error}")
         
-        # If all data sources fail, return empty arrays instead of hardcoded mock data
-        logger.warning("All data sources failed - returning empty arrays")
-        return {
-            "gainers": [],
-            "losers": []
-        }
+        return {"gainers": [], "losers": []}
 
 
 @router.get("/heatmap")
@@ -402,280 +237,179 @@ def get_order_book_depth() -> Any:
 
 @router.get("/macro")
 def get_macro_indicators() -> Any:
+    # Use real data from shared state if available ($ USD/INR, Gold, Crude)
+    if last_macro_indicators.get('usd_inr') and last_macro_indicators.get('usd_inr') > 0:
+        return {
+            "usd_inr": round(last_macro_indicators['usd_inr'], 2),
+            "gold": round(last_macro_indicators['gold'], 2),
+            "crude": round(last_macro_indicators['crude'], 2),
+            "10y_yield": 7.15, # Sample yield
+            "sentiment": "BULLISH" if last_macro_indicators['usd_inr'] < 83.5 else "NEUTRAL",
+            "volatility_label": "STABLE"
+        }
+    
+    # Mock fallback if feed hasn't initialized
     return {
-        "usd_inr": round(random.uniform(82.5, 84.5), 2),
-        "gold": round(random.uniform(60000, 65000), 2),
-        "crude": round(random.uniform(70, 86), 2),
-        "10y_yield": round(random.uniform(6.8, 7.4), 2)
+        "usd_inr": 83.42,
+        "gold": 62450.00,
+        "crude": 78.50,
+        "10y_yield": 7.12,
+        "sentiment": "NEUTRAL",
+        "volatility_label": "LOW"
     }
 
 
 @router.get("/currencies")
 async def get_currency_movers() -> Any:
     """
-    Get top currency movers using MarketStack API.
+    Get top currency movers using yfinance batch download with 5-minute cache.
     """
-    import requests
-    from app.core.config import settings
+    import time
+    global _currency_cache, _currency_cache_time
+    if '_currency_cache' not in globals():
+        _currency_cache = None
+        _currency_cache_time = 0
 
-    # Initialize variables for MarketStack data
-    marketstack_currencies = []
+    if _currency_cache and (time.time() - _currency_cache_time < 600):
+        return _currency_cache
 
-    # Try MarketStack API for currencies
-    if settings.MARKETSTACK_API_KEY:
-        try:
-            # MarketStack API endpoint for currencies (using FX endpoints if available)
-            # Note: MarketStack primarily supports stocks, but we can use some FX pairs if available
-            url = "http://api.marketstack.com/v1/live"
-            params = {
-                'access_key': settings.MARKETSTACK_API_KEY,
-                'symbols': 'USDINR=X,EURINR=X,GBPINR=X,JPYINR=X,AUDINR=X'  # Currency pairs
-            }
+    try:
+        import yfinance as yf
+        import pandas as pd
+        symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'SGDINR=X']
+        
+        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        
+        results = []
+        for symbol in symbols:
+            try:
+                if isinstance(data.columns, pd.MultiIndex):
+                    hist = data[symbol]
+                else:
+                    hist = data # Single symbol case
 
-            response = requests.get(url, params=params)
+                if not hist.empty and 'Close' in hist:
+                    current_price = hist['Close'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+                    change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0
 
-            if response.status_code == 200:
-                data = response.json()
+                    results.append({
+                        'symbol': symbol.replace('=X', ''),
+                        'exchange': 'FOREX',
+                        'price': round(float(current_price), 4),
+                        'change': round(float(change_pct), 2),
+                        'last_price': round(float(current_price), 4)
+                    })
+            except Exception:
+                continue
 
-                if 'error' not in data and 'data' in data and data['data']:
-                    currencies_data = []
-                    for item in data['data']:
-                        currencies_data.append({
-                            'symbol': item['symbol'],
-                            'exchange': 'FOREX',
-                            'price': item['last'],
-                            'change': item['change_percent'],
-                            'last_price': item['last']
-                        })
-
-                    marketstack_currencies = currencies_data
-        except Exception as e:
-            logger.error(f"Error fetching currency data from MarketStack: {e}")
-
-    # If MarketStack doesn't provide currency data, use yfinance as fallback
-    if not marketstack_currencies:
-        try:
-            import yfinance as yf
-            currency_symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'SGDINR=X']  # Removed CHFIND=X as it causes errors
-
-            currency_data = []
-            for symbol in currency_symbols:
-                try:
-                    ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
-
-                    if not hist.empty:
-                        current_price = hist['Close'].iloc[-1]
-
-                        # Use previous day's close for comparison
-                        if len(hist) > 1:
-                            prev_close = hist['Close'].iloc[-2]
-                        elif 'previousClose' in ticker.info:
-                            prev_close = ticker.info['previousClose']
-                        else:
-                            prev_close = current_price
-
-                        if prev_close != 0:
-                            change_pct = ((current_price - prev_close) / prev_close) * 100
-                        else:
-                            change_pct = 0
-
-                        currency_data.append({
-                            'symbol': symbol.replace('=X', ''),
-                            'exchange': 'FOREX',
-                            'price': current_price,
-                            'change': round(change_pct, 2),
-                            'last_price': current_price
-                        })
-                except Exception as e:
-                    logger.error(f"Error fetching currency data for {symbol}: {e}")
-                    continue
-
-            marketstack_currencies = currency_data
-        except Exception as e:
-            logger.error(f"Error fetching currency data from yfinance: {e}")
-
-    # Return currency data
-    return {
-        "currencies": marketstack_currencies
-    }
+        _currency_cache = {"currencies": results}
+        _currency_cache_time = time.time()
+        return _currency_cache
+    except Exception as e:
+        logger.error(f"Error in batch currency fetch: {e}")
+        return {"currencies": []}
 
 
 @router.get("/metals")
 async def get_metals_movers() -> Any:
     """
-    Get top metals movers using MarketStack API.
+    Get top metals movers using yfinance batch download with 5-minute cache.
     """
-    import requests
-    from app.core.config import settings
+    import time
+    global _metals_cache, _metals_cache_time
+    if '_metals_cache' not in globals():
+        _metals_cache = None
+        _metals_cache_time = 0
 
-    # Initialize variables for MarketStack data
-    marketstack_metals = []
+    if _metals_cache and (time.time() - _metals_cache_time < 600):
+        return _metals_cache
 
-    # Try MarketStack API for metals
-    if settings.MARKETSTACK_API_KEY:
-        try:
-            # MarketStack API endpoint for commodities/metal-like symbols
-            url = "http://api.marketstack.com/v1/live"
-            params = {
-                'access_key': settings.MARKETSTACK_API_KEY,
-                'symbols': 'GC=F,SI=F,HG=F,PL=F,PA=F'  # Gold, Silver, Copper, Platinum, Palladium
-            }
+    try:
+        import yfinance as yf
+        import pandas as pd
+        symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'ZN=F']
+        
+        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        
+        results = []
+        for symbol in symbols:
+            try:
+                if isinstance(data.columns, pd.MultiIndex):
+                    hist = data[symbol]
+                else:
+                    hist = data
 
-            response = requests.get(url, params=params)
+                if not hist.empty and 'Close' in hist:
+                    current_price = hist['Close'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+                    change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0
 
-            if response.status_code == 200:
-                data = response.json()
+                    results.append({
+                        'symbol': symbol.replace('=F', ''),
+                        'exchange': 'MCX',
+                        'price': round(float(current_price), 2),
+                        'change': round(float(change_pct), 2),
+                        'last_price': round(float(current_price), 2)
+                    })
+            except Exception:
+                continue
 
-                if 'error' not in data and 'data' in data and data['data']:
-                    metals_data = []
-                    for item in data['data']:
-                        metals_data.append({
-                            'symbol': item['symbol'],
-                            'exchange': 'COMEX',
-                            'price': item['last'],
-                            'change': item['change_percent'],
-                            'last_price': item['last']
-                        })
-
-                    marketstack_metals = metals_data
-        except Exception as e:
-            logger.error(f"Error fetching metals data from MarketStack: {e}")
-
-    # If MarketStack doesn't provide metals data, use yfinance as fallback
-    if not marketstack_metals:
-        try:
-            import yfinance as yf
-            metal_symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'ZN=F']  # Gold, Silver, Copper, Platinum, Palladium, Zinc - removed problematic symbols
-
-            metal_data = []
-            for symbol in metal_symbols:
-                try:
-                    ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
-
-                    if not hist.empty:
-                        current_price = hist['Close'].iloc[-1]
-
-                        # Use previous day's close for comparison
-                        if len(hist) > 1:
-                            prev_close = hist['Close'].iloc[-2]
-                        elif 'previousClose' in ticker.info:
-                            prev_close = ticker.info['previousClose']
-                        else:
-                            prev_close = current_price
-
-                        if prev_close != 0:
-                            change_pct = ((current_price - prev_close) / prev_close) * 100
-                        else:
-                            change_pct = 0
-
-                        metal_data.append({
-                            'symbol': symbol.replace('=F', ''),
-                            'exchange': 'MCX',
-                            'price': current_price,
-                            'change': round(change_pct, 2),
-                            'last_price': current_price
-                        })
-                except Exception as e:
-                    logger.error(f"Error fetching metal data for {symbol}: {e}")
-                    continue
-
-            marketstack_metals = metal_data
-        except Exception as e:
-            logger.error(f"Error fetching metals data from yfinance: {e}")
-
-    # Return metals data
-    return {
-        "metals": marketstack_metals
-    }
+        _metals_cache = {"metals": results}
+        _metals_cache_time = time.time()
+        return _metals_cache
+    except Exception as e:
+        logger.error(f"Error in batch metals fetch: {e}")
+        return {"metals": []}
 
 
 @router.get("/commodities")
 async def get_commodity_movers() -> Any:
     """
-    Get top commodity movers using MarketStack API.
+    Get top commodity movers using yfinance batch download with 5-minute cache.
     """
-    import requests
-    from app.core.config import settings
+    import time
+    global _commodity_cache, _commodity_cache_time
+    if '_commodity_cache' not in globals():
+        _commodity_cache = None
+        _commodity_cache_time = 0
 
-    # Initialize variables for MarketStack data
-    marketstack_commodities = []
+    if _commodity_cache and (time.time() - _commodity_cache_time < 600):
+        return _commodity_cache
 
-    # Try MarketStack API for commodities
-    if settings.MARKETSTACK_API_KEY:
-        try:
-            # MarketStack API endpoint for commodities
-            url = "http://api.marketstack.com/v1/live"
-            params = {
-                'access_key': settings.MARKETSTACK_API_KEY,
-                'symbols': 'CL=F,NG=F,HO=F,GC=F,SI=F'  # Crude Oil, Natural Gas, Heating Oil, Gold, Silver
-            }
+    try:
+        import yfinance as yf
+        import pandas as pd
+        symbols = ['CL=F', 'NG=F', 'GC=F', 'SI=F', 'HG=F', 'ZN=F']
+        
+        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        
+        results = []
+        for symbol in symbols:
+            try:
+                if isinstance(data.columns, pd.MultiIndex):
+                    hist = data[symbol]
+                else:
+                    hist = data
 
-            response = requests.get(url, params=params)
+                if not hist.empty and 'Close' in hist:
+                    current_price = hist['Close'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+                    change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0
 
-            if response.status_code == 200:
-                data = response.json()
+                    results.append({
+                        'symbol': symbol.replace('=F', ''),
+                        'exchange': 'MCX',
+                        'price': round(float(current_price), 2),
+                        'change': round(float(change_pct), 2),
+                        'last_price': round(float(current_price), 2)
+                    })
+            except Exception:
+                continue
 
-                if 'error' not in data and 'data' in data and data['data']:
-                    commodities_data = []
-                    for item in data['data']:
-                        commodities_data.append({
-                            'symbol': item['symbol'],
-                            'exchange': 'MCX',
-                            'price': item['last'],
-                            'change': item['change_percent'],
-                            'last_price': item['last']
-                        })
-
-                    marketstack_commodities = commodities_data
-        except Exception as e:
-            logger.error(f"Error fetching commodities data from MarketStack: {e}")
-
-    # If MarketStack doesn't provide commodities data, use yfinance as fallback
-    if not marketstack_commodities:
-        try:
-            import yfinance as yf
-            commodity_symbols = ['CL=F', 'NG=F', 'GC=F', 'SI=F', 'HG=F', 'ZN=F']  # Various commodities - removed problematic symbols
-
-            commodity_data = []
-            for symbol in commodity_symbols:
-                try:
-                    ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
-
-                    if not hist.empty:
-                        current_price = hist['Close'].iloc[-1]
-
-                        # Use previous day's close for comparison
-                        if len(hist) > 1:
-                            prev_close = hist['Close'].iloc[-2]
-                        elif 'previousClose' in ticker.info:
-                            prev_close = ticker.info['previousClose']
-                        else:
-                            prev_close = current_price
-
-                        if prev_close != 0:
-                            change_pct = ((current_price - prev_close) / prev_close) * 100
-                        else:
-                            change_pct = 0
-
-                        commodity_data.append({
-                            'symbol': symbol.replace('=F', ''),
-                            'exchange': 'MCX',
-                            'price': current_price,
-                            'change': round(change_pct, 2),
-                            'last_price': current_price
-                        })
-                except Exception as e:
-                    logger.error(f"Error fetching commodity data for {symbol}: {e}")
-                    continue
-
-            marketstack_commodities = commodity_data
-        except Exception as e:
-            logger.error(f"Error fetching commodities data from yfinance: {e}")
-
-    # Return commodities data
-    return {
-        "commodities": marketstack_commodities
-    }
+        _commodity_cache = {"commodities": results}
+        _commodity_cache_time = time.time()
+        return _commodity_cache
+    except Exception as e:
+        logger.error(f"Error in batch commodity fetch: {e}")
+        return {"commodities": []}

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from app.api.deps import get_db, get_current_active_user
+from app.core.database import get_db
+from app.core.rbac import get_current_user as get_current_active_user
 from app.schemas.ticket import TicketCreate, TicketResponse, TicketUpdate, TicketMessageCreate, TicketMessageResponse
 from app.models.user import User
 from app.services.ticket_service import ticket_service

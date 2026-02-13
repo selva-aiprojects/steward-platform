@@ -44,9 +44,8 @@ class EnhancedLLMService:
                 self.clients['groq'] = Groq(api_key=groq_api_key)
                 self.available_models['groq'] = [
                     "llama-3.3-70b-versatile",
-                    "llama3-groq-70b-8192-tool-use-preview",
-                    "llama3-groq-8b-8192-tool-use-preview",
-                    "mixtral-8x7b-32768"
+                    "llama-3.1-70b-versatile",
+                    "llama-3.1-8b-instant"
                 ]
                 logger.info("Groq client initialized successfully")
             except Exception as e:

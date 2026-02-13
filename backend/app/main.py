@@ -10,6 +10,17 @@ import random
 import os
 import logging
 
+logger = logging.getLogger(__name__)
+
+# Import shared global state
+from app.core.state import (
+    last_market_movers, 
+    last_steward_prediction, 
+    last_exchange_status,
+    last_macro_indicators,
+    clean_ticker_symbol
+)
+
 # Import startup services
 from app.startup import startup_sequence
 
@@ -53,9 +64,8 @@ socket_cors = "*" if "*" in allowed_origins else allowed_origins
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=socket_cors)
 socket_app = socketio.ASGIApp(sio, app)
 
-# Global state for immediate feed on join
-last_market_movers = {'gainers': [], 'losers': []}
-last_steward_prediction = {"prediction": "Initializing...", "history": []}
+# Global state is now imported from app.core.state to ensure consistency
+# last_market_movers and last_steward_prediction are already imported above
 
 # Note: Using TrueData API for live market data - no hardcoded fallback values
 # The system will fetch live data from TrueData API and only show actual market prices
@@ -104,7 +114,7 @@ async def market_feed():
     Background worker that broadcasts market updates.
     Switches between Live yfinance Data and Mock Data based on EXECUTION_MODE.
     """
-    global last_market_movers, last_steward_prediction
+    # uses shared globals from app.core.state
     from app.services.data_integration import data_integration_service
     from app.core.config import settings
     import os
@@ -120,324 +130,176 @@ async def market_feed():
         # Major indices
         '^NSEI',  # NIFTY 50 index
         '^BSESN',  # SENSEX index
+        # Macro Indicators (added for consistency across cards and tickers)
+        'USDINR=X', # USD/INR
+        'GC=F',     # Gold Futures
+        'CL=F'      # Crude Oil Futures
     ]
 
     # Store history in memory (simple deque-like structure)
     prediction_history = []
+    last_ai_analysis_time = 0
+    refresh_interval = 30
 
     while True:
-        # Reduced cycle for better responsiveness
-        # Using 2s for demo responsiveness
-        await asyncio.sleep(2 if settings.EXECUTION_MODE == "LIVE_TRADING" else 1)
+        await asyncio.sleep(refresh_interval if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
 
         try:
-            # Setup Groq once per cycle (if key exists)
-            groq_key = os.getenv("GROQ_API_KEY")
-            groq_client = None
-            if groq_key:
-                try:
-                    from groq import Groq
-                    groq_client = Groq(api_key=groq_key)
-                except ImportError:
-                    print("Groq library not installed")
-                    groq_client = None  # Define the variable even if import fails
-                except Exception as e:
-                    print(f"Error initializing Groq client: {e}")
-                    groq_client = None  # Define the variable even if initialization fails
-
-            if settings.EXECUTION_MODE == "LIVE_TRADING":
-                # 1. Attempt real fetch using yfinance
-                try:
-                    # Get live data for all symbols in the watchlist
-                    tickers_data = yf.Tickers(' '.join(watchlist))
-
-                    # Fetch data for all tickers at once
-                    raw_quotes = {}
-                    for ticker_symbol in watchlist:
-                        try:
-                            ticker = yf.Ticker(ticker_symbol)
-                            hist = ticker.history(period="5d")  # Changed to 5d to ensure we have previous close data
-
-                            if not hist.empty:
-                                current_price = hist['Close'].iloc[-1]
-                                # Use previous day's close for comparison
-                                if len(hist) > 1:
-                                    prev_close = hist['Close'].iloc[-2]
-                                elif 'previousClose' in ticker.info:
-                                    prev_close = ticker.info['previousClose']
-                                else:
-                                    # If no previous data, use current price to avoid division by zero
-                                    prev_close = current_price
-
-                                if prev_close != 0:
-                                    change_pct = ((current_price - prev_close) / prev_close) * 100
-                                else:
-                                    change_pct = 0
-
-                                # Determine exchange from ticker symbol
-                                if '.NS' in ticker_symbol:
-                                    exchange = 'NSE'
-                                elif '.BO' in ticker_symbol:
-                                    exchange = 'BSE'
-                                elif ticker_symbol.startswith('^'):
-                                    exchange = 'BSE'  # Index
-                                elif ticker_symbol.endswith('=F'):
-                                    exchange = 'MCX'  # Commodities
-                                elif ticker_symbol.endswith('=X'):
-                                    exchange = 'FOREX'  # Forex
-                                else:
-                                    exchange = 'OTHER'
-
-                                # Extract clean symbol name
-                                clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
-
-                                raw_quotes[ticker_symbol] = {
-                                    'last_price': current_price,
-                                    'change': change_pct,
-                                    'exchange': exchange,
-                                    'symbol': clean_symbol
-                                }
-                        except Exception as e:
-                            print(f"Error fetching data for {ticker_symbol}: {e}")
-                            continue
-                except Exception as e:
-                    print(f"yfinance bulk fetch error: {e}")
-                    raw_quotes = {}
-
-                # 2. Smart Simulator fallback
-                if not raw_quotes or len(raw_quotes) == 0:
-                    print("yfinance API failed, using smart simulator fallback")
-                    raw_quotes = {s: {
-                        'last_price': round((72000 if 'BSESN' in s else 50000 if '=F' in s else 1500) + random.uniform(-100, 100), 2),
-                        'change': round(random.uniform(-3, 3), 2),
-                        'exchange': 'NSE' if '.NS' in s else 'BSE' if '.BO' in s else 'MCX' if '=F' in s else 'FOREX' if '=X' in s else 'OTHER'
-                    } for s in watchlist}
-
-                # Process quotes for gainers/losers
-                quotes = {}
-                for ticker_symbol, data in raw_quotes.items():
-                    # Extract clean symbol name
-                    clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
-                    quotes[clean_symbol] = data
-
-                # 2. Identify Gainers and Losers
-                # Filter out any that might have missing change data
-                valid_quotes = {s: q for s, q in quotes.items() if q.get('last_price') is not None}
-                if valid_quotes:
-                    # Calculate changes for each quote if not directly available
-                    quotes_with_changes = {}
-                    for s, q in valid_quotes.items():
-                        change_pct = q.get('change', 0)
-
-                        quotes_with_changes[s] = {**q, 'calculated_change': change_pct}
-
-                    sorted_movers = sorted(quotes_with_changes.items(), key=lambda x: x[1]['calculated_change'], reverse=True)
-
-                    top_gainers = sorted_movers[:10] # Top 10
-                    top_losers = sorted_movers[-10:] # Bottom 10
-
-                    # Format movers for frontend
-                    gainers_data = []
-                    for s, q in top_gainers:
-                        # Determine exchange from original ticker symbol
-                        exchange = q.get('exchange', 'NSE')
-                        gainers_data.append({
-                            'symbol': s,
-                            'exchange': exchange,
-                            'price': q.get('last_price', 0),
-                            'change': round(q['calculated_change'], 2)
-                        })
-
-                    losers_data = []
-                    for s, q in top_losers:
-                        # Determine exchange from original ticker symbol
-                        exchange = q.get('exchange', 'NSE')
-                        losers_data.append({
-                            'symbol': s,
-                            'exchange': exchange,
-                            'price': q.get('last_price', 0),
-                            'change': round(q['calculated_change'], 2)
-                        })
-
-                    # Update global state
-                    last_market_movers = {'gainers': gainers_data, 'losers': losers_data}
-
-                    # Emit consolidated movers event
-                    await sio.emit('market_movers', last_market_movers, room='market_data')
-
-                    # 3. Ticker Broadcast (Multi-exchange)
-                    for ticker_symbol in watchlist:
-                        # Extract clean symbol name
-                        clean_symbol = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('=F', '').replace('=X', '').replace('^', '')
-
-                        quote = raw_quotes.get(ticker_symbol)
-                        if not quote: continue
-
-                        # Determine exchange from ticker symbol
-                        if '.NS' in ticker_symbol:
-                            exchange = 'NSE'
-                        elif '.BO' in ticker_symbol:
-                            exchange = 'BSE'
-                        elif ticker_symbol.startswith('^'):
-                            exchange = 'BSE'  # Index
-                        elif ticker_symbol.endswith('=F'):
-                            exchange = 'MCX'  # Commodities
-                        elif ticker_symbol.endswith('=X'):
-                            exchange = 'FOREX'  # Forex
-                        else:
-                            exchange = 'OTHER'
-
-                        update = {
-                            'symbol': clean_symbol,
-                            'exchange': exchange,
-                            'price': quote.get('last_price', quote.get('price', 0)),
-                            'change': quote.get('change', 0),
-                            'type': 'up' if quote.get('change', 0) >= 0 else 'down'
-                        }
-                        await sio.emit('market_update', update, room='market_data')
-
-                    # 4. Global "Steward Prediction" (Dynamic real-time trend)
-                    if groq_client:
-                        try:
-                            market_summary = ", ".join([f"{s}: {q.get('change', 0):.2f}%" for s, q in quotes.items() if q.get('change') is not None])
-                            prompt = f"""
-                            Analyze the current market trend based on these changes: {market_summary}.
-                            Provide a senior wealth steward analysis in JSON format:
-                            {{
-                                "prediction": "one punchy, expert sentence summary",
-                                "decision": "STRONG BUY | BUY | HOLD | SELL | STRONG SELL",
-                                "confidence": 0-100,
-                                "signal_mix": {{
-                                    "technical": 0-100,
-                                    "fundamental": 0-100,
-                                    "news": 0-100
-                                }},
-                                "risk_radar": 0-100
-                            }}
-                            """
-                            completion = groq_client.chat.completions.create(
-                                messages=[{"role": "user", "content": prompt}],
-                                model="llama-3.3-70b-versatile",
-                                response_format={"type": "json_object"},
-                                timeout=30  # Add timeout to prevent hanging
-                            )
-                            import json
-                            analysis = json.loads(completion.choices[0].message.content.strip())
-
-                            # Update global state
-                            last_steward_prediction = {
-                                'prediction': analysis.get('prediction', "Market stability maintained."),
-                                'decision': analysis.get('decision', "HOLD"),
-                                'confidence': analysis.get('confidence', 85),
-                                'signal_mix': analysis.get('signal_mix', {"technical": 70, "fundamental": 80, "news": 60}),
-                                'risk_radar': analysis.get('risk_radar', 40),
-                                'history': prediction_history
-                            }
-
-                            await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
-                        except Exception as e:
-                            print(f"Groq analysis error: {e}")
-                            # Use fallback prediction
-                            last_steward_prediction = {
-                                'prediction': "Market showing neutral momentum. Monitoring AI signals.",
-                                'decision': "HOLD",
-                                'confidence': 70,
-                                'signal_mix': {"technical": 60, "fundamental": 70, "news": 65},
-                                'risk_radar': 45,
-                                'history': prediction_history
-                            }
-                            await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
+            # Cache Groq client
+            if not hasattr(market_feed, 'groq_client'):
+                groq_key = os.getenv("GROQ_API_KEY")
+                if groq_key:
+                    try:
+                        from groq import Groq
+                        market_feed.groq_client = Groq(api_key=groq_key)
+                    except Exception:
+                        market_feed.groq_client = None
                 else:
-                    print("No valid quotes received, using mock data")
-                    # Use mock data as fallback
-                    mock_gainers = [
-                        {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.50, 'change': 2.34},
-                        {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': 1.87},
-                        {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': 1.45},
-                        {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': 1.23},
-                        {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': 0.98}
-                    ]
-                    mock_losers = [
-                        {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': -0.75},
-                        {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': -1.23},
-                        {'symbol': 'LT', 'exchange': 'NSE', 'price': 2200.00, 'change': -1.56},
-                        {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': -2.10},
-                        {'symbol': 'KOTAKBANK', 'exchange': 'NSE', 'price': 1800.00, 'change': -2.34}
-                    ]
-                    last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
+                    market_feed.groq_client = None
+            
+            groq_client = market_feed.groq_client
+
+            # 1. Attempt real fetch using yfinance batch download (For both LIVE and PAPER modes)
+            import pandas as pd
+            real_data_success = False
+            raw_quotes = {}
+            
+            try:
+                data = yf.download(watchlist, period="5d", group_by='ticker', progress=False)
+                
+                for ticker_symbol in watchlist:
+                    try:
+                        # Handle multi-index dataframe from yf.download (group_by='ticker')
+                        if isinstance(data.columns, pd.MultiIndex):
+                            # Ticker is Level 0, Attribute (Open, Close, etc) is Level 1
+                            if ticker_symbol in data.columns.levels[0]:
+                                ticker_df = data[ticker_symbol].dropna(subset=['Close'])
+                                if not ticker_df.empty:
+                                    current_price = ticker_df['Close'].iloc[-1]
+                                    prev_batch_price = ticker_df['Close'].iloc[-2] if len(ticker_df) > 1 else current_price
+                                    change_pct = ((current_price - prev_batch_price) / prev_batch_price * 100) if prev_batch_price != 0 else 0
+                                    
+                                    # Localize Commodities
+                                    if ticker_symbol == 'GC=F': 
+                                        current_price = (current_price / 31.1035) * 83.5 * 10 
+                                    elif ticker_symbol == 'CL=F': 
+                                        current_price = current_price * 83.5 
+
+                                    raw_quotes[ticker_symbol] = {
+                                        'last_price': float(current_price),
+                                        'change': float(change_pct),
+                                        'exchange': 'NSE' if '.NS' in ticker_symbol else 'BSE' if ('.BO' in ticker_symbol or ticker_symbol.startswith('^')) else 'FOREX' if ticker_symbol.endswith('=X') else 'MCX' if ticker_symbol.endswith('=F') else 'NSE',
+                                        'symbol': clean_ticker_symbol(ticker_symbol)
+                                    }
+                        else:
+                            # Single ticker or flattened columns
+                            if not data.empty and 'Close' in data.columns:
+                                current_price = data['Close'].iloc[-1]
+                                raw_quotes[ticker_symbol] = {
+                                    'last_price': float(current_price),
+                                    'change': 0.0,
+                                    'exchange': 'NSE',
+                                    'symbol': clean_ticker_symbol(ticker_symbol)
+                                }
+                    except Exception as ticker_err:
+                        logger.debug(f"Error processing {ticker_symbol}: {ticker_err}")
+                        continue
+                
+                if raw_quotes:
+                    real_data_success = True
+                    logger.info(f"Successfully fetched {len(raw_quotes)} real-time quotes")
+            except Exception as e:
+                logger.error(f"yfinance batch fetch failed: {e}")
+
+            if real_data_success:
+                # 2. Process quotes for gainers/losers
+                quotes_to_sort = []
+                for ticker_symbol, q_data in raw_quotes.items():
+                    # Only include stocks (NSE/BSE) in gainers/losers, not macro
+                    if '.NS' in ticker_symbol or '.BO' in ticker_symbol:
+                        quotes_to_sort.append(q_data)
+
+                if quotes_to_sort:
+                    sorted_movers = sorted(quotes_to_sort, key=lambda x: x['change'], reverse=True)
+                    gainers_data = sorted_movers[:10]
+                    losers_data = sorted(sorted_movers[-10:], key=lambda x: x['change']) # Most negative first
+
+                    # Update global state - mutate to maintain reference
+                    last_market_movers.update({
+                        'gainers': gainers_data,
+                        'losers': losers_data
+                    })
                     await sio.emit('market_movers', last_market_movers, room='market_data')
             else:
-                # Mock Mode Fallback
-                symbol = random.choice([
-                    'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN',
-                    'ITC', 'LT', 'AXISBANK', 'KOTAKBANK', 'BAJFINANCE', 'MARUTI'
-                ])
-                # Update global state for REST compatibility
-                mock_gainers = [
-                    {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2987.50, 'change': 2.34},
-                    {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3820.00, 'change': 1.87},
-                    {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1675.00, 'change': 1.45},
-                    {'symbol': 'INFY', 'exchange': 'NSE', 'price': 1540.00, 'change': 1.23},
-                    {'symbol': 'ICICIBANK', 'exchange': 'NSE', 'price': 1042.00, 'change': 0.98}
-                ]
-                mock_losers = [
-                    {'symbol': 'SBIN', 'exchange': 'NSE', 'price': 580.00, 'change': -0.75},
-                    {'symbol': 'ITC', 'exchange': 'NSE', 'price': 438.00, 'change': -1.23},
-                    {'symbol': 'LT', 'exchange': 'NSE', 'price': 2200.00, 'change': -1.56},
-                    {'symbol': 'AXISBANK', 'exchange': 'NSE', 'price': 1125.00, 'change': -2.10},
-                    {'symbol': 'KOTAKBANK', 'exchange': 'NSE', 'price': 1800.00, 'change': -2.34}
-                ]
-                last_market_movers = {'gainers': mock_gainers, 'losers': mock_losers}
+                # ABSOLUTE FALLBACK - If both fetch and existing data fail
+                if not last_market_movers.get('gainers'):
+                    logger.warning("No real data available, using mock baseline")
+                    mock_gainers = [
+                        {'symbol': 'RELIANCE', 'exchange': 'NSE', 'price': 2985.50, 'change': 1.2},
+                        {'symbol': 'TCS', 'exchange': 'NSE', 'price': 3850.20, 'change': 0.8},
+                        {'symbol': 'HDFCBANK', 'exchange': 'NSE', 'price': 1640.45, 'change': 0.5}
+                    ]
+                    last_market_movers.update({'gainers': mock_gainers, 'losers': []})
+                    await sio.emit('market_movers', last_market_movers, room='market_data')
+                else:
+                    logger.info("Maintaining last known good prices during API outage")
+                    await sio.emit('market_movers', last_market_movers, room='market_data')
 
-                await sio.emit('market_movers', last_market_movers, room='market_data')
-
-                mock_watchlist = [
-                    ("NSE", "RELIANCE"), ("NSE", "TCS"), ("NSE", "INFY"), ("NSE", "HDFCBANK"),
-                    ("NSE", "ICICIBANK"), ("NSE", "SBIN"), ("NSE", "ITC"), ("NSE", "AXISBANK"),
-                    ("NSE", "KOTAKBANK"), ("NSE", "BAJFINANCE"), ("NSE", "MARUTI"),
-                    ("BSE", "SENSEX"), ("BSE", "BOM500002"), ("BSE", "BOM500010"),
-                    ("MCX", "GOLD"), ("MCX", "SILVER"), ("MCX", "CRUDEOIL"), ("MCX", "NATURALGAS")
-                ]
-                updates = random.sample(mock_watchlist, k=min(6, len(mock_watchlist)))
-                for exchange, symbol in updates:
-                    update = {
-                        'symbol': symbol,
-                        'exchange': exchange,
-                        'price': round(random.uniform(100, 1000), 2),
-                        'change': round(random.uniform(-5, 5), 2)
-                    }
-                    projection = "AI Projection pending: System in MOCK mode."
-                    if groq_client:
-                        try:
-                            prompt = f"Provide a concise 1-sentence market projection for Indian stock {symbol} (NSE) trading at {update['price']}."
-                            completion = groq_client.chat.completions.create(
-                                messages=[{"role": "user", "content": prompt}],
-                                model="llama-3.1-8b-instant",
-                                max_tokens=60,
-                                timeout=30  # Add timeout to prevent hanging
-                            )
-                            projection = completion.choices[0].message.content.strip()
-                        except Exception as e:
-                            print(f"Groq projection error: {e}")
-                    update['projection'] = projection
-                    update['type'] = 'up' if update['change'] >= 0 else 'down'
+            # 3. Always update Ticker Batch (from raw_quotes if success, else legacy state)
+            ticker_batch = []
+            if raw_quotes:
+                for ts, q in raw_quotes.items():
+                    ticker_batch.append({
+                        'symbol': q['symbol'],
+                        'exchange': q['exchange'],
+                        'price': round(q['last_price'], 2),
+                        'change': round(q['change'], 2),
+                        'type': 'up' if q['change'] >= 0 else 'down'
+                    })
+            
+            if ticker_batch:
+                await sio.emit('ticker_batch', ticker_batch, room='market_data')
+                
+                # 4. Sample Market Updates (lively UI)
+                sample_size = min(5, len(ticker_batch))
+                for update in random.sample(ticker_batch, k=sample_size):
                     await sio.emit('market_update', update, room='market_data')
 
-                # Mock high-fidelity prediction for UI testing
-                last_steward_prediction = {
-                    'prediction': "Nifty showing strong resilience at current levels. Bullish technical setup emerging.",
-                    'decision': "STRONG BUY",
-                    'confidence': 92,
-                    'signal_mix': {"technical": 88, "fundamental": 94, "news": 85},
-                    'risk_radar': 32,
-                    'history': prediction_history
-                }
-                await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
+            # 5. Update Macro Indicators from real data if available
+            if raw_quotes:
+                for ticker in watchlist:
+                    if ticker in raw_quotes:
+                        val = round(raw_quotes[ticker]['last_price'], 2)
+                        if 'USDINR' in ticker: last_macro_indicators['usd_inr'] = val
+                        elif 'GC=F' in ticker: last_macro_indicators['gold'] = val
+                        elif 'CL=F' in ticker: last_macro_indicators['crude'] = val
 
-                # Also update global prediction in mock mode
-                if last_steward_prediction['prediction'] == "Initializing...":
-                    last_steward_prediction['prediction'] = "Market showing neutral momentum in mock session. Monitoring AI signals."
+            # 6. AI Market Narrative (Throttled)
+            import time
+            if groq_client and (time.time() - last_ai_analysis_time > 300):
+                try:
+                    last_ai_analysis_time = time.time()
+                    market_summary = ", ".join([f"{q['symbol']}: {q['change']:.2f}%" for q in ticker_batch[:5]])
+                    prompt = f"Analyze market in JSON: {market_summary}"
+                    completion = groq_client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model="llama-3.3-70b-versatile",
+                        response_format={"type": "json_object"},
+                        timeout=15
+                    )
+                    import json
+                    analysis = json.loads(completion.choices[0].message.content.strip())
+                    last_steward_prediction.update({
+                        'prediction': analysis.get('prediction', "Market steady."),
+                        'decision': analysis.get('decision', "HOLD"),
+                        'confidence': analysis.get('confidence', 80),
+                        'signal_mix': analysis.get('signal_mix', {"technical": 70, "fundamental": 90, "news": 50}),
+                        'risk_radar': analysis.get('risk_radar', 30),
+                        'history': prediction_history
+                    })
                     await sio.emit('steward_prediction', last_steward_prediction, room='market_data')
+                except:
+                    pass
 
         except Exception as e:
             print(f"Market feed error: {e}")
@@ -492,15 +354,3 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "build": "cors-fix-2699d6f"}
-
-@app.get("/api/v1/market/movers")
-async def get_market_movers():
-    """REST endpoint to get market movers (for compatibility with existing frontend code)"""
-    global last_market_movers
-    return last_market_movers
-
-@app.get("/api/v1/ai/steward-prediction")
-async def get_steward_prediction():
-    """REST endpoint to get steward prediction (for compatibility with existing frontend code)"""
-    global last_steward_prediction
-    return last_steward_prediction

@@ -1,4 +1,4 @@
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Iterable
 
@@ -9,9 +9,14 @@ from app.models.user import User
 
 def get_current_user(
     x_user_id: int | None = Header(default=None, alias="X-User-Id"),
+    user_id_query: int | None = Query(default=None, alias="user_id"), # Fallback for dev ease
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     db: Session = Depends(get_db),
 ) -> User:
+    # Use query param fallback in dev if header is missing
+    if x_user_id is None and user_id_query is not None and settings.APP_ENV in {"DEV", "TEST"}:
+        x_user_id = user_id_query
+
     if x_user_id is None:
         if settings.APP_ENV in {"DEV", "QA", "UAT", "TEST"}:
             user = db.query(User).first()

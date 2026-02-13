@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
 
-from app.api.deps import get_current_active_user
+from app.core.rbac import get_current_user
 from app.models.user import User
 from app.schemas.ai_schemas import (
     MarketAnalysisRequest,
@@ -28,7 +28,7 @@ router = APIRouter()
 @router.post("/market-analysis", response_model=MarketAnalysisResponse)
 async def enhanced_market_analysis(
     request: MarketAnalysisRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Perform enhanced market analysis using multiple LLM providers and data sources
@@ -88,7 +88,7 @@ async def enhanced_market_analysis(
 async def enhanced_market_research(
     sector: Optional[str] = Query(None, description="Specific sector to analyze"),
     llm_provider: str = Query("groq", description="LLM provider to use"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Generate enhanced market research and sector analysis
@@ -127,7 +127,7 @@ async def enhanced_market_research(
 @router.post("/chat", response_model=ChatResponse)
 async def enhanced_chat(
     request: ChatRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Enhanced chat with financial data context
@@ -203,7 +203,7 @@ async def multi_source_analysis(
     end_date: Optional[datetime] = Query(None, description="End date for historical data"),
     llm_provider: str = Query("groq", description="LLM provider to use"),
     data_source: str = Query("nse", description="Data source to use"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Perform analysis using multiple data sources and LLM providers

@@ -50,7 +50,7 @@ export const AppDataProvider = ({ children }) => {
             setLoading(true);
         }
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, userData, researchData, heatmapData, newsData, optionsData, depthData, macroData, currencyData, metalsData, commodityData] = await Promise.all([
+            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, researchData, heatmapData, newsData, optionsData, depthData, macroData, currencyData, metalsData, commodityData] = await Promise.all([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
@@ -59,7 +59,6 @@ export const AppDataProvider = ({ children }) => {
                 fetchStrategies(viewId),
                 fetchMarketMovers(),
                 fetchExchangeStatus(),
-                fetchUser(viewId),
                 fetchMarketResearch(),
                 fetchSectorHeatmap(),
                 fetchMarketNews(),
@@ -97,20 +96,8 @@ export const AppDataProvider = ({ children }) => {
                 setStrategies(Array.isArray(strategiesData) ? strategiesData : []);
             }
 
-            // Update User Context with fresh data from backend
-            if (userData && typeof userData === 'object') {
-                if (viewId === user?.id) {
-                    setContextUser({
-                        ...userData,
-                        name: userData?.full_name || userData?.name || userData?.email
-                    });
-                } else if (viewId === selectedUser?.id) {
-                    setSelectedUser({
-                        ...userData,
-                        name: userData?.full_name || userData?.name || userData?.email
-                    });
-                }
-            }
+            // User stats like balance and holdings are already updated in setSummary and setHoldings.
+            // Removing the redundant full-user object sync to prevent circular render loops.
 
             // Prepare the marketMovers object with all data
             const updatedMarketMovers = {
@@ -182,7 +169,7 @@ export const AppDataProvider = ({ children }) => {
                 setHasLoaded(true);
             }
         }
-    }, [viewId, user, selectedUser, isAdmin, setContextUser, setSelectedUser, hasLoaded]);
+    }, [viewId, isAdmin, hasLoaded]); // Simplified dependencies to break the recursion loop
 
     useEffect(() => {
         if (viewId) {
@@ -249,11 +236,19 @@ export const AppDataProvider = ({ children }) => {
             }
         };
 
+        const onTickerBatch = (batch) => {
+            if (Array.isArray(batch)) {
+                // This would update individual tickers in high-frequency components
+                // For now, we logging or can use it to update a global price map
+            }
+        };
+
         socket.on('connect', onConnect);
         socket.on('market_update', onMarketUpdate);
         socket.on('steward_prediction', onStewardPrediction);
         socket.on('admin_metrics', onAdminMetrics);
         socket.on('market_movers', onMarketMovers);
+        socket.on('ticker_batch', onTickerBatch);
 
         if (socket.connected) onConnect();
 

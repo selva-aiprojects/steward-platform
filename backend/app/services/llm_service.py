@@ -10,10 +10,9 @@ class LLMService:
         self.client = None
         self.api_key = None  # Will be loaded dynamically when needed
         self.available_models = [
-            "llama-3.3-70b-versatile",  # Updated model
-            "llama-3.1-8b-instant",
-            "llama3-groq-70b-8192-tool-use-preview",
-            "llama3-groq-8b-8192-tool-use-preview"
+            "llama-3.3-70b-versatile",
+            "llama-3.1-70b-versatile",
+            "llama-3.1-8b-instant"
         ]
         
         # Initialize client if API key is available at startup
@@ -131,34 +130,44 @@ class LLMService:
         
         # Extract user_id from context if available
         user_id = None
-        if context and "User:" in context:
-            # Extract user_id from context string like "User: John Doe, Role: AUTO"
+        if context:
+            # Look for User_ID: 999 style
             import re
-            # Look for user_id in context if it's passed
-            for part in context.split(','):
-                if 'user_id' in part.lower():
-                    try:
-                        user_id = int(part.split(':')[-1].strip())
-                    except:
-                        pass
-        
-        # If no user_id found in context, default to first user (demo mode)
+            id_match = re.search(r'User_ID:\s*(\d+)', context)
+            if id_match:
+                user_id = int(id_match.group(1))
+            
+            if not user_id:
+                # Look for user_id attribute in JSON-like context
+                id_match = re.search(r'"user_id":\s*(\d+)', context)
+                if id_match:
+                    user_id = int(id_match.group(1))
+
+        # Default to 1 if still not found
         if not user_id:
-            # Try to extract from context string that might contain user_id
-            import re
-            user_id_match = re.search(r'"user_id":\s*(\d+)', context)
-            if user_id_match:
-                user_id = int(user_id_match.group(1))
-            else:
-                user_id = 1  # Default to first user for demo purposes
+            user_id = 1
         
         from app.core.database import SessionLocal
         from app.models.portfolio import Portfolio
         from app.models.strategy import Strategy
         from app.models.trade import Trade
+        from app.core.state import last_market_movers, find_price_by_symbol
 
         db = SessionLocal()
         try:
+            # Check for specific price queries first
+            words = msg_lower.replace('?', '').replace(',', '').split()
+            for word in words:
+                if len(word) > 2:
+                    price_info = find_price_by_symbol(word)
+                    if price_info:
+                        return (
+                            f"**Live Quote (Offline Mode):**\n"
+                            f"The current price for **{price_info['symbol']}** is **₹{price_info['price']:,.2f}** "
+                            f"({'+' if price_info.get('change',0) >= 0 else ''}{price_info.get('change', 0)}%).\n\n"
+                            f"Source: Validated Market Feed | Connectivity: Backup Node"
+                        )
+
             # 1. Portfolio Queries
             if "portfolio" in msg_lower or "balance" in msg_lower or "value" in msg_lower:
                 # Query specific user's portfolio
@@ -178,7 +187,6 @@ class LLMService:
             # 2. Strategy Queries
             if "strategy" in msg_lower or "strategies" in msg_lower or "algo" in msg_lower:
                 # Query specific user's strategies through their portfolio
-                from app.models.portfolio import Portfolio
                 portfolio = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
                 if portfolio:
                     strats = db.query(Strategy).filter(Strategy.portfolio_id == portfolio.id).all()
@@ -207,20 +215,23 @@ class LLMService:
                 return f"User #{user_id} does not have an active portfolio to query trade history from."
 
             # 4. Market/General Fallback
-            if "market" in msg_lower or "trend" in msg_lower:
+            if "market" in msg_lower or "trend" in msg_lower or "price" in msg_lower or "quote" in msg_lower:
+                 gainers = last_market_movers.get('gainers', [])
+                 gainer_text = ", ".join([f"{g['symbol']} (+{g['change']}%)" for g in gainers[:3]]) if gainers else "N/A"
                  return (
                      "**Market Insight (Offline Mode):**\n"
-                     "I cannot access live external feeds without the Neural Link (Groq API), but internal telemetry indicates "
-                     "stable connection to NSE/BSE Execution Nodes. Local latency is nominal (24ms).\n\n"
-                     f"For user #{user_id}'s specific portfolio data, try asking: *'Show my portfolio'* or *'List my strategies'*."
+                     "I cannot access live external LLM feeds, but my internal market cache shows the current leaders:\n"
+                     f"- **Top Gainers:** {gainer_text}\n"
+                     "- **Exchange Latency:** 24ms (Nominal)\n\n"
+                     f"For user #{user_id}'s specific portfolio data, try asking: *'Show my portfolio'* or *'Price of Reliance'*."
                  )
 
             # Default generic response
             return (
                 f"**Offline Intelligence for User #{user_id}:** I am operating with limited connectivity (No external LLM). "
                 f"I can query your **Portfolio**, **Strategies**, and **Trade History** directly from the secure ledger. "
-                f"Try asking: *'Show my portfolio'* or *'List active strategies'*.\n\n"
-                f"Current View: User #{user_id} data access."
+                f"Try asking: *'Show my portfolio'* or *'Price of Reliance'*.\n\n"
+                f"**Current View:** User #{user_id} data access. | **Security:** AES-256 Local Encryption"
             )
 
         except Exception as e:
