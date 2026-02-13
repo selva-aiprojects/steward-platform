@@ -1,17 +1,78 @@
 from fastapi import APIRouter
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from app.core.config import settings
 import random
 import logging
 import yfinance as yf
 import time
 import asyncio
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 MARKET_CACHE_TTL_SECONDS = 300
 _cache_store: Dict[str, Dict[str, Any]] = {}
+_provider_stats: Dict[str, Dict[str, Any]] = {}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _record_provider_result(provider: str, success: bool, latency_ms: Optional[float] = None, error: str = "") -> None:
+    stats = _provider_stats.get(provider, {
+        "calls": 0,
+        "failures": 0,
+        "last_success_at": None,
+        "last_error_at": None,
+        "last_error": "",
+        "last_latency_ms": None,
+        "avg_latency_ms": None,
+    })
+    stats["calls"] += 1
+    if not success:
+        stats["failures"] += 1
+        stats["last_error_at"] = _now_iso()
+        stats["last_error"] = error
+    else:
+        stats["last_success_at"] = _now_iso()
+
+    if latency_ms is not None:
+        latency_ms = round(float(latency_ms), 2)
+        stats["last_latency_ms"] = latency_ms
+        if stats["avg_latency_ms"] is None:
+            stats["avg_latency_ms"] = latency_ms
+        else:
+            stats["avg_latency_ms"] = round((stats["avg_latency_ms"] * 0.7) + (latency_ms * 0.3), 2)
+
+    calls = max(stats["calls"], 1)
+    stats["error_rate"] = round(stats["failures"] / calls, 4)
+    _provider_stats[provider] = stats
+
+
+def _with_market_meta(payload: Dict[str, Any], source: str, status: str, as_of: Optional[str] = None) -> Dict[str, Any]:
+    data = dict(payload)
+    data["source"] = source
+    data["status"] = status
+    data["as_of"] = as_of or _now_iso()
+    return data
+
+
+async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 4):
+    # yfinance can occasionally block far beyond its own timeout argument.
+    return await asyncio.wait_for(
+        asyncio.to_thread(
+            yf.download,
+            symbols,
+            period=period,
+            group_by='ticker',
+            progress=False,
+            timeout=timeout_s,
+            threads=False
+        ),
+        timeout=timeout_s + 1
+    )
 
 
 def _cache_get(key: str) -> Any:
@@ -34,8 +95,7 @@ from app.core.state import (
     last_market_movers, 
     last_steward_prediction, 
     last_macro_indicators, 
-    clean_ticker_symbol,
-    get_default_market_snapshot
+    clean_ticker_symbol
 )
 
 @router.get("/status")
@@ -95,7 +155,12 @@ async def get_market_movers() -> Any:
     # --- SHARED STATE SYNC ---
     # Prioritize shared global state for consistency with Socket.IO
     if last_market_movers.get('gainers') and last_market_movers.get('losers'):
-        return last_market_movers
+        return _with_market_meta(
+            last_market_movers,
+            last_market_movers.get("source", "socket_feed"),
+            last_market_movers.get("status", "LIVE"),
+            last_market_movers.get("as_of")
+        )
 
     # --- CACHING LOGIC ---
     cached_movers = _cache_get("movers")
@@ -115,17 +180,10 @@ async def get_market_movers() -> Any:
     ]
 
     try:
+        started = time.time()
         # Fetch data for all tickers in one batch request
         import pandas as pd
-        data = await asyncio.to_thread(
-            yf.download,
-            watchlist,
-            period="5d",
-            group_by='ticker',
-            progress=False,
-            timeout=8,
-            threads=False
-        )
+        data = await _yf_download(watchlist, period="5d", timeout_s=4)
         
         raw_quotes = {}
         for ticker_symbol in watchlist:
@@ -184,40 +242,46 @@ async def get_market_movers() -> Any:
                 'last_price': round(q['last_price'], 2)
             })
 
-        result = {
+        result = _with_market_meta({
             "gainers": gainers_data,
             "losers": sorted(losers_data, key=lambda x: x['change']) # Most negative first
-        }
+        }, source="yahoo_finance", status="LIVE")
         
         if result["gainers"] or result["losers"]:
+            _record_provider_result("yahoo_finance", True, (time.time() - started) * 1000)
             _cache_set("movers", result)
             return result
 
         # If batch fetch returned no usable rows, attempt fallback.
+        _record_provider_result("yahoo_finance", False, (time.time() - started) * 1000, "Empty movers payload")
         raise RuntimeError("Empty movers payload from primary feed")
 
     except Exception as e:
         logger.error(f"Error fetching market movers: {e}")
+        _record_provider_result("yahoo_finance", False, error=str(e))
         # Try TrueData API as fallback if other sources fail
-        try:
-            true_data_result = true_data_service.get_top_movers(count=15)
-            if true_data_result and true_data_result.get("gainers") and true_data_result.get("losers"):
-                fallback = {
-                    "gainers": true_data_result["gainers"][:15],
-                    "losers": true_data_result["losers"][:15]
-                }
-                _cache_set("movers", fallback)
-                return fallback
-        except Exception as td_error:
-            logger.error(f"Error fetching data from TrueData: {td_error}")
+        if settings.TRUEDATA_API_KEY:
+            try:
+                td_started = time.time()
+                true_data_result = await asyncio.wait_for(
+                    asyncio.to_thread(true_data_service.get_top_movers, 15),
+                    timeout=3
+                )
+                if true_data_result and true_data_result.get("gainers") and true_data_result.get("losers"):
+                    fallback = _with_market_meta({
+                        "gainers": true_data_result["gainers"][:15],
+                        "losers": true_data_result["losers"][:15]
+                    }, source="truedata", status="LIVE")
+                    _record_provider_result("truedata", True, (time.time() - td_started) * 1000)
+                    _cache_set("movers", fallback)
+                    return fallback
+            except Exception as td_error:
+                logger.error(f"Error fetching data from TrueData: {td_error}")
+                _record_provider_result("truedata", False, error=str(td_error))
 
         if stale_movers:
-            return stale_movers
-        fallback = get_default_market_snapshot()
-        _cache_set("movers", {"gainers": fallback["gainers"], "losers": fallback["losers"]})
-        if not last_market_movers.get("gainers"):
-            last_market_movers.update(fallback)
-        return {"gainers": fallback["gainers"], "losers": fallback["losers"]}
+            return _with_market_meta(stale_movers, stale_movers.get("source", "cache"), "STALE", stale_movers.get("as_of"))
+        return _with_market_meta({"gainers": [], "losers": []}, source="none", status="UNAVAILABLE")
 
 
 @router.get("/heatmap")
@@ -268,24 +332,24 @@ def get_order_book_depth() -> Any:
 def get_macro_indicators() -> Any:
     # Use real data from shared state if available ($ USD/INR, Gold, Crude)
     if last_macro_indicators.get('usd_inr') and last_macro_indicators.get('usd_inr') > 0:
-        return {
+        return _with_market_meta({
             "usd_inr": round(last_macro_indicators['usd_inr'], 2),
             "gold": round(last_macro_indicators['gold'], 2),
             "crude": round(last_macro_indicators['crude'], 2),
             "10y_yield": 7.15, # Sample yield
             "sentiment": "BULLISH" if last_macro_indicators['usd_inr'] < 83.5 else "NEUTRAL",
             "volatility_label": "STABLE"
-        }
-    
-    # Mock fallback if feed hasn't initialized
-    return {
-        "usd_inr": 83.42,
-        "gold": 62450.00,
-        "crude": 78.50,
-        "10y_yield": 7.12,
-        "sentiment": "NEUTRAL",
-        "volatility_label": "LOW"
-    }
+        }, source="socket_feed", status="LIVE")
+
+    # No mock fallback: return explicit unavailable state until real data arrives.
+    return _with_market_meta({
+        "usd_inr": None,
+        "gold": None,
+        "crude": None,
+        "10y_yield": None,
+        "sentiment": "UNAVAILABLE",
+        "volatility_label": "UNAVAILABLE"
+    }, source="none", status="UNAVAILABLE")
 
 
 @router.get("/currencies")
@@ -295,7 +359,9 @@ async def get_currency_movers() -> Any:
     """
     # Prioritize shared global state
     if last_market_movers.get('currencies'):
-        return {"currencies": last_market_movers['currencies']}
+        return _with_market_meta({
+            "currencies": last_market_movers['currencies']
+        }, source=last_market_movers.get("source", "socket_feed"), status=last_market_movers.get("status", "LIVE"), as_of=last_market_movers.get("as_of"))
 
     cached_currencies = _cache_get("currencies")
     if cached_currencies:
@@ -303,19 +369,12 @@ async def get_currency_movers() -> Any:
     stale_currencies = _cache_store.get("currencies", {}).get("value")
 
     try:
+        started = time.time()
         import yfinance as yf
         import pandas as pd
         symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'SGDINR=X']
         
-        data = await asyncio.to_thread(
-            yf.download,
-            symbols,
-            period="5d",
-            group_by='ticker',
-            progress=False,
-            timeout=8,
-            threads=False
-        )
+        data = await _yf_download(symbols, period="5d", timeout_s=4)
         
         results = []
         for symbol in symbols:
@@ -340,16 +399,16 @@ async def get_currency_movers() -> Any:
             except Exception:
                 continue
 
-        payload = {"currencies": results}
+        payload = _with_market_meta({"currencies": results}, source="yahoo_finance", status="LIVE")
+        _record_provider_result("yahoo_finance_fx", True, (time.time() - started) * 1000)
         _cache_set("currencies", payload)
         return payload
     except Exception as e:
         logger.error(f"Error in batch currency fetch: {e}")
+        _record_provider_result("yahoo_finance_fx", False, error=str(e))
         if stale_currencies:
-            return stale_currencies
-        fallback = {"currencies": get_default_market_snapshot()["currencies"]}
-        _cache_set("currencies", fallback)
-        return fallback
+            return _with_market_meta(stale_currencies, stale_currencies.get("source", "cache"), "STALE", stale_currencies.get("as_of"))
+        return _with_market_meta({"currencies": []}, source="none", status="UNAVAILABLE")
 
 
 @router.get("/metals")
@@ -359,7 +418,9 @@ async def get_metals_movers() -> Any:
     """
     # Prioritize shared global state
     if last_market_movers.get('metals'):
-        return {"metals": last_market_movers['metals']}
+        return _with_market_meta({
+            "metals": last_market_movers['metals']
+        }, source=last_market_movers.get("source", "socket_feed"), status=last_market_movers.get("status", "LIVE"), as_of=last_market_movers.get("as_of"))
 
     cached_metals = _cache_get("metals")
     if cached_metals:
@@ -367,19 +428,12 @@ async def get_metals_movers() -> Any:
     stale_metals = _cache_store.get("metals", {}).get("value")
 
     try:
+        started = time.time()
         import yfinance as yf
         import pandas as pd
         symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'ZN=F']
         
-        data = await asyncio.to_thread(
-            yf.download,
-            symbols,
-            period="5d",
-            group_by='ticker',
-            progress=False,
-            timeout=8,
-            threads=False
-        )
+        data = await _yf_download(symbols, period="5d", timeout_s=4)
         
         results = []
         for symbol in symbols:
@@ -404,16 +458,16 @@ async def get_metals_movers() -> Any:
             except Exception:
                 continue
 
-        payload = {"metals": results}
+        payload = _with_market_meta({"metals": results}, source="yahoo_finance", status="LIVE")
+        _record_provider_result("yahoo_finance_metals", True, (time.time() - started) * 1000)
         _cache_set("metals", payload)
         return payload
     except Exception as e:
         logger.error(f"Error in batch metals fetch: {e}")
+        _record_provider_result("yahoo_finance_metals", False, error=str(e))
         if stale_metals:
-            return stale_metals
-        fallback = {"metals": get_default_market_snapshot()["metals"]}
-        _cache_set("metals", fallback)
-        return fallback
+            return _with_market_meta(stale_metals, stale_metals.get("source", "cache"), "STALE", stale_metals.get("as_of"))
+        return _with_market_meta({"metals": []}, source="none", status="UNAVAILABLE")
 
 
 @router.get("/commodities")
@@ -423,7 +477,9 @@ async def get_commodity_movers() -> Any:
     """
     # Prioritize shared global state
     if last_market_movers.get('commodities'):
-        return {"commodities": last_market_movers['commodities']}
+        return _with_market_meta({
+            "commodities": last_market_movers['commodities']
+        }, source=last_market_movers.get("source", "socket_feed"), status=last_market_movers.get("status", "LIVE"), as_of=last_market_movers.get("as_of"))
 
     cached_commodities = _cache_get("commodities")
     if cached_commodities:
@@ -431,19 +487,12 @@ async def get_commodity_movers() -> Any:
     stale_commodities = _cache_store.get("commodities", {}).get("value")
 
     try:
+        started = time.time()
         import yfinance as yf
         import pandas as pd
         symbols = ['CL=F', 'NG=F', 'GC=F', 'SI=F', 'HG=F', 'ZN=F']
         
-        data = await asyncio.to_thread(
-            yf.download,
-            symbols,
-            period="5d",
-            group_by='ticker',
-            progress=False,
-            timeout=8,
-            threads=False
-        )
+        data = await _yf_download(symbols, period="5d", timeout_s=4)
         
         results = []
         for symbol in symbols:
@@ -468,13 +517,29 @@ async def get_commodity_movers() -> Any:
             except Exception:
                 continue
 
-        payload = {"commodities": results}
+        payload = _with_market_meta({"commodities": results}, source="yahoo_finance", status="LIVE")
+        _record_provider_result("yahoo_finance_commodities", True, (time.time() - started) * 1000)
         _cache_set("commodities", payload)
         return payload
     except Exception as e:
         logger.error(f"Error in batch commodity fetch: {e}")
+        _record_provider_result("yahoo_finance_commodities", False, error=str(e))
         if stale_commodities:
-            return stale_commodities
-        fallback = {"commodities": get_default_market_snapshot()["commodities"]}
-        _cache_set("commodities", fallback)
-        return fallback
+            return _with_market_meta(stale_commodities, stale_commodities.get("source", "cache"), "STALE", stale_commodities.get("as_of"))
+        return _with_market_meta({"commodities": []}, source="none", status="UNAVAILABLE")
+
+
+@router.get("/health")
+def get_market_data_health() -> Any:
+    now = _now_iso()
+    cache_age_seconds = {}
+    for key, entry in _cache_store.items():
+        cache_age_seconds[key] = round(max(0.0, time.time() - entry.get("ts", time.time())), 2)
+
+    return {
+        "status": "ok",
+        "as_of": now,
+        "cache_ttl_seconds": MARKET_CACHE_TTL_SECONDS,
+        "cache_age_seconds": cache_age_seconds,
+        "providers": _provider_stats,
+    }

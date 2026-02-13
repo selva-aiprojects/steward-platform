@@ -9,8 +9,13 @@ import asyncio
 import random
 import os
 import logging
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 # Import shared global state
 from app.core.state import (
@@ -18,8 +23,7 @@ from app.core.state import (
     last_steward_prediction, 
     last_exchange_status,
     last_macro_indicators,
-    clean_ticker_symbol,
-    get_default_market_snapshot
+    clean_ticker_symbol
 )
 
 # Import startup services
@@ -116,7 +120,6 @@ async def market_feed():
     Switches between Live yfinance Data and Mock Data based on EXECUTION_MODE.
     """
     # uses shared globals from app.core.state
-    from app.services.data_integration import data_integration_service
     from app.core.config import settings
     import os
     import random
@@ -175,14 +178,17 @@ async def market_feed():
 
             try:
                 # Use a 5d period to get current and previous day's close for change calculation
-                data = await asyncio.to_thread(
-                    yf.download,
-                    watchlist,
-                    period="5d",
-                    group_by='ticker',
-                    progress=False,
-                    timeout=8,
-                    threads=False
+                data = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        yf.download,
+                        watchlist,
+                        period="5d",
+                        group_by='ticker',
+                        progress=False,
+                        timeout=8,
+                        threads=False
+                    ),
+                    timeout=10
                 )
                 
                 # Use current exchange rate for commodity localization (USD -> INR)
@@ -271,32 +277,36 @@ async def market_feed():
                     'losers': losers_data,
                     'currencies': currencies,
                     'metals': metals,
-                    'commodities': commodities
+                    'commodities': commodities,
+                    'source': 'yahoo_finance',
+                    'status': 'LIVE',
+                    'as_of': _now_iso()
                 })
                 
                 # Emit updates
                 await sio.emit('market_movers', last_market_movers, room='market_data')
                 await sio.emit('macro_indicators', last_macro_indicators, room='market_data')
             else:
-                # Keep UI populated when upstream data providers are temporarily unavailable.
-                fallback_snapshot = get_default_market_snapshot()
-                last_market_movers.update(fallback_snapshot)
-                last_macro_indicators.update({
-                    "usd_inr": 83.42,
-                    "gold": 62450.00,
-                    "crude": 78.50,
-                    "sentiment": "NEUTRAL",
-                    "volatility_level": "LOW"
-                })
-                await sio.emit('market_movers', last_market_movers, room='market_data')
-                await sio.emit('macro_indicators', last_macro_indicators, room='market_data')
-                for item in fallback_snapshot["gainers"] + fallback_snapshot["losers"]:
-                    raw_quotes[item["symbol"]] = {
-                        "last_price": float(item["price"]),
-                        "change": float(item["change"]),
-                        "exchange": item["exchange"],
-                        "symbol": item["symbol"]
-                    }
+                # Emit only last known real state; do not inject synthetic market values.
+                if any(last_market_movers.get(bucket) for bucket in ["gainers", "losers", "currencies", "metals", "commodities"]):
+                    last_market_movers["status"] = "STALE"
+                    last_market_movers["as_of"] = last_market_movers.get("as_of") or _now_iso()
+                    await sio.emit('market_movers', last_market_movers, room='market_data')
+                    await sio.emit('macro_indicators', last_macro_indicators, room='market_data')
+                    for bucket in ["gainers", "losers", "currencies", "metals", "commodities"]:
+                        for item in last_market_movers.get(bucket, []):
+                            symbol = item.get("symbol")
+                            price = item.get("price", item.get("last_price"))
+                            change = item.get("change", 0)
+                            exchange = item.get("exchange", "NSE")
+                            if not symbol or price is None:
+                                continue
+                            raw_quotes[symbol] = {
+                                "last_price": safe_float(price),
+                                "change": safe_float(change),
+                                "exchange": exchange,
+                                "symbol": symbol
+                            }
 
             # 3. Always update Ticker Batch (from raw_quotes if success, else legacy state)
             ticker_batch = []

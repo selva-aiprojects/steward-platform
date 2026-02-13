@@ -84,6 +84,9 @@ export function Dashboard() {
     const mm = marketMoversState || { gainers: [], losers: [] };
     const gainers = Array.isArray(mm.gainers) ? mm.gainers : [];
     const losers = Array.isArray(mm.losers) ? mm.losers : [];
+    const marketDataStatus = (mm.status || 'UNAVAILABLE').toUpperCase();
+    const marketDataSource = mm.source || 'none';
+    const marketAsOfLabel = mm.as_of ? new Date(mm.as_of).toLocaleTimeString() : '--';
 
     // Tickers: take more stocks for the compact ticker display
     const groupedStocks = [...gainers, ...losers].slice(0, 15);
@@ -656,22 +659,36 @@ export function Dashboard() {
                                 <div className="flex justify-between text-xs">
                                     <span className="text-slate-500">Market Sentiment</span>
                                     <span className="font-black text-primary">
-                    {macroIndicators?.sentiment || 'NEUTRAL'}
+                    {macroIndicators?.sentiment || 'UNAVAILABLE'}
                   </span>
                                 </div>
                                 <div className="flex justify-between text-xs">
                                     <span className="text-slate-500">Volatility Level</span>
                                     <span className="font-black text-amber-500">
-                    {macroIndicators?.volatility_label || 'UNKNOWN'}
+                    {macroIndicators?.volatility_label || 'UNAVAILABLE'}
                   </span>
                                 </div>
                             </div>
                         </Card>
 
                         <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                                Top Movers
-                            </h3>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
+                                    Top Movers
+                                </h3>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${
+                                    marketDataStatus === 'LIVE'
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : marketDataStatus === 'STALE'
+                                            ? 'bg-amber-100 text-amber-700'
+                                            : 'bg-rose-100 text-rose-700'
+                                }`}>
+                                    {marketDataStatus}
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-3">
+                                Source: {marketDataSource} | As of: {marketAsOfLabel}
+                            </p>
                             <div className="space-y-3">
                                 {gainers.slice(0, 3).map((mover, i) => (
                                     <div key={i} className="flex justify-between items-center">
@@ -696,7 +713,9 @@ export function Dashboard() {
                                     </div>
                                 ))}
                                 {gainers.length === 0 && losers.length === 0 && (
-                                    <div className="text-xs text-slate-400 italic">No live movers data</div>
+                                    <div className="text-xs text-slate-400 italic">
+                                        {marketDataStatus === 'UNAVAILABLE' ? 'Live market data unavailable' : 'No live movers data'}
+                                    </div>
                                 )}
                             </div>
                         </Card>

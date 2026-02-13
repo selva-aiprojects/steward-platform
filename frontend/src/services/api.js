@@ -374,7 +374,7 @@ export const fetchMarketMovers = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return [];
+        return { gainers: [], losers: [], source: 'none', status: 'UNAVAILABLE', as_of: null };
     }
 };
 
@@ -384,7 +384,7 @@ export const fetchCurrencyMovers = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return { currencies: [] };
+        return { currencies: [], source: 'none', status: 'UNAVAILABLE', as_of: null };
     }
 };
 
@@ -394,7 +394,7 @@ export const fetchMetalsMovers = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return { metals: [] };
+        return { metals: [], source: 'none', status: 'UNAVAILABLE', as_of: null };
     }
 };
 
@@ -404,7 +404,7 @@ export const fetchCommodityMovers = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return { commodities: [] };
+        return { commodities: [], source: 'none', status: 'UNAVAILABLE', as_of: null };
     }
 };
 
@@ -469,7 +469,7 @@ export const fetchMacroIndicators = async () => {
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
-        return null;
+        return { usd_inr: null, gold: null, crude: null, sentiment: 'UNAVAILABLE', volatility_label: 'UNAVAILABLE' };
     }
 };
 

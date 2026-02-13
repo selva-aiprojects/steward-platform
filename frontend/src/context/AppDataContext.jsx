@@ -21,7 +21,10 @@ export const AppDataProvider = ({ children }) => {
         losers: [],
         currencies: [],
         metals: [],
-        commodities: []
+        commodities: [],
+        source: 'none',
+        status: 'UNAVAILABLE',
+        as_of: null
     });
     const [marketResearch, setMarketResearch] = useState(null);
     const [sectorHeatmap, setSectorHeatmap] = useState([]);
@@ -114,7 +117,10 @@ export const AppDataProvider = ({ children }) => {
                 losers: [],
                 currencies: [],
                 metals: [],
-                commodities: []
+                commodities: [],
+                source: 'none',
+                status: 'UNAVAILABLE',
+                as_of: null
             };
 
             if (moversData) {
@@ -125,6 +131,9 @@ export const AppDataProvider = ({ children }) => {
                     // If it has gainers/losers properties, use as-is but ensure structure
                     updatedMarketMovers.gainers = Array.isArray(moversData.gainers) ? moversData.gainers : [];
                     updatedMarketMovers.losers = Array.isArray(moversData.losers) ? moversData.losers : [];
+                    updatedMarketMovers.source = moversData.source || 'none';
+                    updatedMarketMovers.status = moversData.status || (updatedMarketMovers.gainers.length || updatedMarketMovers.losers.length ? 'LIVE' : 'UNAVAILABLE');
+                    updatedMarketMovers.as_of = moversData.as_of || null;
                 }
             }
 
@@ -186,7 +195,10 @@ export const AppDataProvider = ({ children }) => {
                     ...prev,
                     currencies: Array.isArray(currencyData?.currencies) ? currencyData.currencies : prev.currencies || [],
                     metals: Array.isArray(metalsData?.metals) ? metalsData.metals : prev.metals || [],
-                    commodities: Array.isArray(commodityData?.commodities) ? commodityData.commodities : prev.commodities || []
+                    commodities: Array.isArray(commodityData?.commodities) ? commodityData.commodities : prev.commodities || [],
+                    source: prev.source || currencyData?.source || metalsData?.source || commodityData?.source || 'none',
+                    status: prev.status || currencyData?.status || metalsData?.status || commodityData?.status || 'UNAVAILABLE',
+                    as_of: prev.as_of || currencyData?.as_of || metalsData?.as_of || commodityData?.as_of || null
                 }));
             })();
 
@@ -246,7 +258,10 @@ export const AppDataProvider = ({ children }) => {
                     setMarketMovers(prev => ({
                         ...prev,
                         gainers: Array.isArray(data.gainers) ? data.gainers : prev.gainers || [],
-                        losers: Array.isArray(data.losers) ? data.losers : prev.losers || []
+                        losers: Array.isArray(data.losers) ? data.losers : prev.losers || [],
+                        source: data.source || prev.source || 'none',
+                        status: data.status || prev.status || 'UNAVAILABLE',
+                        as_of: data.as_of || prev.as_of || null
                     }));
                 }
                 // Update other market data as needed
@@ -271,7 +286,10 @@ export const AppDataProvider = ({ children }) => {
                     losers: Array.isArray(data.losers) ? data.losers : prev.losers || [],
                     currencies: Array.isArray(data.currencies) ? data.currencies : prev.currencies || [],
                     metals: Array.isArray(data.metals) ? data.metals : prev.metals || [],
-                    commodities: Array.isArray(data.commodities) ? data.commodities : prev.commodities || []
+                    commodities: Array.isArray(data.commodities) ? data.commodities : prev.commodities || [],
+                    source: data.source || prev.source || 'none',
+                    status: data.status || prev.status || 'UNAVAILABLE',
+                    as_of: data.as_of || prev.as_of || null
                 }));
             }
         };

@@ -1,200 +1,80 @@
 """
-Startup script for StockSteward AI backend
-Initializes all services and performs health checks
+Lean startup for StockSteward AI backend.
+Initializes only critical services by default.
 """
 
 import asyncio
 import logging
 import os
-from app.core.config import settings
-from app.core.database import engine, Base
-from app.services.kite_service import KiteService
-from app.services.enhanced_llm_service import EnhancedLLMService
-from app.services.data_integration import DataIntegrationService
-
-# Initialize global service instances
-kite_service = KiteService()
-enhanced_llm_service = EnhancedLLMService()
-data_integration_service = DataIntegrationService()
+from app.core.database import Base
 
 logger = logging.getLogger(__name__)
 
-async def initialize_services():
-    """
-    Initialize all core services with proper error handling
-    """
-    logger.info("Starting StockSteward AI service initialization...")
-    
-    # 1. Initialize database
+
+async def initialize_services() -> None:
+    """Initialize critical runtime dependencies."""
+    logger.info("Starting core service initialization...")
     try:
-        # Create all tables using the existing sync engine
         from app.core.database import engine as sync_engine
         Base.metadata.create_all(bind=sync_engine)
         logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+    except Exception as error:
+        logger.error(f"Database initialization failed: {error}")
         raise
-    
-    # 2. Initialize Kite/Zerodha service
+
+
+async def initialize_optional_services() -> dict:
+    """
+    Optional legacy service initialization.
+    Controlled by RUN_LEGACY_SERVICE_INIT=1.
+    """
+    status = {"kite": False, "llm_providers": [], "data_integrations": []}
+    if os.getenv("RUN_LEGACY_SERVICE_INIT", "0").strip() != "1":
+        logger.info("Skipping legacy service initialization")
+        return status
+
+    logger.info("Running legacy service initialization")
+
     try:
-        if settings.ZERODHA_API_KEY and settings.ZERODHA_ACCESS_TOKEN:
-            # Just get the client to initialize it, no need for a separate initialize_client method
-            kite_client = kite_service.get_client()
-            if kite_client:
-                logger.info("KiteConnect service initialized successfully")
-            else:
-                logger.warning("KiteConnect service failed to initialize - paper trading mode will be used")
-        else:
-            logger.info("KiteConnect credentials not provided - running in paper trading mode")
-    except Exception as e:
-        logger.error(f"KiteConnect service initialization failed: {e}")
-        # Don't raise exception as paper trading is still possible
-    
-    # 3. Initialize Enhanced LLM Services
+        from app.services.kite_service import kite_service
+        status["kite"] = kite_service.get_client() is not None
+    except Exception as error:
+        logger.warning(f"Kite init skipped: {error}")
+
     try:
-        # The EnhancedLLMService initializes providers in __init__, just verify they're available
-        available_providers = enhanced_llm_service.get_available_providers()
-        logger.info(f"Available LLM providers: {available_providers}")
-    except Exception as e:
-        logger.error(f"Enhanced LLM service initialization failed: {e}")
-        # Don't raise exception as fallback mechanisms exist
-    
-    # 4. Initialize Data Integration Services
+        from app.services.enhanced_llm_service import EnhancedLLMService
+        llm_service = EnhancedLLMService()
+        status["llm_providers"] = llm_service.get_available_providers()
+    except Exception as error:
+        logger.warning(f"LLM init skipped: {error}")
+
     try:
-        # Verify data sources are accessible
-        data_sources_verified = await data_integration_service.verify_connections()
-        logger.info(f"Verified data sources: {data_sources_verified}")
-    except Exception as e:
-        logger.error(f"Data integration service initialization failed: {e}")
-        # Don't raise exception as fallback data sources exist
-    
-    
-    logger.info("All services initialized successfully")
+        from app.services.data_integration import DataIntegrationService
+        data_service = DataIntegrationService()
+        status["data_integrations"] = [
+            key for key, ok in (await data_service.verify_connections()).items() if ok
+        ]
+    except Exception as error:
+        logger.warning(f"Data integration init skipped: {error}")
+
+    return status
 
 
-async def perform_health_checks():
-    """
-    Perform comprehensive health checks on all services in parallel for optimization
-    """
-    logger.info("Performing optimized health checks...")
-    
-    health_status = {
-        "database": False,
-        "kite_connect": False,
-        "llm_services": [],
-        "data_integrations": [],
-        "socket_service": True # Mark True as it's initialized in main.py
-    }
-    
-    # 1. Database Check
-    async def check_db():
-        try:
-            from app.core.database import engine
-            from sqlalchemy import text
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            return True
-        except Exception as e:
-            logger.error(f"DB health check failed: {e}")
-            return False
-
-    # 2. Kite Check
-    async def check_kite():
-        try:
-            return kite_service.validate_connection()
-        except: return False
-
-    # 3. LLM Checks (Parallel)
-    async def check_llm():
-        available = enhanced_llm_service.get_available_providers()
-        results = await asyncio.gather(*[enhanced_llm_service.test_connection(p) for p in available])
-        return [p for p, success in zip(available, results) if success]
-
-    # 4. Data Integration Checks
-    async def check_data():
-        try:
-            available = await data_integration_service.get_available_sources()
-            connection_status = await data_integration_service.verify_connections()
-            return [src for src in available if connection_status.get(src, False)]
-        except: return []
-
-    # Run all major checks in parallel
-    db_ok, kite_ok, active_llms, active_data = await asyncio.gather(
-        check_db(), check_kite(), check_llm(), check_data()
-    )
-
-    health_status.update({
-        "database": db_ok,
-        "kite_connect": kite_ok,
-        "llm_services": active_llms,
-        "data_integrations": active_data
-    })
-    
-    logger.info(f"Parallel health check results: {health_status}")
-    return health_status
-
-
-async def startup_sequence():
-    """
-    Complete startup sequence for StockSteward AI
-    """
+async def startup_sequence() -> dict:
+    """Execute startup sequence for the backend."""
     logger.info("Starting StockSteward AI platform...")
-    
-    try:
-        # Initialize all services
-        await initialize_services()
-        
-        run_health_checks = os.getenv("RUN_STARTUP_HEALTH_CHECKS", "0").strip() == "1"
-        health_timeout = int(os.getenv("STARTUP_HEALTH_TIMEOUT_SEC", "8"))
-
-        if run_health_checks:
-            try:
-                health_status = await asyncio.wait_for(perform_health_checks(), timeout=health_timeout)
-            except asyncio.TimeoutError:
-                logger.warning(f"Startup health checks timed out after {health_timeout}s; continuing boot")
-                health_status = {
-                    "database": True,
-                    "kite_connect": False,
-                    "llm_services": [],
-                    "data_integrations": [],
-                    "socket_service": True
-                }
-        else:
-            logger.info("Skipping startup health checks (set RUN_STARTUP_HEALTH_CHECKS=1 to enable)")
-            health_status = {
-                "database": True,
-                "kite_connect": False,
-                "llm_services": [],
-                "data_integrations": [],
-                "socket_service": True
-            }
-        
-        # Log summary
-        successful_initializations = sum([
-            health_status.get("database", False),
-            health_status.get("kite_connect", False),
-            len(health_status.get("llm_services", [])),
-            len(health_status.get("data_integrations", [])),
-            health_status.get("socket_service", False)
-        ])
-        
-        total_checks = 5  # database, kite, llm_providers, data_sources, socket
-        logger.info(f"Startup completed: {successful_initializations}/{total_checks} services operational")
-        
-        # Log specific status
-        logger.info(f"Database: {'✓' if health_status['database'] else '✗'}")
-        logger.info(f"KiteConnect: {'✓' if health_status['kite_connect'] else '✗'}")
-        logger.info(f"LLM Providers: {len(health_status['llm_services'])} available")
-        logger.info(f"Data Sources: {len(health_status['data_integrations'])} available")
-        logger.info(f"Socket Service: {'✓' if health_status['socket_service'] else '✗'}")
-        
-        return health_status
-        
-    except Exception as e:
-        logger.error(f"Startup sequence failed: {e}")
-        raise
+    await initialize_services()
+    optional_status = await initialize_optional_services()
+    summary = {"database": True, "socket_service": True, **optional_status}
+    logger.info(
+        "Startup ready: database=%s kite=%s llm=%d data=%d",
+        summary["database"],
+        summary["kite"],
+        len(summary["llm_providers"]),
+        len(summary["data_integrations"]),
+    )
+    return summary
 
 
 if __name__ == "__main__":
-    # Run startup sequence if called directly
     asyncio.run(startup_sequence())
