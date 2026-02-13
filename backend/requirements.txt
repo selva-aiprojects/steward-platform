@@ -26,7 +26,7 @@ ta==0.11.0
 TA-Lib==0.4.24
 ccxt==4.2.87
 websocket-client==1.6.4
-websockets==12.0
+websockets==13.1
 redis==5.0.1
 celery==5.3.4
 rq==1.15.1
