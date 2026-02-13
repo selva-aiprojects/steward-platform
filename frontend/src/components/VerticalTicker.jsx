@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Clock, Activity } from "lucide-react";
  * VerticalTicker - A high-standard trading terminal style vertical scroller
  */
 const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" }) => {
+  const hasScrollableDepth = Array.isArray(items) && items.length > 6;
 
   const displayItems = useMemo(() => {
     if (!items || items.length === 0) return [];
@@ -33,7 +34,7 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
   }
 
   return (
-    <div className="bg-[#0a0f18] border border-white/10 rounded-xl p-4 shadow-2xl h-[400px] flex flex-col overflow-hidden relative group">
+    <div className={`bg-[#0a0f18] border border-white/10 rounded-xl p-4 shadow-2xl ${hasScrollableDepth ? 'h-[440px]' : 'h-[320px]'} flex flex-col overflow-hidden relative group`}>
       {/* Header Segment */}
       <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
         <div className="flex flex-col">
@@ -50,7 +51,7 @@ const VerticalTicker = ({ items = [], title = "LIVE DATA", type = "commodities" 
 
       <div className="flex-1 overflow-hidden relative">
         <div className="absolute inset-0 flex flex-col ticker-v-container">
-          <div className="animate-vertical-loop flex flex-col">
+          <div className={`${hasScrollableDepth ? 'animate-vertical-loop' : ''} flex flex-col`}>
             {displayItems.map((item, index) => {
               const change = Number(item.change_pct ?? item.change ?? 0);
               const price = item.price ?? item.last_price ?? 0;

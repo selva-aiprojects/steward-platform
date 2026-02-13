@@ -196,9 +196,9 @@ export const AppDataProvider = ({ children }) => {
                     currencies: Array.isArray(currencyData?.currencies) ? currencyData.currencies : prev.currencies || [],
                     metals: Array.isArray(metalsData?.metals) ? metalsData.metals : prev.metals || [],
                     commodities: Array.isArray(commodityData?.commodities) ? commodityData.commodities : prev.commodities || [],
-                    source: prev.source || currencyData?.source || metalsData?.source || commodityData?.source || 'none',
-                    status: prev.status || currencyData?.status || metalsData?.status || commodityData?.status || 'UNAVAILABLE',
-                    as_of: prev.as_of || currencyData?.as_of || metalsData?.as_of || commodityData?.as_of || null
+                    source: (prev.source && prev.source !== 'none') ? prev.source : (currencyData?.source || metalsData?.source || commodityData?.source || 'none'),
+                    status: (prev.status && prev.status !== 'UNAVAILABLE') ? prev.status : (currencyData?.status || metalsData?.status || commodityData?.status || 'UNAVAILABLE'),
+                    as_of: currencyData?.as_of || metalsData?.as_of || commodityData?.as_of || prev.as_of || null
                 }));
             })();
 
@@ -296,8 +296,34 @@ export const AppDataProvider = ({ children }) => {
 
         const onTickerBatch = (batch) => {
             if (Array.isArray(batch)) {
-                // This would update individual tickers in high-frequency components
-                // For now, we logging or can use it to update a global price map
+                const bySymbol = {};
+                batch.forEach((row) => {
+                    if (row?.symbol) bySymbol[String(row.symbol).toUpperCase()] = row;
+                });
+
+                const patchList = (list) =>
+                    (Array.isArray(list) ? list : []).map((item) => {
+                        const key = String(item?.symbol || '').toUpperCase();
+                        const live = bySymbol[key];
+                        if (!live) return item;
+                        return {
+                            ...item,
+                            price: live.price ?? item.price,
+                            last_price: live.price ?? item.last_price,
+                            change: live.change ?? item.change,
+                            exchange: live.exchange || item.exchange
+                        };
+                    });
+
+                setMarketMovers((prev) => ({
+                    ...prev,
+                    gainers: patchList(prev.gainers),
+                    losers: patchList(prev.losers),
+                    currencies: patchList(prev.currencies),
+                    metals: patchList(prev.metals),
+                    commodities: patchList(prev.commodities),
+                    as_of: new Date().toISOString()
+                }));
             }
         };
 

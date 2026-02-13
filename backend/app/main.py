@@ -137,10 +137,22 @@ async def market_feed():
         # Major indices
         '^NSEI',  # NIFTY 50 index
         '^BSESN',  # SENSEX index
-        # Macro Indicators (added for consistency across cards and tickers)
+        # Forex (expanded for vertical ticker depth)
         'USDINR=X', # USD/INR
+        'EURINR=X',
+        'GBPINR=X',
+        'JPYINR=X',
+        'AUDINR=X',
+        'CADINR=X',
+        # Metals / commodities (expanded for pilot visibility)
         'GC=F',     # Gold Futures
-        'CL=F'      # Crude Oil Futures
+        'SI=F',     # Silver
+        'HG=F',     # Copper
+        'PL=F',     # Platinum
+        'PA=F',     # Palladium
+        'CL=F',     # Crude Oil Futures
+        'NG=F',     # Natural Gas
+        'ZN=F'      # Zinc
     ]
 
     # Store history in memory (simple deque-like structure)
