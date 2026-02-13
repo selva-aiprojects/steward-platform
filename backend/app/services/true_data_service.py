@@ -56,9 +56,6 @@ class TrueDataService:
         """
         Get live quote for a symbol from TrueData
         """
-        if not self.api_key:
-            return None
-            
         try:
             # In a real implementation, this would call TrueData's API
             # For now, we'll use yfinance as a fallback for Indian stocks
@@ -70,7 +67,7 @@ class TrueDataService:
             
             # Use yfinance as fallback while we develop TrueData integration
             yf_ticker = yf.Ticker(ticker)
-            hist = yf_ticker.history(period="5d")
+            hist = yf_ticker.history(period="5d", timeout=8)
             
             if not hist.empty:
                 current_price = hist['Close'].iloc[-1]
@@ -102,9 +99,6 @@ class TrueDataService:
         """
         Get live quotes for multiple symbols from TrueData
         """
-        if not self.api_key:
-            return []
-        
         results = []
         for symbol in symbols:
             quote = self.get_quote(symbol, exchange)

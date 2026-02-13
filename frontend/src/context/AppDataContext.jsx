@@ -50,7 +50,16 @@ export const AppDataProvider = ({ children }) => {
             setLoading(true);
         }
         try {
-            const [sumData, holdingsData, watchlistData, tradesData, projData, strategiesData, moversData, statusData, researchData, heatmapData, newsData, optionsData, depthData, macroData, currencyData, metalsData, commodityData] = await Promise.all([
+            const [
+                sumResult,
+                holdingsResult,
+                watchlistResult,
+                tradesResult,
+                projectionsResult,
+                strategiesResult,
+                moversResult,
+                statusResult
+            ] = await Promise.allSettled([
                 fetchPortfolioSummary(viewId),
                 fetchHoldings(viewId),
                 fetchWatchlist(viewId),
@@ -58,17 +67,17 @@ export const AppDataProvider = ({ children }) => {
                 fetchProjections(),
                 fetchStrategies(viewId),
                 fetchMarketMovers(),
-                fetchExchangeStatus(),
-                fetchMarketResearch(),
-                fetchSectorHeatmap(),
-                fetchMarketNews(),
-                fetchOptionsSnapshot(),
-                fetchOrderBookDepth(),
-                fetchMacroIndicators(),
-                fetchCurrencyMovers(),
-                fetchMetalsMovers(),
-                fetchCommodityMovers()
+                fetchExchangeStatus()
             ]);
+
+            const sumData = sumResult.status === 'fulfilled' ? sumResult.value : null;
+            const holdingsData = holdingsResult.status === 'fulfilled' ? holdingsResult.value : [];
+            const watchlistData = watchlistResult.status === 'fulfilled' ? watchlistResult.value : [];
+            const tradesData = tradesResult.status === 'fulfilled' ? tradesResult.value : [];
+            const projData = projectionsResult.status === 'fulfilled' ? projectionsResult.value : [];
+            const strategiesData = strategiesResult.status === 'fulfilled' ? strategiesResult.value : [];
+            const moversData = moversResult.status === 'fulfilled' ? moversResult.value : null;
+            const statusData = statusResult.status === 'fulfilled' ? statusResult.value : null;
 
             const safeSummary = sumData && typeof sumData === 'object'
                 ? sumData
@@ -119,47 +128,76 @@ export const AppDataProvider = ({ children }) => {
                 }
             }
 
-            // Add currency data if available
-            if (currencyData && Array.isArray(currencyData.currencies)) {
-                updatedMarketMovers.currencies = currencyData.currencies;
-            }
-
-            // Add metals data if available
-            if (metalsData && Array.isArray(metalsData.metals)) {
-                updatedMarketMovers.metals = metalsData.metals;
-            }
-
-            // Add commodities data if available
-            if (commodityData && Array.isArray(commodityData.commodities)) {
-                updatedMarketMovers.commodities = commodityData.commodities;
-            }
-
             setMarketMovers(updatedMarketMovers);
 
             setExchangeStatus(statusData || { status: 'ONLINE', latency: '24ms', exchange: 'NSE/BSE' });
-            setMarketResearch(researchData);
-            if (!hasLoaded || (Array.isArray(heatmapData) && heatmapData.length > 0)) {
-                setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);
-            }
-            if (!hasLoaded || (Array.isArray(newsData) && newsData.length > 0)) {
-                setMarketNews(Array.isArray(newsData) ? newsData : []);
-            }
-            if (!hasLoaded || (Array.isArray(optionsData) && optionsData.length > 0)) {
-                setOptionsSnapshot(Array.isArray(optionsData) ? optionsData : []);
-            }
-            if (!hasLoaded || depthData) {
-                setOrderBook(depthData || { bids: [], asks: [] });
-            }
-            if (!hasLoaded || macroData) {
-                setMacroIndicators(macroData);
-            }
+
+            void (async () => {
+                const [
+                    researchResult,
+                    heatmapResult,
+                    newsResult,
+                    optionsResult,
+                    depthResult,
+                    macroResult,
+                    currencyResult,
+                    metalsResult,
+                    commodityResult
+                ] = await Promise.allSettled([
+                    fetchMarketResearch(),
+                    fetchSectorHeatmap(),
+                    fetchMarketNews(),
+                    fetchOptionsSnapshot(),
+                    fetchOrderBookDepth(),
+                    fetchMacroIndicators(),
+                    fetchCurrencyMovers(),
+                    fetchMetalsMovers(),
+                    fetchCommodityMovers()
+                ]);
+
+                const researchData = researchResult.status === 'fulfilled' ? researchResult.value : null;
+                const heatmapData = heatmapResult.status === 'fulfilled' ? heatmapResult.value : [];
+                const newsData = newsResult.status === 'fulfilled' ? newsResult.value : [];
+                const optionsData = optionsResult.status === 'fulfilled' ? optionsResult.value : [];
+                const depthData = depthResult.status === 'fulfilled' ? depthResult.value : null;
+                const macroData = macroResult.status === 'fulfilled' ? macroResult.value : null;
+                const currencyData = currencyResult.status === 'fulfilled' ? currencyResult.value : null;
+                const metalsData = metalsResult.status === 'fulfilled' ? metalsResult.value : null;
+                const commodityData = commodityResult.status === 'fulfilled' ? commodityResult.value : null;
+
+                setMarketResearch(researchData);
+                if (!hasLoaded || (Array.isArray(heatmapData) && heatmapData.length > 0)) {
+                    setSectorHeatmap(Array.isArray(heatmapData) ? heatmapData : []);
+                }
+                if (!hasLoaded || (Array.isArray(newsData) && newsData.length > 0)) {
+                    setMarketNews(Array.isArray(newsData) ? newsData : []);
+                }
+                if (!hasLoaded || (Array.isArray(optionsData) && optionsData.length > 0)) {
+                    setOptionsSnapshot(Array.isArray(optionsData) ? optionsData : []);
+                }
+                if (!hasLoaded || depthData) {
+                    setOrderBook(depthData || { bids: [], asks: [] });
+                }
+                if (!hasLoaded || macroData) {
+                    setMacroIndicators(macroData);
+                }
+
+                setMarketMovers(prev => ({
+                    ...prev,
+                    currencies: Array.isArray(currencyData?.currencies) ? currencyData.currencies : prev.currencies || [],
+                    metals: Array.isArray(metalsData?.metals) ? metalsData.metals : prev.metals || [],
+                    commodities: Array.isArray(commodityData?.commodities) ? commodityData.commodities : prev.commodities || []
+                }));
+            })();
 
             if (isAdmin || user?.is_superuser) {
-                const users = await fetchUsers();
-                setAllUsers((users || []).map(u => ({
-                    ...u,
-                    name: u.full_name || u.name || u.email
-                })));
+                void (async () => {
+                    const users = await fetchUsers();
+                    setAllUsers((users || []).map(u => ({
+                        ...u,
+                        name: u.full_name || u.name || u.email
+                    })));
+                })();
             }
         } catch (error) {
             console.error("Failed to refresh app data:", error);

@@ -7,6 +7,7 @@ const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
 const BASE_URL = RAW_API_URL.replace(/[\/?]+$/, '');
 const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
 const SOCKET_URL = HAS_VERSIONED_PATH ? BASE_URL.replace(/\/api\/v1$/, '') : BASE_URL;
+const REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_API_TIMEOUT_MS || 12000);
 
 console.log("API Connection:", BASE_URL); // Debug log for deployment verification
 
@@ -37,7 +38,7 @@ const getCurrentUserId = () => {
 };
 
 export const socket = io(SOCKET_URL, {
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
     autoConnect: true,
     reconnectionAttempts: 5
 });
@@ -45,9 +46,20 @@ export const socket = io(SOCKET_URL, {
 socket.on('connect', () => console.log("Socket connected:", socket.id));
 socket.on('connect_error', (err) => console.error("Socket connection error:", err));
 
+const apiFetch = async (url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
 export const checkApiHealth = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/health`);
+        const response = await apiFetch(`${BASE_URL}/health`);
         const data = await response.json();
         console.log("API Health Status:", data);
         return data;
@@ -63,7 +75,7 @@ export const fetchUsers = async () => {
         if (!Object.keys(headers).length) {
             return [];
         }
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/users/`, {
             headers
         });
         if (!response.ok) throw new Error('Failed to fetch users');
@@ -80,7 +92,7 @@ export const fetchUser = async (userId) => {
         if (!Object.keys(headers).length) {
             return null;
         }
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
             headers
         });
         if (!response.ok) throw new Error('Failed to fetch user');
@@ -93,7 +105,7 @@ export const fetchUser = async (userId) => {
 
 export const updateUser = async (userId, data) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/users/${userId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(data)
@@ -108,7 +120,7 @@ export const updateUser = async (userId, data) => {
 
 export const createUser = async (data) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/users/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/users/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(data)
@@ -123,7 +135,7 @@ export const createUser = async (data) => {
 
 export const fetchAllPortfolios = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/portfolio/`);
         if (!response.ok) throw new Error('Failed to fetch portfolios');
         return await response.json();
     } catch (error) {
@@ -138,7 +150,7 @@ export const fetchStrategies = async (userId = null) => {
         if (userId) {
             url += `?user_id=${userId}`;
         }
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         if (!response.ok) throw new Error('Failed to fetch strategies');
         return await response.json();
     } catch (error) {
@@ -149,7 +161,7 @@ export const fetchStrategies = async (userId = null) => {
 
 export const fetchProjections = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/projections/`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/projections/`);
         if (!response.ok) throw new Error('Failed to fetch projections');
         return await response.json();
     } catch (error) {
@@ -161,7 +173,7 @@ export const fetchProjections = async () => {
 export const fetchTrades = async (userId) => {
     try {
         const url = userId ? `${BASE_URL}${API_PREFIX}/trades/?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/trades/`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         if (!response.ok) throw new Error('Failed to fetch trades');
         return await response.json();
     } catch (error) {
@@ -173,7 +185,7 @@ export const fetchTrades = async (userId) => {
 export const fetchPortfolioHistory = async (userId) => {
     try {
         const url = userId ? `${BASE_URL}${API_PREFIX}/portfolio/history?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/portfolio/history`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         if (!response.ok) throw new Error('Failed to fetch history');
         return await response.json();
     } catch (error) {
@@ -185,7 +197,7 @@ export const fetchPortfolioHistory = async (userId) => {
 export const fetchDailyPnL = async (userId) => {
     try {
         const url = userId ? `${BASE_URL}${API_PREFIX}/trades/daily-pnl?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/trades/daily-pnl`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         if (!response.ok) throw new Error('Failed to fetch daily pnl');
         return await response.json();
     } catch (error) {
@@ -196,7 +208,7 @@ export const fetchDailyPnL = async (userId) => {
 
 export const createAuditLog = async (logData) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/audit/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/audit/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(logData)
@@ -211,7 +223,7 @@ export const createAuditLog = async (logData) => {
 
 export const fetchPortfolioSummary = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/?user_id=${userId}`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/portfolio/?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch summary');
         const data = await response.json();
         // Return first portfolio if multiple returned
@@ -224,7 +236,7 @@ export const fetchPortfolioSummary = async (userId) => {
 
 export const fetchHoldings = async (userId) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/holdings?user_id=${userId}`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/portfolio/holdings?user_id=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch holdings');
         return await response.json();
     } catch (error) {
@@ -236,7 +248,7 @@ export const fetchHoldings = async (userId) => {
 export const fetchWatchlist = async (userId) => {
     try {
         const url = userId ? `${BASE_URL}${API_PREFIX}/watchlist/?user_id=${userId}` : `${BASE_URL}${API_PREFIX}/watchlist/`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         if (!response.ok) throw new Error('Failed to fetch watchlist');
         return await response.json();
     } catch (error) {
@@ -247,7 +259,7 @@ export const fetchWatchlist = async (userId) => {
 
 export const loginUser = async (email, password) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/auth/login`.replace(/\?+$/, ''), {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/auth/login`.replace(/\?+$/, ''), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -262,7 +274,7 @@ export const loginUser = async (email, password) => {
 
 export const depositFunds = async (userId, amount) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/deposit`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/portfolio/deposit`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, amount })
@@ -277,7 +289,7 @@ export const depositFunds = async (userId, amount) => {
 
 export const launchStrategy = async (userId, strategyData) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/strategies/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/strategies/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, ...strategyData })
@@ -292,7 +304,7 @@ export const launchStrategy = async (userId, strategyData) => {
 
 export const fetchExchangeStatus = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/status/`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/status/`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -311,7 +323,7 @@ export const executeTrade = async (userId, tradeData) => {
         if (!resolvedTrade || !resolvedUserId) {
             throw new Error('Missing user id or trade data');
         }
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/trades/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/trades/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -330,7 +342,7 @@ export const executeTrade = async (userId, tradeData) => {
 
 export const addToWatchlist = async (userId, symbol) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/watchlist/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, symbol, current_price: 0, change: '0.0%' })
@@ -345,7 +357,7 @@ export const addToWatchlist = async (userId, symbol) => {
 
 export const removeFromWatchlist = async (userId, symbol) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/watchlist/${symbol}?user_id=${userId}`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/watchlist/${symbol}?user_id=${userId}`, {
             method: 'DELETE'
         });
         if (!response.ok) throw new Error('Failed to remove from watchlist');
@@ -358,7 +370,7 @@ export const removeFromWatchlist = async (userId, symbol) => {
 
 export const fetchMarketMovers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/movers/`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/movers/`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -368,7 +380,7 @@ export const fetchMarketMovers = async () => {
 
 export const fetchCurrencyMovers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/currencies`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/currencies`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -378,7 +390,7 @@ export const fetchCurrencyMovers = async () => {
 
 export const fetchMetalsMovers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/metals`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/metals`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -388,7 +400,7 @@ export const fetchMetalsMovers = async () => {
 
 export const fetchCommodityMovers = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/commodities`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/commodities`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -398,7 +410,7 @@ export const fetchCommodityMovers = async () => {
 
 export const withdrawFunds = async (userId, amount) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/portfolio/withdraw`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/portfolio/withdraw`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, amount })
@@ -413,7 +425,7 @@ export const withdrawFunds = async (userId, amount) => {
 
 export const fetchSectorHeatmap = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/heatmap`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/heatmap`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -423,7 +435,7 @@ export const fetchSectorHeatmap = async () => {
 
 export const fetchMarketNews = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/news`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/news`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -433,7 +445,7 @@ export const fetchMarketNews = async () => {
 
 export const fetchOptionsSnapshot = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/options`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/options`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -443,7 +455,7 @@ export const fetchOptionsSnapshot = async () => {
 
 export const fetchOrderBookDepth = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/depth`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/depth`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -453,7 +465,7 @@ export const fetchOrderBookDepth = async () => {
 
 export const fetchMacroIndicators = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/market/macro`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/market/macro`);
         if (!response.ok) throw new Error();
         return await response.json();
     } catch (error) {
@@ -463,7 +475,7 @@ export const fetchMacroIndicators = async () => {
 
 export const fetchMarketResearch = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/ai/market-research`);
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/ai/market-research`);
         if (!response.ok) throw new Error('Failed to fetch market research');
         return await response.json();
     } catch (error) {
@@ -474,7 +486,7 @@ export const fetchMarketResearch = async () => {
 
 export const submitKycApplication = async (payload) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -489,7 +501,7 @@ export const submitKycApplication = async (payload) => {
 
 export const fetchKycApplications = async () => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {
             headers: { ...getAuthHeaders() }
         });
         if (!response.ok) throw new Error('Failed to fetch KYC applications');
@@ -502,7 +514,7 @@ export const fetchKycApplications = async () => {
 
 export const reviewKycApplication = async (kycId, status, review_notes) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/review`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/review`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ status, review_notes })
@@ -517,7 +529,7 @@ export const reviewKycApplication = async (kycId, status, review_notes) => {
 
 export const approveKycApplication = async (kycId) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/approve`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/approve`, {
             method: 'POST',
             headers: { ...getAuthHeaders() }
         });
@@ -531,7 +543,7 @@ export const approveKycApplication = async (kycId) => {
 
 export const rejectKycApplication = async (kycId, review_notes) => {
     try {
-        const response = await fetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/reject`, {
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications/${kycId}/reject`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ status: 'REJECTED', review_notes })

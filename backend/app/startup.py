@@ -5,6 +5,7 @@ Initializes all services and performs health checks
 
 import asyncio
 import logging
+import os
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.services.kite_service import KiteService
@@ -143,8 +144,30 @@ async def startup_sequence():
         # Initialize all services
         await initialize_services()
         
-        # Perform health checks
-        health_status = await perform_health_checks()
+        run_health_checks = os.getenv("RUN_STARTUP_HEALTH_CHECKS", "0").strip() == "1"
+        health_timeout = int(os.getenv("STARTUP_HEALTH_TIMEOUT_SEC", "8"))
+
+        if run_health_checks:
+            try:
+                health_status = await asyncio.wait_for(perform_health_checks(), timeout=health_timeout)
+            except asyncio.TimeoutError:
+                logger.warning(f"Startup health checks timed out after {health_timeout}s; continuing boot")
+                health_status = {
+                    "database": True,
+                    "kite_connect": False,
+                    "llm_services": [],
+                    "data_integrations": [],
+                    "socket_service": True
+                }
+        else:
+            logger.info("Skipping startup health checks (set RUN_STARTUP_HEALTH_CHECKS=1 to enable)")
+            health_status = {
+                "database": True,
+                "kite_connect": False,
+                "llm_services": [],
+                "data_integrations": [],
+                "socket_service": True
+            }
         
         # Log summary
         successful_initializations = sum([

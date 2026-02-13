@@ -1,14 +1,30 @@
-from fastapi import APIRouter, Depends
-from typing import Any, List, Dict, Optional
+from fastapi import APIRouter
+from typing import Any, Dict
 from app.core.config import settings
 import random
 import logging
-import requests
 import yfinance as yf
+import time
+import asyncio
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+MARKET_CACHE_TTL_SECONDS = 300
+_cache_store: Dict[str, Dict[str, Any]] = {}
+
+
+def _cache_get(key: str) -> Any:
+    cached = _cache_store.get(key)
+    if not cached:
+        return None
+    if time.time() - cached["ts"] > MARKET_CACHE_TTL_SECONDS:
+        return None
+    return cached["value"]
+
+
+def _cache_set(key: str, value: Any) -> None:
+    _cache_store[key] = {"ts": time.time(), "value": value}
 
 # Import TrueData service
 from app.services.true_data_service import true_data_service
@@ -81,15 +97,10 @@ async def get_market_movers() -> Any:
         return last_market_movers
 
     # --- CACHING LOGIC ---
-    import time
-    global _movers_cache, _movers_cache_time
-    if '_movers_cache' not in globals():
-        _movers_cache = None
-        _movers_cache_time = 0
-
-    # Cache for 10 minutes (600 seconds)
-    if _movers_cache and (time.time() - _movers_cache_time < 600):
-        return _movers_cache
+    cached_movers = _cache_get("movers")
+    if cached_movers:
+        return cached_movers
+    stale_movers = _cache_store.get("movers", {}).get("value")
 
     # Primary source for Indian stocks using yfinance (Batch download is MUCH faster)
     watchlist = [
@@ -105,7 +116,15 @@ async def get_market_movers() -> Any:
     try:
         # Fetch data for all tickers in one batch request
         import pandas as pd
-        data = yf.download(watchlist, period="5d", group_by='ticker', progress=False)
+        data = await asyncio.to_thread(
+            yf.download,
+            watchlist,
+            period="5d",
+            group_by='ticker',
+            progress=False,
+            timeout=8,
+            threads=False
+        )
         
         raw_quotes = {}
         for ticker_symbol in watchlist:
@@ -169,11 +188,12 @@ async def get_market_movers() -> Any:
             "losers": sorted(losers_data, key=lambda x: x['change']) # Most negative first
         }
         
-        # Update cache
-        _movers_cache = result
-        _movers_cache_time = time.time()
-        
-        return result
+        if result["gainers"] or result["losers"]:
+            _cache_set("movers", result)
+            return result
+
+        # If batch fetch returned no usable rows, attempt fallback.
+        raise RuntimeError("Empty movers payload from primary feed")
 
     except Exception as e:
         logger.error(f"Error fetching market movers: {e}")
@@ -181,13 +201,17 @@ async def get_market_movers() -> Any:
         try:
             true_data_result = true_data_service.get_top_movers(count=15)
             if true_data_result and true_data_result.get("gainers") and true_data_result.get("losers"):
-                return {
+                fallback = {
                     "gainers": true_data_result["gainers"][:15],
                     "losers": true_data_result["losers"][:15]
                 }
+                _cache_set("movers", fallback)
+                return fallback
         except Exception as td_error:
             logger.error(f"Error fetching data from TrueData: {td_error}")
-        
+
+        if stale_movers:
+            return stale_movers
         return {"gainers": [], "losers": []}
 
 
@@ -268,14 +292,25 @@ async def get_currency_movers() -> Any:
     if last_market_movers.get('currencies'):
         return {"currencies": last_market_movers['currencies']}
 
-    import time
+    cached_currencies = _cache_get("currencies")
+    if cached_currencies:
+        return cached_currencies
+    stale_currencies = _cache_store.get("currencies", {}).get("value")
 
     try:
         import yfinance as yf
         import pandas as pd
         symbols = ['USDINR=X', 'EURINR=X', 'GBPINR=X', 'JPYINR=X', 'AUDINR=X', 'CADINR=X', 'SGDINR=X']
         
-        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        data = await asyncio.to_thread(
+            yf.download,
+            symbols,
+            period="5d",
+            group_by='ticker',
+            progress=False,
+            timeout=8,
+            threads=False
+        )
         
         results = []
         for symbol in symbols:
@@ -300,11 +335,13 @@ async def get_currency_movers() -> Any:
             except Exception:
                 continue
 
-        _currency_cache = {"currencies": results}
-        _currency_cache_time = time.time()
-        return _currency_cache
+        payload = {"currencies": results}
+        _cache_set("currencies", payload)
+        return payload
     except Exception as e:
         logger.error(f"Error in batch currency fetch: {e}")
+        if stale_currencies:
+            return stale_currencies
         return {"currencies": []}
 
 
@@ -317,14 +354,25 @@ async def get_metals_movers() -> Any:
     if last_market_movers.get('metals'):
         return {"metals": last_market_movers['metals']}
 
-    import time
+    cached_metals = _cache_get("metals")
+    if cached_metals:
+        return cached_metals
+    stale_metals = _cache_store.get("metals", {}).get("value")
 
     try:
         import yfinance as yf
         import pandas as pd
         symbols = ['GC=F', 'SI=F', 'HG=F', 'PL=F', 'PA=F', 'ZN=F']
         
-        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        data = await asyncio.to_thread(
+            yf.download,
+            symbols,
+            period="5d",
+            group_by='ticker',
+            progress=False,
+            timeout=8,
+            threads=False
+        )
         
         results = []
         for symbol in symbols:
@@ -349,11 +397,13 @@ async def get_metals_movers() -> Any:
             except Exception:
                 continue
 
-        _metals_cache = {"metals": results}
-        _metals_cache_time = time.time()
-        return _metals_cache
+        payload = {"metals": results}
+        _cache_set("metals", payload)
+        return payload
     except Exception as e:
         logger.error(f"Error in batch metals fetch: {e}")
+        if stale_metals:
+            return stale_metals
         return {"metals": []}
 
 
@@ -366,14 +416,25 @@ async def get_commodity_movers() -> Any:
     if last_market_movers.get('commodities'):
         return {"commodities": last_market_movers['commodities']}
 
-    import time
+    cached_commodities = _cache_get("commodities")
+    if cached_commodities:
+        return cached_commodities
+    stale_commodities = _cache_store.get("commodities", {}).get("value")
 
     try:
         import yfinance as yf
         import pandas as pd
         symbols = ['CL=F', 'NG=F', 'GC=F', 'SI=F', 'HG=F', 'ZN=F']
         
-        data = yf.download(symbols, period="5d", group_by='ticker', progress=False)
+        data = await asyncio.to_thread(
+            yf.download,
+            symbols,
+            period="5d",
+            group_by='ticker',
+            progress=False,
+            timeout=8,
+            threads=False
+        )
         
         results = []
         for symbol in symbols:
@@ -398,9 +459,11 @@ async def get_commodity_movers() -> Any:
             except Exception:
                 continue
 
-        _commodity_cache = {"commodities": results}
-        _commodity_cache_time = time.time()
-        return _commodity_cache
+        payload = {"commodities": results}
+        _cache_set("commodities", payload)
+        return payload
     except Exception as e:
         logger.error(f"Error in batch commodity fetch: {e}")
+        if stale_commodities:
+            return stale_commodities
         return {"commodities": []}

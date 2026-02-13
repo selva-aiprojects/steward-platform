@@ -142,8 +142,6 @@ async def market_feed():
     refresh_interval = 30
 
     while True:
-        await asyncio.sleep(refresh_interval if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
-
         try:
             # Cache Groq client
             if not hasattr(market_feed, 'groq_client'):
@@ -176,7 +174,15 @@ async def market_feed():
 
             try:
                 # Use a 5d period to get current and previous day's close for change calculation
-                data = yf.download(watchlist, period="5d", group_by='ticker', progress=False)
+                data = await asyncio.to_thread(
+                    yf.download,
+                    watchlist,
+                    period="5d",
+                    group_by='ticker',
+                    progress=False,
+                    timeout=8,
+                    threads=False
+                )
                 
                 # Use current exchange rate for commodity localization (USD -> INR)
                 # Fallback to 83.5 if USDINR fetch fails
@@ -307,7 +313,8 @@ async def market_feed():
                     last_ai_analysis_time = time.time()
                     market_summary = ", ".join([f"{q['symbol']}: {q['change']:.2f}%" for q in ticker_batch[:5]])
                     prompt = f"Analyze market in JSON: {market_summary}"
-                    completion = groq_client.chat.completions.create(
+                    completion = await asyncio.to_thread(
+                        groq_client.chat.completions.create,
                         messages=[{"role": "user", "content": prompt}],
                         model="llama-3.3-70b-versatile",
                         response_format={"type": "json_object"},
@@ -331,6 +338,8 @@ async def market_feed():
             print(f"Market feed error: {e}")
             import traceback
             traceback.print_exc()
+        finally:
+            await asyncio.sleep(refresh_interval if settings.EXECUTION_MODE == "LIVE_TRADING" else 5)
 
 # Background System Telemetry (Admin Only)
 async def admin_feed():

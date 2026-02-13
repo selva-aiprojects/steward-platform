@@ -25,9 +25,7 @@ class Settings(BaseSettings):
     def assemble_db_url(cls, v: str) -> str:
         if isinstance(v, str):
             # Strip common copy-paste artifacts from Neon/Postgres shells
-            original_v = v
             v = v.strip()
-            print(f"DEBUG: Raw DATABASE_URL: '{v}'")  # Debug print
 
             # Handle the specific case from the error: 'psql postgresql://...'
             # The error shows the string is: 'psql postgresql://...' (with quotes included)
@@ -72,7 +70,6 @@ class Settings(BaseSettings):
             if v.startswith("postgres://"):
                 v = v.replace("postgres://", "postgresql://", 1)
 
-            print(f"DEBUG: Processed DATABASE_URL: '{v}'")  # Debug print
         return v
 
     # Security & API Keys
