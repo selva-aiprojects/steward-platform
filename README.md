@@ -214,7 +214,7 @@ Comprehensive test coverage including:
 
 4. Start the application:
    ```bash
-   uvicorn backend.app.main:app --reload
+   python backend/startup.py
    ```
 
 ## Development

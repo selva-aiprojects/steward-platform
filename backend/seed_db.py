@@ -14,6 +14,12 @@ from app.models.trade import Trade
 from app.models.strategy import Strategy
 from app.models.projection import Projection
 from app.models.social_sentiment import SocialSentiment
+from app.models.activity import Activity
+from app.models.audit_log import AuditLog
+from app.models.kyc import KYCApplication
+from app.models.optimization import PortfolioOptimizationResult, StrategyOptimizationResult
+from app.models.trade_approval import TradeApproval
+from app.models.ticket import Ticket, TicketMessage
 from datetime import datetime, timedelta
 
 def seed_db():
@@ -21,8 +27,9 @@ def seed_db():
     # Drop all tables with cascade to handle foreign key constraints
     with engine.connect() as conn:
         # Execute raw SQL to drop all tables with CASCADE
-        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS public"))
+        conn.execute(text("DROP SCHEMA IF EXISTS algo CASCADE"))
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS algo"))
+        conn.execute(text("SET search_path TO algo, public"))
         conn.commit()
 
     # Create all tables

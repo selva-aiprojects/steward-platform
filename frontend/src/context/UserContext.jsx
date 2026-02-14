@@ -30,17 +30,6 @@ export const UserProvider = ({ children }) => {
             } else {
                 setSelectedUser(null);
             }
-        } else if (process.env.NODE_ENV === 'development' && !window.location.pathname.startsWith('/login')) {
-            // Auto-login with dev user in development mode if no user is stored
-            const devUser = {
-                id: 999,
-                name: 'Development Admin',
-                email: 'admin@stocksteward.ai',
-                role: 'SUPERADMIN',
-                avatar: 'DA'
-            };
-            setUser(devUser);
-            localStorage.setItem('stocksteward_user', JSON.stringify(devUser));
         }
         setLoading(false);
     }, []);

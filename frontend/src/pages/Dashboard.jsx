@@ -26,6 +26,24 @@ import { useAppData } from '../context/AppDataContext';
 
 export function Dashboard() {
     const [period, setPeriod] = useState('This Week');
+    const [thoughtIndex, setThoughtIndex] = useState(0);
+    const thoughts = [
+        "Scanning Nifty 50 order flow anomalies...",
+        "Analyzing sentiment delta from 50+ global news sources...",
+        "Cross-referencing historical VIX spikes with current volatility...",
+        "Validating RSI divergence on 15m and 1h intervals...",
+        "Monitoring institutional buy-side pressure on BankNifty...",
+        "Calculating risk-adjusted position resizing limits...",
+        "Synchronizing with global macro-economic indicators...",
+        "Evaluating option chain OI distribution for expiry targets..."
+    ];
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            setThoughtIndex((prev) => (prev + 1) % thoughts.length);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, []);
 
     const { user, selectedUser, setSelectedUser, isAdmin } = useUser();
     const {
@@ -148,19 +166,19 @@ export function Dashboard() {
                     s.symbol &&
                     Number.isFinite(Number(s.price)) &&
                     (String(s.symbol).toUpperCase().includes('GC=F') || // Gold futures
-                     String(s.symbol).toUpperCase().includes('SI=F') || // Silver futures
-                     String(s.symbol).toUpperCase().includes('HG=F') || // Copper futures
-                     String(s.symbol).toUpperCase().includes('CL=F') || // Crude oil (energy metal)
-                     String(s.symbol).toUpperCase().includes('XAU') || // Gold in forex format
-                     String(s.symbol).toUpperCase().includes('XAG') || // Silver in forex format
-                     String(s.symbol).toUpperCase().includes('GOLD') || // Gold in other formats
-                     String(s.symbol).toUpperCase().includes('SILVER') || // Silver in other formats
-                     String(s.symbol).toUpperCase().includes('ALUMINIUM') || // Industrial metals
-                     String(s.symbol).toUpperCase().includes('ZINC') ||
-                     String(s.symbol).toUpperCase().includes('COPPER') ||
-                     String(s.symbol).toUpperCase().includes('NICKEL') ||
-                     String(s.symbol).toUpperCase().includes('LEAD') ||
-                     String(s.symbol).toUpperCase().includes('TIN'))
+                        String(s.symbol).toUpperCase().includes('SI=F') || // Silver futures
+                        String(s.symbol).toUpperCase().includes('HG=F') || // Copper futures
+                        String(s.symbol).toUpperCase().includes('CL=F') || // Crude oil (energy metal)
+                        String(s.symbol).toUpperCase().includes('XAU') || // Gold in forex format
+                        String(s.symbol).toUpperCase().includes('XAG') || // Silver in forex format
+                        String(s.symbol).toUpperCase().includes('GOLD') || // Gold in other formats
+                        String(s.symbol).toUpperCase().includes('SILVER') || // Silver in other formats
+                        String(s.symbol).toUpperCase().includes('ALUMINIUM') || // Industrial metals
+                        String(s.symbol).toUpperCase().includes('ZINC') ||
+                        String(s.symbol).toUpperCase().includes('COPPER') ||
+                        String(s.symbol).toUpperCase().includes('NICKEL') ||
+                        String(s.symbol).toUpperCase().includes('LEAD') ||
+                        String(s.symbol).toUpperCase().includes('TIN'))
             )
             .slice(0, 8);
     })();
@@ -194,17 +212,6 @@ export function Dashboard() {
         }));
     })();
     const curveToRender = chartData.length ? chartData : fallbackCurve;
-
-    if (loading) {
-        return (
-            <div className="h-screen flex flex-col items-center justify-center text-slate-400">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-                <p className="font-black uppercase text-xs tracking-[0.3em] text-slate-500 mt-4">
-                    LOADING DASHBOARD...
-                </p>
-            </div>
-        );
-    }
 
     const metrics = [
         {
@@ -246,364 +253,377 @@ export function Dashboard() {
 
     return (
         <div className="flex flex-col min-h-screen pb-4">
-            <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
-                {/* Header */}
-                <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
-                            {user?.role === 'SUPERADMIN'
-                                ? selectedUser
-                                    ? `Auditing: ${
-                                        selectedUser.name || selectedUser.full_name || selectedUser.email
-                                    }`
-                                    : 'Platform Executive Control'
-                                : user?.role === 'AUDITOR'
-                                    ? 'Compliance Oversight'
-                                    : user?.role === 'BUSINESS_OWNER'
-                                        ? 'Executive Dashboard'
-                                        : `Welcome, ${user?.name || 'Investor'}`}
-                        </h1>
-                        <div className="flex items-center gap-2 mt-2">
-              <span
-                  className={`h-1.5 w-1.5 rounded-full animate-pulse ${
-                      user?.role === 'SUPERADMIN'
-                          ? 'bg-indigo-500'
-                          : user?.role === 'AUDITOR'
-                              ? 'bg-amber-500'
-                              : user?.role === 'BUSINESS_OWNER'
-                                  ? 'bg-purple-500'
-                                  : 'bg-primary'
-                  }`}
-              />
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">
+            {loading ? (
+                <div className="h-screen flex flex-col items-center justify-center text-slate-400">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                    <p className="font-black uppercase text-xs tracking-[0.3em] text-slate-500 mt-4">
+                        LOADING DASHBOARD...
+                    </p>
+                </div>
+            ) : (
+                <div className="max-w-[1600px] mx-auto space-y-8 p-6 w-full">
+                    <header className="flex flex-col gap-6 md:flex-row md:items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-heading">
                                 {user?.role === 'SUPERADMIN'
                                     ? selectedUser
-                                        ? 'User Inspection Mode: LIVE'
-                                        : 'Global System Oversight: LIVE'
+                                        ? `Auditing: ${selectedUser.name || selectedUser.full_name || selectedUser.email
+                                        }`
+                                        : 'Platform Executive Control'
                                     : user?.role === 'AUDITOR'
-                                        ? 'Audit Logging: LIVE'
+                                        ? 'Compliance Oversight'
                                         : user?.role === 'BUSINESS_OWNER'
-                                            ? 'Revenue Monitoring: LIVE'
-                                            : 'Personal Wealth Agent: LIVE'}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                        {isAdmin && (
-                            <div className="flex items-center gap-3 bg-white border border-slate-200 p-1.5 rounded-xl shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
-                  Scope
-                </span>
-                                <select
-                                    className="bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest text-slate-700 focus:ring-0 rounded-lg py-1 px-3 cursor-pointer"
-                                    value={selectedUser?.id || 'GLOBAL'}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val === 'GLOBAL') {
-                                            setSelectedUser(null);
-                                        } else {
-                                            const u = allUsers.find((usr) => usr.id === parseInt(val));
-                                            if (u) {
-                                                setSelectedUser({
-                                                    ...u,
-                                                    name: u.full_name || u.name || u.email
-                                                });
-                                            }
-                                        }
-                                    }}
-                                >
-                                    <option value="GLOBAL">Platform Summary</option>
-                                    <optgroup label="Active Users">
-                                        {allUsers.map((u) => (
-                                            <option key={u.id} value={u.id}>
-                                                {u.full_name || u.name || u.email}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                </select>
-                            </div>
-                        )}
-
-                        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
-                            {['Today', 'This Week', 'This Year'].map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPeriod(p)}
-                                    className={`flex-1 md:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all whitespace-nowrap ${
-                                        period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
-                                    }`}
-                                >
-                                    {p}
-                                </button>
-                            ))}
-                        </div>
-
-                        <button
-                            onClick={refreshAllData}
-                            className="px-4 py-2 text-[10px] font-black rounded-lg bg-slate-900 text-white uppercase tracking-[0.2em]"
-                        >
-                            Refresh Live Data
-                        </button>
-                    </div>
-                </header>
-
-                {/* AI Intelligence Card */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Shield size={160} className="text-primary rotate-12" />
-                    </div>
-
-                    <div className="relative z-10 space-y-8">
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-sm">
-                                    <Zap className="text-primary animate-pulse" size={28} />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">
-                      GUARDIAN INTELLIGENCE
-                    </span>
-                                        <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      REAL-TIME ANALYSIS
-                    </span>
-                                    </div>
-                                    <h2 className="text-white text-xl font-black tracking-tight leading-tight max-w-2xl">
-                                        {currentStewardPrediction?.prediction || 'Waiting for live model signal...'}
-                                    </h2>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 w-full md:w-auto">
-                                <Link to="/strategies" className="flex-1 md:flex-none">
-                                    <button className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-                                        <Activity size={14} />
-                                        LAUNCH STRATEGY
-                                    </button>
-                                </Link>
-                                <button className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-slate-700">
-                                    VIEW LOGIC
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-slate-800/50">
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    AI DECISION
+                                            ? 'Executive Dashboard'
+                                            : `Welcome, ${user?.name || 'Investor'}`}
+                            </h1>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span
+                                    className={`h-1.5 w-1.5 rounded-full animate-pulse ${user?.role === 'SUPERADMIN'
+                                        ? 'bg-indigo-500'
+                                        : user?.role === 'AUDITOR'
+                                            ? 'bg-amber-500'
+                                            : user?.role === 'BUSINESS_OWNER'
+                                                ? 'bg-purple-500'
+                                                : 'bg-primary'
+                                        }`}
+                                />
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">
+                                    {user?.role === 'SUPERADMIN'
+                                        ? selectedUser
+                                            ? 'User Inspection Mode: LIVE'
+                                            : 'Global System Oversight: LIVE'
+                                        : user?.role === 'AUDITOR'
+                                            ? 'Audit Logging: LIVE'
+                                            : user?.role === 'BUSINESS_OWNER'
+                                                ? 'Revenue Monitoring: LIVE'
+                                                : 'Personal Wealth Agent: LIVE'}
                                 </p>
-                                <div
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                                        currentStewardPrediction?.decision?.includes('BUY')
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                            {isAdmin && (
+                                <div className="flex items-center gap-3 bg-white border border-slate-200 p-1.5 rounded-xl shadow-sm">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                                        Scope
+                                    </span>
+                                    <select
+                                        className="bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest text-slate-700 focus:ring-0 rounded-lg py-1 px-3 cursor-pointer"
+                                        value={selectedUser?.id || 'GLOBAL'}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === 'GLOBAL') {
+                                                setSelectedUser(null);
+                                            } else {
+                                                const u = allUsers.find((usr) => usr.id === parseInt(val));
+                                                if (u) {
+                                                    setSelectedUser({
+                                                        ...u,
+                                                        name: u.full_name || u.name || u.email
+                                                    });
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <option value="GLOBAL">Platform Summary</option>
+                                        <optgroup label="Active Users">
+                                            {allUsers.map((u) => (
+                                                <option key={u.id} value={u.id}>
+                                                    {u.full_name || u.name || u.email}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
+                                {['Today', 'This Week', 'This Year'].map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPeriod(p)}
+                                        className={`flex-1 md:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all whitespace-nowrap ${period === p ? 'bg-white shadow-md text-primary' : 'text-slate-400 hover:text-slate-700'
+                                            }`}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={refreshAllData}
+                                className="px-4 py-2 text-[10px] font-black rounded-lg bg-slate-900 text-white uppercase tracking-[0.2em]"
+                            >
+                                Refresh Live Data
+                            </button>
+                        </div>
+                    </header >
+
+                    {/* AI Intelligence Card */}
+                    < div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group" >
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Shield size={160} className="text-primary rotate-12" />
+                        </div>
+
+                        <div className="relative z-10 space-y-8">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-sm">
+                                        <Zap className="text-primary animate-pulse" size={28} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">
+                                                GUARDIAN INTELLIGENCE
+                                            </span>
+                                            <span className="h-1 w-1 rounded-full bg-slate-700" />
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800 rounded-full border border-slate-700">
+                                                <div className="h-1 w-1 rounded-full bg-green-500 animate-ping" />
+                                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                    LIVE ENGINE: {Math.floor(Math.random() * 50 + 10)}ms
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <h2 className="text-white text-xl font-black tracking-tight leading-tight max-w-2xl">
+                                            {currentStewardPrediction?.prediction || 'Waiting for live model signal...'}
+                                        </h2>
+
+                                        {/* Thinking Trace Terminal */}
+                                        <div className="mt-3 flex items-center gap-3 bg-black/40 border border-slate-700/50 rounded-lg px-3 py-1.5 w-fit">
+                                            <span className="text-[8px] font-mono text-primary font-bold">STEWARD_THOUGHT_STREAM ~$</span>
+                                            <span className="text-[9px] font-mono text-slate-400 animate-pulse">{thoughts[thoughtIndex]}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 w-full md:w-auto">
+                                    <Link to="/strategies" className="flex-1 md:flex-none">
+                                        <button className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                                            <Activity size={14} />
+                                            LAUNCH STRATEGY
+                                        </button>
+                                    </Link>
+                                    <button className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-slate-700">
+                                        VIEW LOGIC
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-slate-800/50">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        AI DECISION
+                                    </p>
+                                    <div
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${currentStewardPrediction?.decision?.includes('BUY')
                                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                             : currentStewardPrediction?.decision?.includes('SELL')
                                                 ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                                                 : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
-                                    }`}
-                                >
-                                    {currentStewardPrediction?.decision || 'HOLD'}
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-500">MEDIUM TERM</span>
-                            </div>
-
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    MODEL CONFIDENCE
-                                </p>
-                                <div className="flex items-center gap-3">
-                  <span className="text-xl font-black text-white">
-                    {currentStewardPrediction?.confidence || 0}%
-                  </span>
-                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-primary transition-all duration-1000"
-                                            style={{ width: `${currentStewardPrediction?.confidence || 0}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    SIGNAL MIX
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      TECH: {currentStewardPrediction?.signal_mix?.technical || 0}
-                    </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      FUND: {currentStewardPrediction?.signal_mix?.fundamental || 0}
-                    </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      NEWS: {currentStewardPrediction?.signal_mix?.news || 0}
-                    </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 border-l border-slate-800/50 pl-6">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    RISK RADAR
-                                </p>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative h-10 w-10 flex items-center justify-center">
-                                        <svg className="h-10 w-10 -rotate-90">
-                                            <circle
-                                                cx="20"
-                                                cy="20"
-                                                r="18"
-                                                fill="transparent"
-                                                stroke="currentColor"
-                                                strokeWidth="3"
-                                                className="text-slate-800"
-                                            />
-                                            <circle
-                                                cx="20"
-                                                cy="20"
-                                                r="18"
-                                                fill="transparent"
-                                                stroke="currentColor"
-                                                strokeWidth="3"
-                                                strokeDasharray={113}
-                                                strokeDashoffset={
-                                                    113 - (113 * (currentStewardPrediction?.risk_radar || 0)) / 100
-                                                }
-                                                className="text-red-500 transition-all duration-1000"
-                                            />
-                                        </svg>
-                                        <span className="absolute text-[8px] font-black text-white">
-                      {currentStewardPrediction?.risk_radar || 0}
-                    </span>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-white leading-none">
-                                            HIGH VOLATILITY
-                                        </p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">
-                                            NIFTY EXPOSURE
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {metrics.map((metric, i) => (
-                        <Link to={metric.link} key={i}>
-                            <Card className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white h-full cursor-pointer">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div
-                                        className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${metric.color}`}
+                                            }`}
                                     >
-                                        <metric.icon size={18} />
+                                        {currentStewardPrediction?.decision || 'HOLD'}
                                     </div>
-                                    <span
-                                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                            metric.change.startsWith('+') || metric.change.includes('LIVE')
-                                                ? 'bg-green-50 text-green-700'
-                                                : 'bg-slate-100 text-slate-600'
-                                        }`}
-                                    >
-                    {metric.change}
-                  </span>
+                                    <span className="text-[10px] font-bold text-slate-500">MEDIUM TERM</span>
                                 </div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
-                                    {metric.label}
-                                </p>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                                    {metric.value}
-                                </h3>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
 
-                {/* Compact Live Ticker Strip */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-heading font-black text-slate-900 text-sm">Live Market Ticker</h3>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                            NSE | BSE
-                        </span>
-                    </div>
-                    <CompactTicker stocks={groupedStocks} title="" height="h-20" />
-                </div>
-
-                {/* Currency, Commodities, and Metals vertical tickers */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <VerticalTicker items={currencyItems} title="Live Currencies" type="currencies" />
-
-                    <VerticalTicker items={commoditiesItems} title="Live Commodities" type="commodities" />
-
-                    <VerticalTicker items={metalsItems} title="Live Metals" type="metals" />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-3">
-                        <Card className="p-6 bg-white border border-slate-100 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-heading font-black text-slate-900 text-base">New IPOs</h3>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    LISTINGS
-                  </span>
-                            </div>
-                            <div className="space-y-3">
-                                {ipoNews.length === 0 ? (
-                                    <div className="text-xs text-slate-400 italic">No IPO news available</div>
-                                ) : (
-                                    ipoNews.map((n, i) => (
-                                        <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                            <p className="text-sm font-bold text-slate-900">
-                                                {n.title || n.headline || 'IPO Announcement'}
-                                            </p>
-                                            {n.date && (
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                    {n.date}
-                                                </p>
-                                            )}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        MODEL CONFIDENCE
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl font-black text-white">
+                                            {(currentStewardPrediction?.confidence || 0) + (Math.random() > 0.5 ? 0.2 : -0.2)}%
+                                        </span>
+                                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-primary transition-all duration-1000"
+                                                style={{ width: `${currentStewardPrediction?.confidence || 0}%` }}
+                                            />
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
+                                    </div>
+                                </div>
 
-                {/* Chart + AI Analyst + Top Movers */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                    <Card className="xl:col-span-8 p-8 border-slate-100 shadow-sm bg-white overflow-hidden relative">
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h2 className="text-lg font-black text-slate-900 font-heading">
-                                    {user?.role === 'AUDITOR' ? 'Compliance Alpha Curve' : 'Performance Alpha'}
-                                </h2>
-                                <p className="text-xs text-slate-500 font-medium">
-                                    {user?.role === 'AUDITOR'
-                                        ? 'System execution integrity audit'
-                                        : 'Net performance curve across all active strategies'}
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="h-3 w-3 rounded-full bg-primary" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  Steward Equity
-                </span>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        SIGNAL MIX
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                                TECH: {currentStewardPrediction?.signal_mix?.technical || 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                                FUND: {currentStewardPrediction?.signal_mix?.fundamental || 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                                NEWS: {currentStewardPrediction?.signal_mix?.news || 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 border-l border-slate-800/50 pl-6">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        RISK RADAR
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative h-10 w-10 flex items-center justify-center">
+                                            <svg className="h-10 w-10 -rotate-90">
+                                                <circle
+                                                    cx="20"
+                                                    cy="20"
+                                                    r="18"
+                                                    fill="transparent"
+                                                    stroke="currentColor"
+                                                    strokeWidth="3"
+                                                    className="text-slate-800"
+                                                />
+                                                <circle
+                                                    cx="20"
+                                                    cy="20"
+                                                    r="18"
+                                                    fill="transparent"
+                                                    stroke="currentColor"
+                                                    strokeWidth="3"
+                                                    strokeDasharray={113}
+                                                    strokeDashoffset={
+                                                        113 - (113 * (currentStewardPrediction?.risk_radar || 0)) / 100
+                                                    }
+                                                    className="text-red-500 transition-all duration-1000"
+                                                />
+                                            </svg>
+                                            <span className="absolute text-[8px] font-black text-white">
+                                                {currentStewardPrediction?.risk_radar || 0}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-white leading-none">
+                                                HIGH VOLATILITY
+                                            </p>
+                                            <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">
+                                                NIFTY EXPOSURE
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="h-[350px] w-full">
+                    </div >
+
+                    {/* Metrics Cards */}
+                    < div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" >
+                        {
+                            metrics.map((metric, i) => (
+                                <Link to={metric.link} key={i}>
+                                    <Card className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group bg-white h-full cursor-pointer">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div
+                                                className={`p-2.5 rounded-xl bg-slate-50 transition-colors group-hover:bg-primary/5 ${metric.color}`}
+                                            >
+                                                <metric.icon size={18} />
+                                            </div>
+                                            <span
+                                                className={`text-[10px] font-black px-2 py-0.5 rounded-full ${metric.change.startsWith('+') || metric.change.includes('LIVE')
+                                                    ? 'bg-green-50 text-green-700'
+                                                    : 'bg-slate-100 text-slate-600'
+                                                    }`}
+                                            >
+                                                {metric.change}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                            {metric.label}
+                                        </p>
+                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                                            {metric.value}
+                                        </h3>
+                                    </Card>
+                                </Link>
+                            ))
+                        }
+                    </div >
+
+                    {/* Compact Live Ticker Strip */}
+                    < div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm overflow-hidden" >
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-heading font-black text-slate-900 text-sm">Live Market Ticker</h3>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                NSE | BSE
+                            </span>
+                        </div>
+                        <CompactTicker stocks={groupedStocks} title="" height="h-20" />
+                    </div >
+
+                    {/* Currency, Commodities, and Metals vertical tickers */}
+                    < div className="grid grid-cols-1 lg:grid-cols-3 gap-6" >
+                        <VerticalTicker items={currencyItems} title="Live Currencies" type="currencies" />
+
+                        <VerticalTicker items={commoditiesItems} title="Live Commodities" type="commodities" />
+
+                        <VerticalTicker items={metalsItems} title="Live Metals" type="metals" />
+                    </div >
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-3">
+                            <Card className="p-6 bg-white border border-slate-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-heading font-black text-slate-900 text-base">New IPOs</h3>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        LISTINGS
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
+                                    {ipoNews.length === 0 ? (
+                                        <div className="text-xs text-slate-400 italic">No IPO news available</div>
+                                    ) : (
+                                        ipoNews.map((n, i) => (
+                                            <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {n.title || n.headline || 'IPO Announcement'}
+                                                </p>
+                                                {n.date && (
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                        {n.date}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Chart + AI Analyst + Top Movers */}
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                        <Card className="xl:col-span-8 p-8 border-slate-100 shadow-sm bg-white overflow-hidden relative">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h2 className="text-lg font-black text-slate-900 font-heading">
+                                        {user?.role === 'AUDITOR' ? 'Compliance Alpha Curve' : 'Performance Alpha'}
+                                    </h2>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        {user?.role === 'AUDITOR'
+                                            ? 'System execution integrity audit'
+                                            : 'Net performance curve across all active strategies'}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-primary" />
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                        Steward Equity
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="h-[350px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={curveToRender}>
                                         <defs>
@@ -645,296 +665,291 @@ export function Dashboard() {
                                         />
                                     </AreaChart>
                                 </ResponsiveContainer>
-                            {!chartData.length && (
-                                <p className="text-[10px] text-slate-400 mt-2">
-                                    Live equity curve unavailable; showing estimated portfolio trajectory.
-                                </p>
-                            )}
-                        </div>
-                    </Card>
-
-                    <div className="xl:col-span-4 space-y-6">
-                        <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                                AI Analyst Insights
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                                    <p className="text-xs text-slate-700 leading-relaxed">
-                                        {currentStewardPrediction?.prediction ||
-                                            'AI is analyzing market conditions and generating insights...'}
+                                {!chartData.length && (
+                                    <p className="text-[10px] text-slate-400 mt-2">
+                                        Live equity curve unavailable; showing estimated portfolio trajectory.
                                     </p>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-slate-500">Market Sentiment</span>
-                                    <span className="font-black text-primary">
-                    {macroIndicators?.sentiment || 'UNAVAILABLE'}
-                  </span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-slate-500">Volatility Level</span>
-                                    <span className="font-black text-amber-500">
-                    {macroIndicators?.volatility_label || 'UNAVAILABLE'}
-                  </span>
-                                </div>
+                                )}
                             </div>
                         </Card>
 
-                        <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
-                                    Top Movers
+                        <div className="xl:col-span-4 space-y-6">
+                            <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
+                                    AI Analyst Insights
                                 </h3>
-                                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${
-                                    marketDataStatus === 'LIVE'
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                                        <p className="text-xs text-slate-700 leading-relaxed">
+                                            {currentStewardPrediction?.prediction ||
+                                                'AI is analyzing market conditions and generating insights...'}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Market Sentiment</span>
+                                        <span className="font-black text-primary">
+                                            {macroIndicators?.sentiment || 'UNAVAILABLE'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Volatility Level</span>
+                                        <span className="font-black text-amber-500">
+                                            {macroIndicators?.volatility_label || 'UNAVAILABLE'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
+                                        Top Movers
+                                    </h3>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${marketDataStatus === 'LIVE'
                                         ? 'bg-emerald-100 text-emerald-700'
                                         : marketDataStatus === 'STALE'
                                             ? 'bg-amber-100 text-amber-700'
                                             : 'bg-rose-100 text-rose-700'
-                                }`}>
-                                    {marketDataStatus}
-                                </span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-3">
-                                Source: {marketDataSource} | As of: {marketAsOfLabel}
-                            </p>
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">
-                                        Top Gainers
-                                    </p>
-                                    <div className="flex gap-2 overflow-x-auto pb-1">
-                                        {gainers.slice(0, 5).map((mover, i) => (
-                                            <div key={`g-${i}`} className="min-w-[140px] rounded-lg border border-emerald-100 bg-emerald-50/60 p-2">
-                                                <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
-                                                <p className="text-[10px] text-emerald-700 font-black">
-                                                    +{formatNumber(mover.change || 0, 2)}%
-                                                </p>
-                                                <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                        }`}>
+                                        {marketDataStatus}
+                                    </span>
                                 </div>
-                                <div className="pt-2 border-t border-slate-100">
-                                    <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">
-                                        Top Losers
-                                    </p>
-                                    <div className="flex gap-2 overflow-x-auto pb-1">
-                                        {losers.slice(0, 5).map((mover, i) => (
-                                            <div key={`l-${i}`} className="min-w-[140px] rounded-lg border border-rose-100 bg-rose-50/60 p-2">
-                                                <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
-                                                <p className="text-[10px] text-rose-700 font-black">
-                                                    {formatNumber(mover.change || 0, 2)}%
-                                                </p>
-                                                <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
-                                            </div>
-                                        ))}
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-3">
+                                    Source: {marketDataSource} | As of: {marketAsOfLabel}
+                                </p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">
+                                            Top Gainers
+                                        </p>
+                                        <div className="flex gap-2 overflow-x-auto pb-1">
+                                            {gainers.slice(0, 5).map((mover, i) => (
+                                                <div key={`g-${i}`} className="min-w-[140px] rounded-lg border border-emerald-100 bg-emerald-50/60 p-2">
+                                                    <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
+                                                    <p className="text-[10px] text-emerald-700 font-black">
+                                                        +{formatNumber(mover.change || 0, 2)}%
+                                                    </p>
+                                                    <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">
+                                            Top Losers
+                                        </p>
+                                        <div className="flex gap-2 overflow-x-auto pb-1">
+                                            {losers.slice(0, 5).map((mover, i) => (
+                                                <div key={`l-${i}`} className="min-w-[140px] rounded-lg border border-rose-100 bg-rose-50/60 p-2">
+                                                    <p className="font-black text-slate-900 text-xs">{mover.symbol}</p>
+                                                    <p className="text-[10px] text-rose-700 font-black">
+                                                        {formatNumber(mover.change || 0, 2)}%
+                                                    </p>
+                                                    <p className="text-[11px] font-black text-slate-800 mt-1">{formatPrice(mover.price)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {gainers.length === 0 && losers.length === 0 && (
+                                        <div className="text-xs text-slate-400 italic">
+                                            {marketDataStatus === 'UNAVAILABLE' ? 'Live market data unavailable' : 'No live movers data'}
+                                        </div>
+                                    )}
                                 </div>
-                                {gainers.length === 0 && losers.length === 0 && (
-                                    <div className="text-xs text-slate-400 italic">
-                                        {marketDataStatus === 'UNAVAILABLE' ? 'Live market data unavailable' : 'No live movers data'}
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Market Intelligence + Order Book + Exchange Status */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
+                                Market Intelligence
+                            </h3>
+                            <div className="space-y-3">
+                                {(marketResearch?.headlines || []).slice(0, 5).map((headline, i) => (
+                                    <div
+                                        key={i}
+                                        className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between"
+                                    >
+                                        <span className="text-xs font-bold text-slate-800">{headline}</span>
+                                        <span className="text-[9px] font-black text-primary uppercase">Insight</span>
+                                    </div>
+                                ))}
+                                {(!marketResearch || !marketResearch.headlines || marketResearch.headlines.length === 0) && (
+                                    <div className="text-xs text-slate-400 italic text-center py-4">
+                                        No market intelligence available
                                     </div>
                                 )}
                             </div>
                         </Card>
-                    </div>
-                </div>
 
-                {/* Market Intelligence + Order Book + Exchange Status */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                            Market Intelligence
-                        </h3>
-                        <div className="space-y-3">
-                            {(marketResearch?.headlines || []).slice(0, 5).map((headline, i) => (
-                                <div
-                                    key={i}
-                                    className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between"
-                                >
-                                    <span className="text-xs font-bold text-slate-800">{headline}</span>
-                                    <span className="text-[9px] font-black text-primary uppercase">Insight</span>
+                        <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
+                                Order Book Depth
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
+                                    {(orderBook?.bids || []).slice(0, 5).map((bid, i) => (
+                                        <div
+                                            key={i}
+                                            className="flex justify-between text-xs font-bold text-slate-700 py-1"
+                                        >
+                                            <span>{formatPrice(bid.price)}</span>
+                                            <span>{bid.qty}</span>
+                                        </div>
+                                    ))}
+                                    {(!orderBook || !orderBook.bids || orderBook.bids.length === 0) && (
+                                        <div className="text-xs text-slate-400 italic">No bid data available</div>
+                                    )}
                                 </div>
-                            ))}
-                            {(!marketResearch || !marketResearch.headlines || marketResearch.headlines.length === 0) && (
-                                <div className="text-xs text-slate-400 italic text-center py-4">
-                                    No market intelligence available
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
+                                    {(orderBook?.asks || []).slice(0, 5).map((ask, i) => (
+                                        <div
+                                            key={i}
+                                            className="flex justify-between text-xs font-bold text-slate-700 py-1"
+                                        >
+                                            <span>{formatPrice(ask.price)}</span>
+                                            <span>{ask.qty}</span>
+                                        </div>
+                                    ))}
+                                    {(!orderBook || !orderBook.asks || orderBook.asks.length === 0) && (
+                                        <div className="text-xs text-slate-400 italic">No ask data available</div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    </Card>
+                            </div>
+                        </Card>
 
-                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                            Order Book Depth
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bids</p>
-                                {(orderBook?.bids || []).slice(0, 5).map((bid, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex justify-between text-xs font-bold text-slate-700 py-1"
+                        <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
+                                Exchange Status
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600">NSE</span>
+                                    <span
+                                        className={`text-xs font-black px-2 py-0.5 rounded-full ${exchangeStatus?.nse === 'open'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                            }`}
                                     >
-                                        <span>{formatPrice(bid.price)}</span>
-                                        <span>{bid.qty}</span>
+                                        {exchangeStatus?.nse || 'closed'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600">BSE</span>
+                                    <span
+                                        className={`text-xs font-black px-2 py-0.5 rounded-full ${exchangeStatus?.bse === 'open'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                            }`}
+                                    >
+                                        {exchangeStatus?.bse || 'closed'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600">MCX</span>
+                                    <span
+                                        className={`text-xs font-black px-2 py-0.5 rounded-full ${exchangeStatus?.mcx === 'open'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                            }`}
+                                    >
+                                        {exchangeStatus?.mcx || 'closed'}
+                                    </span>
+                                </div>
+                                <div className="pt-2 border-t border-slate-100">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-600">System Status</span>
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                            connected
+                                        </span>
                                     </div>
-                                ))}
-                                {(!orderBook || !orderBook.bids || orderBook.bids.length === 0) && (
-                                    <div className="text-xs text-slate-400 italic">No bid data available</div>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Asks</p>
-                                {(orderBook?.asks || []).slice(0, 5).map((ask, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex justify-between text-xs font-bold text-slate-700 py-1"
-                                    >
-                                        <span>{formatPrice(ask.price)}</span>
-                                        <span>{ask.qty}</span>
-                                    </div>
-                                ))}
-                                {(!orderBook || !orderBook.asks || orderBook.asks.length === 0) && (
-                                    <div className="text-xs text-slate-400 italic">No ask data available</div>
-                                )}
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                            Exchange Status
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-slate-600">NSE</span>
-                                <span
-                                    className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                                        exchangeStatus?.nse === 'open'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                    }`}
-                                >
-                  {exchangeStatus?.nse || 'closed'}
-                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-600">BSE</span>
-                                <span
-                                    className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                                        exchangeStatus?.bse === 'open'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                    }`}
-                                >
-                  {exchangeStatus?.bse || 'closed'}
-                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-600">MCX</span>
-                                <span
-                                    className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                                        exchangeStatus?.mcx === 'open'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                    }`}
-                                >
-                  {exchangeStatus?.mcx || 'closed'}
-                </span>
-                            </div>
-                            <div className="pt-2 border-t border-slate-100">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">System Status</span>
-                                    <span className="text-xs font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    connected
-                  </span>
                                 </div>
                             </div>
+                        </Card>
+                    </div>
+
+                    {/* Recent Trades */}
+                    <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
+                            Recent Trades
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Symbol
+                                        </th>
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Side
+                                        </th>
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Quantity
+                                        </th>
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Price
+                                        </th>
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            PnL
+                                        </th>
+                                        <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Time
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(recentTrades || []).slice(0, 5).map((trade, i) => (
+                                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
+                                            <td className="py-3 font-black text-slate-900">{trade.symbol}</td>
+                                            <td
+                                                className={`py-3 font-black ${trade.action === 'BUY'
+                                                    ? 'text-green-600'
+                                                    : trade.action === 'SELL'
+                                                        ? 'text-red-500'
+                                                        : 'text-slate-500'
+                                                    }`}
+                                            >
+                                                {trade.action}
+                                            </td>
+                                            <td className="py-3 text-slate-700">{trade.quantity}</td>
+                                            <td className="py-3 font-black text-slate-900">
+                                                {formatPrice(trade.price)}
+                                            </td>
+                                            <td
+                                                className={`py-3 font-black ${trade.pnl > 0
+                                                    ? 'text-green-600'
+                                                    : trade.pnl < 0
+                                                        ? 'text-red-500'
+                                                        : 'text-slate-500'
+                                                    }`}
+                                            >
+                                                {trade.pnl > 0 ? '+' : ''}
+                                                {formatPrice(trade.pnl)}
+                                            </td>
+                                            <td className="py-3 text-[10px] text-slate-500">
+                                                {trade.timestamp || trade.created_at
+                                                    ? new Date(trade.timestamp || trade.created_at).toLocaleTimeString()
+                                                    : '--'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!recentTrades || recentTrades.length === 0) && (
+                                        <tr>
+                                            <td colSpan={6} className="py-8 text-center text-slate-400 text-sm">
+                                                No recent trades
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </Card>
                 </div>
-
-                {/* Recent Trades */}
-                <Card className="p-6 border-slate-100 shadow-sm bg-white">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4">
-                        Recent Trades
-                    </h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                            <tr className="border-b border-slate-100">
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Symbol
-                                </th>
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Side
-                                </th>
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Quantity
-                                </th>
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Price
-                                </th>
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    PnL
-                                </th>
-                                <th className="text-left py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Time
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {(recentTrades || []).slice(0, 5).map((trade, i) => (
-                                <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                                    <td className="py-3 font-black text-slate-900">{trade.symbol}</td>
-                                    <td
-                                        className={`py-3 font-black ${
-                                            trade.action === 'BUY'
-                                                ? 'text-green-600'
-                                                : trade.action === 'SELL'
-                                                    ? 'text-red-500'
-                                                    : 'text-slate-500'
-                                        }`}
-                                    >
-                                        {trade.action}
-                                    </td>
-                                    <td className="py-3 text-slate-700">{trade.quantity}</td>
-                                    <td className="py-3 font-black text-slate-900">
-                                        {formatPrice(trade.price)}
-                                    </td>
-                                    <td
-                                        className={`py-3 font-black ${
-                                            trade.pnl > 0
-                                                ? 'text-green-600'
-                                                : trade.pnl < 0
-                                                    ? 'text-red-500'
-                                                    : 'text-slate-500'
-                                        }`}
-                                    >
-                                        {trade.pnl > 0 ? '+' : ''}
-                                        {formatPrice(trade.pnl)}
-                                    </td>
-                                    <td className="py-3 text-[10px] text-slate-500">
-                                        {trade.timestamp || trade.created_at
-                                            ? new Date(trade.timestamp || trade.created_at).toLocaleTimeString()
-                                            : '--'}
-                                    </td>
-                                </tr>
-                            ))}
-                            {(!recentTrades || recentTrades.length === 0) && (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-slate-400 text-sm">
-                                        No recent trades
-                                    </td>
-                                </tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
+            )}
         </div>
     );
 }

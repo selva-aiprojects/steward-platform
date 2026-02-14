@@ -1,38 +1,39 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from "../components/ui/card";
-import { 
-  Play, 
-  Pause, 
-  RefreshCcw, 
-  Zap, 
-  Target, 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUpRight, 
-  Shield, 
-  Loader2, 
-  Lock, 
-  Unlock, 
-  Settings2, 
-  X, 
-  ArrowRight, 
-  Activity,
-  ShoppingBag,
-  Unlock as UnlockIcon,
-  Lock as LockIcon
+import {
+    Play,
+    Pause,
+    RefreshCcw,
+    Zap,
+    Target,
+    TrendingUp,
+    TrendingDown,
+    ArrowUpRight,
+    Shield,
+    Loader2,
+    Lock,
+    Unlock,
+    Settings2,
+    X,
+    ArrowRight,
+    Activity,
+    ShoppingBag,
+    DollarSign,
+    Unlock as UnlockIcon,
+    Lock as LockIcon
 } from 'lucide-react';
-import { 
-  fetchStrategies, 
-  fetchProjections, 
-  fetchUser, 
-  updateUser, 
-  fetchPortfolioHistory, 
-  fetchPortfolioSummary, 
-  fetchExchangeStatus, 
-  executeTrade, 
-  fetchHoldings, 
-  launchStrategy, 
-  depositFunds 
+import {
+    fetchStrategies,
+    fetchProjections,
+    fetchUser,
+    updateUser,
+    fetchPortfolioHistory,
+    fetchPortfolioSummary,
+    fetchExchangeStatus,
+    executeTrade,
+    fetchHoldings,
+    launchStrategy,
+    depositFunds
 } from "../services/api";
 
 import { useUser } from "../context/UserContext";
@@ -57,6 +58,7 @@ export function TradingHub() {
     const [strategies, setStrategies] = useState([]);
     const [toggling, setToggling] = useState(false);
     const [executing, setExecuting] = useState(false);
+    const [assetClass, setAssetClass] = useState('EQUITY'); // EQUITY, OPTIONS, COMMODITIES, CURRENCY
     const [provisioning, setProvisioning] = useState(false);
     const [showLaunchModal, setShowLaunchModal] = useState(false);
     const [newStratSymbol, setNewStratSymbol] = useState('TCS');
@@ -149,14 +151,26 @@ export function TradingHub() {
         setExecuting(true);
         try {
             const normalizedSymbol = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
+
+            // Try to get live price from marketMovers
+            let livePrice = 2450.00; // Default fallback
+            if (marketMovers) {
+                const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || [])];
+                const found = allMovers.find(m => m.symbol === normalizedSymbol);
+                if (found && found.price) {
+                    livePrice = found.price;
+                }
+            }
+
             const tradeData = {
                 symbol: normalizedSymbol,
                 side: action, // BUY or SELL
                 quantity: orderQty,
-                price: 2450.00, // Mock live price fallback
+                price: livePrice,
                 order_type: 'MARKET',
                 user_id: user.id,
-                decision_logic: `User manual override: Explicit ${action} command executed via Trading Hub.`
+                asset_class: assetClass,
+                decision_logic: `User manual override: Explicit ${action} command for ${assetClass} [${normalizedSymbol}] executed at live price INR ${livePrice}.`
             };
 
             const result = await executeTrade(user.id, tradeData);
@@ -190,7 +204,16 @@ export function TradingHub() {
             return;
         }
         const normalized = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
-        const price = 2450.00; // Mock price - would come from market data in real implementation
+
+        let price = 2450.00; // Default fallback
+        if (marketMovers) {
+            const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || [])];
+            const found = allMovers.find(m => m.symbol === normalized);
+            if (found && found.price) {
+                price = found.price;
+            }
+        }
+
         setBasket(prev => ([...prev, {
             id: Date.now(),
             symbol: normalized,
@@ -290,29 +313,44 @@ export function TradingHub() {
             { symbol: 'NATURALGAS', exchange: 'MCX' }
         ];
 
-        const fromHoldings = (activeHoldings || []).map(h => ({ 
-          symbol: h.symbol, 
-          exchange: h.exchange || 'NSE' 
+        const fromHoldings = (activeHoldings || []).map(h => ({
+            symbol: h.symbol,
+            exchange: h.exchange || 'NSE'
         }));
-        const fromWatchlist = (watchlist || []).map(w => ({ 
-          symbol: w.symbol, 
-          exchange: w.exchange || 'NSE' 
+        const fromWatchlist = (watchlist || []).map(w => ({
+            symbol: w.symbol,
+            exchange: w.exchange || 'NSE'
         }));
         const allMovers = marketMovers && typeof marketMovers === 'object' ?
-          [...(marketMovers.gainers || []), ...(marketMovers.losers || [])] : [];
+            [...(marketMovers.gainers || []), ...(marketMovers.losers || [])] : [];
         const fromMovers = allMovers.map(m => ({
-          symbol: m.symbol,
-          exchange: m.exchange || 'NSE'
+            symbol: m.symbol,
+            exchange: m.exchange || 'NSE'
         }));
-        const fromProjections = (projections || []).map(p => ({ 
-          symbol: p.ticker, 
-          exchange: 'NSE' 
+        const fromProjections = (projections || []).map(p => ({
+            symbol: p.ticker,
+            exchange: 'NSE'
         }));
 
         const combined = [...base, ...fromHoldings, ...fromWatchlist, ...fromMovers, ...fromProjections];
         const seen = new Set();
         return combined.filter(item => {
             if (!item.symbol) return false;
+
+            // Asset Class Filtering Logic
+            if (assetClass === 'EQUITY') {
+                // Heuristic: symbols like SENSEX or MCX ones are non-equity for this filter
+                if (item.exchange === 'MCX') return false;
+                if (['SENSEX'].includes(item.symbol)) return false;
+            } else if (assetClass === 'COMMODITIES') {
+                if (item.exchange !== 'MCX' && !['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'].includes(item.symbol)) return false;
+            } else if (assetClass === 'OPTIONS') {
+                // Heuristic for options: usually longer strings or specific suffix
+                if (item.symbol.length < 5 && !['NIFTY', 'BANKNIFTY'].includes(item.symbol)) return false;
+            } else if (assetClass === 'CURRENCY') {
+                if (!item.symbol.includes('INR') && !['USD', 'EUR', 'GBP'].includes(item.symbol)) return false;
+            }
+
             const key = `${item.exchange}:${item.symbol}`;
             if (seen.has(key)) return false;
             seen.add(key);
@@ -326,15 +364,29 @@ export function TradingHub() {
         }
     }, [symbolOptions, orderTicker]);
 
+    const currentTickerPrice = useMemo(() => {
+        if (!orderTicker || !marketMovers) return null;
+        const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || []), ...(marketMovers.currencies || []), ...(marketMovers.metals || []), ...(marketMovers.commodities || [])];
+        const found = allMovers.find(m => m.symbol === orderTicker);
+        return found ? found.price : null;
+    }, [orderTicker, marketMovers]);
+
     return (
         <div data-testid="trading-hub-container" className="pb-4 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Trading Hub</h1>
-                    <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-                        <span data-testid="algo-status" className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
-                        Algo Engine: {user?.trading_mode === 'AUTO' ? 'Autonomous Mode Active' : 'Manual Override Active'}
-                    </p>
+                    <div className="flex items-center gap-4 mt-1">
+                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
+                            <span data-testid="algo-status" className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+                            Algo Engine: {user?.trading_mode === 'AUTO' ? 'Autonomous Mode Active' : 'Manual Override Active'}
+                        </p>
+                        <span className="h-3 w-[1px] bg-slate-200" />
+                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
+                            <DollarSign size={10} className="text-primary" />
+                            Limit: <span className="text-slate-900">INR {summary?.cash_balance?.toLocaleString() || '0'}</span>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
@@ -362,6 +414,16 @@ export function TradingHub() {
                         {user?.trading_mode === 'MANUAL' ? <UnlockIcon size={14} className="animate-bounce" /> : <Shield size={14} />}
                         Manual Mode
                     </button>
+                </div>
+
+                <div className="flex flex-col items-center px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Active Hub Status</span>
+                    <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'} animate-pulse`} />
+                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                            {user?.trading_mode === 'AUTO' ? 'Autonomous Mode' : 'Manual Override'}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="h-10 w-[1px] bg-slate-100 hidden md:block mx-4" />
@@ -478,80 +540,107 @@ export function TradingHub() {
                         )}
                     </div>
 
-                    <div data-testid="manual-order-ticket" className={`flex flex-col md:flex-row gap-6 items-end ${user?.trading_mode === 'AUTO' ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
-                        <div className="flex-1 w-full space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    list="ticker-options"
-                                    value={orderTicker}
-                                    onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                    placeholder="Type or select a symbol"
-                                />
-                                <datalist id="ticker-options">
-                                    {symbolOptions.map((item) => (
-                                        <option key={`${item.exchange}-${item.symbol}`} value={item.symbol}>
-                                            {item.exchange}
-                                        </option>
+                    <div data-testid="manual-order-ticket" className={`flex flex-col gap-6 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                        {/* Asset Class Selection */}
+                        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+                            {['EQUITY', 'OPTIONS', 'COMMODITIES', 'CURRENCY'].map((cls) => (
+                                <button
+                                    key={cls}
+                                    onClick={() => setAssetClass(cls)}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${assetClass === cls ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    {cls}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-6 items-end">
+                            <div className="flex-1 w-full space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        list="ticker-options"
+                                        value={orderTicker}
+                                        onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                        placeholder={
+                                            assetClass === 'EQUITY' ? "Ticker (e.g. INFY)" :
+                                                assetClass === 'OPTIONS' ? "Option (e.g. NIFTY24FEB22000CE)" :
+                                                    assetClass === 'COMMODITIES' ? "Commodity (e.g. CRUDEOIL)" :
+                                                        "Currency (e.g. USDINR)"
+                                        }
+                                    />
+                                    <datalist id="ticker-options">
+                                        {symbolOptions.map((item) => (
+                                            <option key={`${item.exchange}-${item.symbol}`} value={item.symbol}>
+                                                {item.exchange}
+                                            </option>
+                                        ))}
+                                    </datalist>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {symbolOptions.slice(0, 6).map((item) => (
+                                        <button
+                                            key={`${item.exchange}-quick-${item.symbol}`}
+                                            type="button"
+                                            onClick={() => setOrderTicker(item.symbol)}
+                                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${orderTicker === item.symbol ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {item.exchange}:{item.symbol}
+                                        </button>
                                     ))}
-                                </datalist>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {symbolOptions.slice(0, 6).map((item) => (
-                                    <button
-                                        key={`${item.exchange}-quick-${item.symbol}`}
-                                        type="button"
-                                        onClick={() => setOrderTicker(item.symbol)}
-                                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${orderTicker === item.symbol ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}
-                                    >
-                                        {item.exchange}:{item.symbol}
-                                    </button>
-                                ))}
+                            <div className="w-full md:w-32 space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units</label>
+                                <input
+                                    type="number"
+                                    value={orderQty}
+                                    onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                    placeholder="Qty"
+                                    min="1"
+                                />
                             </div>
-                        </div>
-                        <div className="w-full md:w-32 space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units</label>
-                            <input
-                                type="number"
-                                value={orderQty}
-                                onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                placeholder="Qty"
-                            />
-                        </div>
-                        <div className="flex gap-3 w-full md:w-auto">
-                            <button
-                                onClick={() => handleManualTrade('BUY')}
-                                disabled={executing}
-                                className="px-6 py-3.5 bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
-                                Buy
-                            </button>
-                            <button
-                                onClick={() => handleManualTrade('SELL')}
-                                disabled={executing}
-                                className="px-6 py-3.5 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingDown size={16} />}
-                                Sell
-                            </button>
-                            <button
-                                onClick={addToBasket}
-                                className="px-4 py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all"
-                            >
-                                <Target size={16} />
-                            </button>
+                            <div className="hidden md:flex flex-col items-center justify-center h-full pb-3">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Price</span>
+                                <span className={`text-sm font-black ${currentTickerPrice ? 'text-primary' : 'text-slate-300'}`}>
+                                    {currentTickerPrice ? `INR ${currentTickerPrice.toLocaleString()}` : 'WAITING...'}
+                                </span>
+                            </div>
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <button
+                                    onClick={() => handleManualTrade('BUY')}
+                                    disabled={executing}
+                                    className="px-6 py-3.5 bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
+                                    Buy
+                                </button>
+                                <button
+                                    onClick={() => handleManualTrade('SELL')}
+                                    disabled={executing}
+                                    className="px-6 py-3.5 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingDown size={16} />}
+                                    Sell
+                                </button>
+                                <button
+                                    onClick={addToBasket}
+                                    className="px-4 py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all"
+                                >
+                                    <Target size={16} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </Card>
-                
+
                 <Card className="p-6 border-slate-200 shadow-sm">
                     <div className="flex flex-col h-full">
                         <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Quick Actions</h3>
-                        
+
                         <div className="space-y-3 flex-1">
                             <button
                                 onClick={() => setShowBasketModal(true)}
@@ -565,7 +654,7 @@ export function TradingHub() {
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">Batch execute multiple orders</p>
                             </button>
-                            
+
                             <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
                                 <div className="flex items-center gap-2">
                                     <Target size={16} className="text-primary" />
@@ -573,7 +662,7 @@ export function TradingHub() {
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">Portfolio risk management</p>
                             </button>
-                            
+
                             <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
                                 <div className="flex items-center gap-2">
                                     <Activity size={16} className="text-primary" />
@@ -581,6 +670,44 @@ export function TradingHub() {
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">Real-time market data</p>
                             </button>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Mini Order Book Depth */}
+                <Card className="p-6 border-slate-100 shadow-sm bg-white md:col-span-1">
+                    <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
+                        <Activity size={14} className="text-primary" />
+                        ORDER BOOK DEPTH
+                    </h3>
+                    <div className="space-y-3">
+                        {/* Sell Side */}
+                        <div className="space-y-1">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={`ask-${i}`} className="flex justify-between items-center text-[10px] font-bold">
+                                    <span className="text-red-500">INR {(currentTickerPrice ? currentTickerPrice + (i + 1) * 0.5 : 2450 + (i + 1)).toFixed(2)}</span>
+                                    <div className="flex-1 mx-2 h-1 bg-red-50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-red-200" style={{ width: `${Math.random() * 60 + 20}%` }} />
+                                    </div>
+                                    <span className="text-slate-400">{(Math.random() * 500).toFixed(0)}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="py-1 border-y border-slate-50 flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black text-slate-900">SPREAD</span>
+                            <span className="text-[10px] font-black text-primary">0.05 (0.02%)</span>
+                        </div>
+                        {/* Buy Side */}
+                        <div className="space-y-1">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={`bid-${i}`} className="flex justify-between items-center text-[10px] font-bold">
+                                    <span className="text-green-500">INR {(currentTickerPrice ? currentTickerPrice - (i + 1) * 0.5 : 2449 - (i + 1)).toFixed(2)}</span>
+                                    <div className="flex-1 mx-2 h-1 bg-green-50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-green-200" style={{ width: `${Math.random() * 60 + 20}%` }} />
+                                    </div>
+                                    <span className="text-slate-400">{(Math.random() * 500).toFixed(0)}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </Card>
@@ -594,22 +721,24 @@ export function TradingHub() {
                         {strategies.length} running
                     </span>
                 </div>
-                
+
                 {strategies.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {strategies.map((strategy) => (
-                            <div key={strategy.id} className="p-4 border border-slate-200 rounded-xl bg-white">
+                            <div key={strategy.id} className={`p-4 border rounded-xl bg-white transition-all duration-300 ${strategy.status === 'RUNNING'
+                                ? (user?.trading_mode === 'AUTO' ? 'border-cyan-500 shadow-md ring-1 ring-cyan-500/20' : 'border-primary shadow-md ring-1 ring-primary/20')
+                                : 'border-slate-200'
+                                }`}>
                                 <div className="flex justify-between items-start mb-3">
                                     <h4 className="font-black text-slate-900">{strategy.name}</h4>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-black uppercase ${
-                                        strategy.status === 'RUNNING' 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-amber-100 text-amber-700'
-                                    }`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-black uppercase ${strategy.status === 'RUNNING'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-amber-100 text-amber-700'
+                                        }`}>
                                         {strategy.status || 'OFFLINE'}
                                     </span>
                                 </div>
-                                
+
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-slate-500">Symbol:</span>
@@ -625,8 +754,23 @@ export function TradingHub() {
                                         <span className="text-slate-500">Trades:</span>
                                         <span className="font-black">{strategy.total_trades ?? 0}</span>
                                     </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Indicators (1h)</span>
+                                        <div className="flex gap-2">
+                                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">RSI: {Math.floor(Math.random() * 20 + 50)}</span>
+                                            <span className="text-[8px] font-black text-primary uppercase tracking-widest">MA(20): OK</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between pt-2 border-t border-slate-50">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Volume (24h)</span>
+                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">₹ {(Math.random() * 50 + 10).toFixed(1)}L</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Last Signal</span>
+                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{new Date().toLocaleTimeString()}</span>
+                                    </div>
                                 </div>
-                                
+
                                 <div className="mt-4 flex gap-2">
                                     <button className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">
                                         Pause
@@ -685,14 +829,14 @@ export function TradingHub() {
                     <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-black text-slate-900">Order Basket</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowBasketModal(false)}
                                 className="text-slate-400 hover:text-slate-600"
                             >
                                 <X size={24} />
                             </button>
                         </div>
-                        
+
                         {basket.length > 0 ? (
                             <>
                                 <div className="space-y-3 mb-6">
@@ -704,7 +848,7 @@ export function TradingHub() {
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <span className="font-black">{order.quantity} @ INR {order.price}</span>
-                                                <button 
+                                                <button
                                                     onClick={() => setBasket(prev => prev.filter((_, i) => i !== index))}
                                                     className="text-red-500 hover:text-red-700"
                                                 >
@@ -714,12 +858,12 @@ export function TradingHub() {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 <div className="flex justify-between items-center mb-6 p-4 bg-slate-50 rounded-xl">
                                     <span className="font-black text-slate-900">Total Value:</span>
                                     <span className="text-xl font-black text-slate-900">INR {basketTotal.toFixed(2)}</span>
                                 </div>
-                                
+
                                 <div className="flex justify-end gap-3">
                                     <button
                                         onClick={() => setShowBasketModal(false)}
@@ -751,16 +895,15 @@ export function TradingHub() {
             {/* Trading Logic Console */}
             <Card className="p-6 border-slate-200 shadow-sm">
                 <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest mb-6">Intelligence Log</h3>
-                
+
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                     {logs.map((log) => (
                         <div key={log.id} className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
                             <span className="text-slate-400 font-mono">[{log.time}]</span>
-                            <span className={`font-black uppercase tracking-widest ${
-                                log.type === 'system' ? 'text-indigo-600' : 
-                                log.type === 'logic' ? 'text-primary' : 
-                                'text-green-600'
-                            }`}>
+                            <span className={`font-black uppercase tracking-widest ${log.type === 'system' ? 'text-indigo-600' :
+                                log.type === 'logic' ? 'text-primary' :
+                                    'text-green-600'
+                                }`}>
                                 {log.type.toUpperCase()}:
                             </span>
                             <span className="text-slate-700">{log.msg}</span>

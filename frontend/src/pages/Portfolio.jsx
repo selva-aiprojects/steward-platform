@@ -43,7 +43,8 @@ import {
   fetchMarketMovers,
   fetchHoldings,
   fetchWatchlist,
-  executeTrade
+  executeTrade,
+  withdrawFunds
 } from "../services/api";
 import { useUser } from '../context/UserContext';
 import { useAppData } from '../context/AppDataContext';
@@ -60,6 +61,7 @@ export function Portfolio() {
     watchlist: appWatchlist,
     projections,
     stewardPrediction: appStewardPrediction,
+    marketMovers,
     loading,
     refreshAllData
   } = useAppData();
@@ -78,6 +80,7 @@ export function Portfolio() {
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupAmount, setTopupAmount] = useState(0);
   const [basket, setBasket] = useState([]);
+  const [timeRange, setTimeRange] = useState('1M');
   const [executing, setExecuting] = useState(false);
   const [basketTotal, setBasketTotal] = useState(0);
   const [showBasketModal, setShowBasketModal] = useState(false);
@@ -222,108 +225,6 @@ export function Portfolio() {
     }
   };
 
-  // Handle manual trade
-  const handleManualTrade = async (side) => {
-    if (!orderTicker || orderQty <= 0) {
-      setTradeStatus({ type: 'error', message: 'Please select a ticker and quantity' });
-      return;
-    }
-
-    setExecuting(true);
-    try {
-      const tradeData = {
-        symbol: orderTicker,
-        side: side,
-        quantity: orderQty,
-        price: orderPrice || null,
-        order_type: 'MARKET',
-        user_id: user.id
-      };
-
-      const result = await executeTrade(user.id, tradeData);
-
-      if (result.success) {
-        setTradeStatus({ 
-          type: 'success', 
-          message: `${side} order placed successfully for ${orderQty} shares of ${orderTicker}` 
-        });
-        
-        // Refresh data
-        await refreshAllData();
-        
-        // Clear form
-        setOrderQty(1);
-        setOrderPrice(0);
-      } else {
-        setTradeStatus({ 
-          type: 'error', 
-          message: result.error || 'Trade execution failed' 
-        });
-      }
-    } catch (error) {
-      setTradeStatus({ 
-        type: 'error', 
-        message: error.message || 'An error occurred during trade execution' 
-      });
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  // Add to basket
-  const addToBasket = () => {
-    if (!orderTicker || orderQty <= 0) {
-      setTradeStatus({ type: 'error', message: 'Invalid order details' });
-      return;
-    }
-
-    const newOrder = {
-      id: Date.now(),
-      symbol: orderTicker,
-      side: orderSide,
-      quantity: orderQty,
-      price: orderPrice,
-      type: 'MARKET'
-    };
-
-    setBasket(prev => [...prev, newOrder]);
-    setTradeStatus({ type: 'success', message: `Added ${orderQty} ${orderTicker} to basket` });
-  };
-
-  // Execute basket
-  const executeBasket = async () => {
-    if (basket.length === 0) return;
-
-    setExecuting(true);
-    try {
-      for (const order of basket) {
-        await executeTrade(user.id, {
-          symbol: order.symbol,
-          side: order.side,
-          quantity: order.quantity,
-          price: order.price,
-          order_type: order.type,
-        });
-      }
-      
-      setTradeStatus({ 
-        type: 'success', 
-        message: `Executed ${basket.length} orders from basket` 
-      });
-      
-      setBasket([]);
-      setShowBasketModal(false);
-      await refreshAllData();
-    } catch (error) {
-      setTradeStatus({ 
-        type: 'error', 
-        message: 'Basket execution failed: ' + error.message 
-      });
-    } finally {
-      setExecuting(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
@@ -334,11 +235,11 @@ export function Portfolio() {
   }
 
   // Calculate allocation data for pie chart
-  const allocationData = activeHoldingsState.length > 0 
+  const allocationData = activeHoldingsState.length > 0
     ? activeHoldingsState.map(h => ({
-        name: h.symbol,
-        value: (h.quantity || 0) * (h.current_price || h.currentPrice || h.price || 0)
-      }))
+      name: h.symbol,
+      value: (h.quantity || 0) * (h.current_price || h.currentPrice || h.price || 0)
+    }))
     : [{ name: 'Cash', value: summary?.cash_balance || 10000 }];
 
   return (
@@ -347,7 +248,7 @@ export function Portfolio() {
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 font-heading">Wealth Vault</h1>
           <p className="text-slate-500 mt-1 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+            <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-50 animate-pulse' : 'bg-orange-500'}`} />
             Agent Status: {user?.trading_mode === 'AUTO' ? 'Autonomous Optimization ACTIVE' : 'Manual Control ENABLED'}
           </p>
         </div>
@@ -385,7 +286,7 @@ export function Portfolio() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md border border-slate-100 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black text-slate-900">Deposit Funds</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowDepositModal(false);
                   setFundStatus(null);
@@ -410,11 +311,10 @@ export function Portfolio() {
               </div>
 
               {fundStatus && (
-                <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${
-                  fundStatus.type === 'success'
-                    ? 'bg-green-50 border-green-100 text-green-600'
-                    : 'bg-red-50 border-red-100 text-red-600'
-                }`}>
+                <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${fundStatus.type === 'success'
+                  ? 'bg-green-50 border-green-100 text-green-600'
+                  : 'bg-red-50 border-red-100 text-red-600'
+                  }`}>
                   {fundStatus.message}
                 </div>
               )}
@@ -450,7 +350,7 @@ export function Portfolio() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md border border-slate-100 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black text-slate-900">Withdraw Funds</h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowWithdrawModal(false);
                   setFundStatus(null);
@@ -475,11 +375,10 @@ export function Portfolio() {
               </div>
 
               {fundStatus && (
-                <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${
-                  fundStatus.type === 'success'
-                    ? 'bg-green-50 border-green-100 text-green-600'
-                    : 'bg-red-50 border-red-100 text-red-600'
-                }`}>
+                <div className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest ${fundStatus.type === 'success'
+                  ? 'bg-green-50 border-green-100 text-green-600'
+                  : 'bg-red-50 border-red-100 text-red-600'
+                  }`}>
                   {fundStatus.message}
                 </div>
               )}
@@ -503,11 +402,18 @@ export function Portfolio() {
                     }
 
                     const userId = selectedUser?.id || user?.id;
+
+                    // Validation: Check if withdrawal amount exceeds cash balance
+                    if (withdrawAmount > (summary?.cash_balance || 0)) {
+                      setFundStatus({ type: 'error', message: 'Insufficient cash balance' });
+                      return;
+                    }
+
                     setWithdrawing(true);
-                    
+
                     try {
                       const result = await withdrawFunds(userId, withdrawAmount);
-                      
+
                       if (result) {
                         setFundStatus({ type: 'success', message: `Successfully withdrew INR ${withdrawAmount}` });
                         setTimeout(() => {
@@ -612,50 +518,55 @@ export function Portfolio() {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-black text-slate-900">Portfolio Value Over Time</h3>
           <div className="flex gap-2">
-            <button className="px-3 py-1.5 text-xs font-black bg-primary text-white rounded-lg">1M</button>
-            <button className="px-3 py-1.5 text-xs font-black bg-slate-100 text-slate-600 rounded-lg">3M</button>
-            <button className="px-3 py-1.5 text-xs font-black bg-slate-100 text-slate-600 rounded-lg">6M</button>
-            <button className="px-3 py-1.5 text-xs font-black bg-slate-100 text-slate-600 rounded-lg">1Y</button>
+            {['1M', '3M', '6M', '1Y'].map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${timeRange === range ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                {range}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={history}>
+            <AreaChart data={history.slice(-(timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === '6M' ? 180 : 365))}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#64748b' }} 
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#64748b' }}
               />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#64748b' }} 
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#64748b' }}
                 tickFormatter={(value) => `₹${value.toLocaleString()}`}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`₹${value.toLocaleString()}`, 'Value']}
-                contentStyle={{ 
-                  borderRadius: '12px', 
-                  border: 'none', 
-                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' 
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: 'none',
+                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                 }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#3b82f6" 
-                strokeWidth={3} 
-                fillOpacity={1} 
-                fill="url(#colorValue)" 
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#colorValue)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -666,7 +577,7 @@ export function Portfolio() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="p-6 border-slate-100 shadow-sm bg-white">
           <h3 className="text-lg font-black text-slate-900 mb-6">Current Holdings</h3>
-          
+
           <div className="space-y-4">
             {activeHoldingsState.length > 0 ? (
               activeHoldingsState.map((holding, index) => {
@@ -686,7 +597,7 @@ export function Portfolio() {
                         <p className="text-sm text-slate-500">{holding.quantity || 0} shares</p>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="font-black text-slate-900">INR {(holding.current_price || holding.currentPrice || holding.price || 0).toFixed(2)}</p>
                       <p className={`text-sm font-black ${pnlPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
@@ -711,7 +622,7 @@ export function Portfolio() {
 
         <Card className="p-6 border-slate-100 shadow-sm bg-white">
           <h3 className="text-lg font-black text-slate-900 mb-6">Asset Allocation</h3>
-          
+
           <div className="h-80 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -736,6 +647,66 @@ export function Portfolio() {
           </div>
         </Card>
       </div>
+
+      {/* New Strategy Launch Section */}
+      <Card className="p-8 border-slate-200 shadow-xl bg-slate-900 text-white overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -mr-32 -mt-32" />
+        <div className="relative z-10">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-2xl font-black uppercase tracking-tight">Available Mandates</h3>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Select an autonomous strategy to deploy</p>
+            </div>
+            <Zap size={32} className="text-primary animate-pulse" fill="currentColor" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { id: 'equity-long', name: 'Alpha Quant Long', type: 'EQUITY', risk: 'LOW', return: '18% p.a.', desc: 'High-conviction equity accumulation based on volume anomalies.' },
+              { id: 'options-income', name: 'Delta Neutral Seller', type: 'OPTIONS', risk: 'MEDIUM', return: '24% p.a.', desc: 'Weekly option selling strategy targeting theta decay.' },
+              { id: 'momentum-pro', name: 'Momentum Scalper', type: 'MULTI-ASSET', risk: 'HIGH', return: '35% p.a.', desc: 'Aggressive trend-following across indices and large caps.' },
+            ].map((strat) => (
+              <div key={strat.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl hover:bg-white/10 transition-all group">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${strat.risk === 'LOW' ? 'bg-green-500/20 text-green-400' : strat.risk === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {strat.risk} RISK
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{strat.type}</span>
+                </div>
+                <h4 className="text-lg font-black mb-1">{strat.name}</h4>
+                <p className="text-xs text-slate-400 line-clamp-2 h-8 mb-4">{strat.desc}</p>
+                <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl mb-4">
+                  <div>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Est. Return</p>
+                    <p className="text-sm font-black text-green-400">{strat.return}</p>
+                  </div>
+                  <Shield size={16} className="text-primary/60" />
+                </div>
+                <button
+                  onClick={() => handleLaunchStrategy()}
+                  disabled={executing}
+                  className="w-full py-3 bg-primary text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:opacity-95 transition-all active:scale-95 flex items-center justify-center gap-2 group-hover:bg-primary-dark"
+                >
+                  {executing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} fill="currentColor" />}
+                  Deploy Mandate
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Transaction Records Loader Overlay */}
+      {executing && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center">
+            <Loader2 size={48} className="text-primary animate-spin mb-4" />
+            <p className="font-black text-slate-900 uppercase tracking-[0.2em] text-xs">Synchronizing with Node...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default Portfolio;

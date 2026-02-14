@@ -66,16 +66,23 @@ class PortfolioCreate(PortfolioBase):
 class PortfolioResponse(PortfolioBase):
     id: int
     user_id: int
+    total_value: Optional[float] = None
+    today_pnl: Optional[float] = None
+    positions_count: Optional[int] = None
+    total_trades: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 
 class PortfolioHistoryPoint(BaseModel):
-    timestamp: datetime
-    total_value: float
-    cash: float
-    unrealized_pnl: float
+    name: Optional[str] = None
+    value: Optional[float] = None
+    daily_pnl: Optional[float] = None
+    timestamp: Optional[datetime] = None
+    total_value: Optional[float] = None
+    cash: Optional[float] = None
+    unrealized_pnl: Optional[float] = None
 
 
 class HoldingResponse(BaseModel):
@@ -92,8 +99,10 @@ class HoldingResponse(BaseModel):
 
 
 class DepositRequest(BaseModel):
+    user_id: int
     amount: float = Field(..., gt=0, description="Amount to deposit")
 
 
 class WithdrawRequest(BaseModel):
+    user_id: int
     amount: float = Field(..., gt=0, description="Amount to withdraw")

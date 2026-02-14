@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1,
+        "email": "alex@stocksteward.ai",
+        "role": "TRADER",
+        "full_name": "Alexander Pierce",
+        "is_active": true
+    },
+    {
+        "id": 999,
+        "email": "admin@stocksteward.ai",
+        "role": "SUPERADMIN",
+        "full_name": "Super Admin",
+        "is_active": true
+    },
+    {
+        "id": 777,
+        "email": "owner@stocksteward.ai",
+        "role": "BUSINESS_OWNER",
+        "full_name": "Business Owner",
+        "is_active": true
+    },
+    {
+        "id": 2,
+        "email": "trader@stocksteward.ai",
+        "role": "TRADER",
+        "full_name": "Trader User",
+        "is_active": true
+    }
+]

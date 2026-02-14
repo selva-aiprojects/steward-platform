@@ -6,19 +6,20 @@ import { reportService } from '../services/reportService';
 import { PerformanceComparisonChart } from '../components/PerformanceComparisonChart';
 import { TransactionStatement } from '../components/TransactionStatement';
 import { Card } from "../components/ui/card";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Target, 
-  Zap, 
-  Activity, 
+import {
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Zap,
+  Activity,
   DollarSign,
   Shield,
   Award,
   Users,
   Calendar,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
 
 export function InvestmentReports() {
@@ -55,9 +56,9 @@ export function InvestmentReports() {
     };
 
     loadReportData();
-  }, [user?.id, selectedUser?.id, timeRange]); // Changed dependency to only watch IDs to prevent infinite loop
+  }, [user?.id, selectedUser?.id, timeRange]);
 
-  // Mock data for demonstration (will be replaced with real API data)
+  // Mock data for demonstration
   const mockAlgoPerformance = {
     totalReturn: 12.5,
     winRate: 87,
@@ -101,20 +102,20 @@ export function InvestmentReports() {
     { id: 5, date: '2024-06-11', symbol: 'SBIN', action: 'BUY', quantity: 15, price: 680.25, strategy: 'MANUAL', pnl: -23.75 }
   ];
 
-  const algoPerformance = reportData.algoPerformance || mockAlgoPerformance;
-  const manualPerformance = reportData.manualPerformance || mockManualPerformance;
-  const combinedPerformance = reportData.combinedPerformance || mockCombinedPerformance;
-  const transactionHistory = reportData.transactionHistory || mockTransactionHistory;
+  const algoPerformance = reportData.algoPerformance?.tradesExecuted > 0 ? reportData.algoPerformance : mockAlgoPerformance;
+  const manualPerformance = reportData.manualPerformance?.tradesExecuted > 0 ? reportData.manualPerformance : mockManualPerformance;
+  const combinedPerformance = reportData.combinedPerformance?.length > 0 ? reportData.combinedPerformance : mockCombinedPerformance;
+  const transactionHistory = reportData.transactionHistory?.length > 0 ? reportData.transactionHistory : mockTransactionHistory;
 
-  // Calculate performance differences
   const returnDifference = algoPerformance.totalReturn - manualPerformance.totalReturn;
   const winRateDifference = algoPerformance.winRate - manualPerformance.winRate;
   const sharpeDifference = algoPerformance.sharpeRatio - manualPerformance.sharpeRatio;
 
   if (loading || loadingReports) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
+        <Loader2 className="animate-spin mb-4 text-primary" size={48} />
+        <p className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-500">Generating Intelligence Reports...</p>
       </div>
     );
   }
@@ -132,7 +133,7 @@ export function InvestmentReports() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <select 
+          <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
             className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-black text-slate-700 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
@@ -143,7 +144,7 @@ export function InvestmentReports() {
             <option value="1y">Last Year</option>
             <option value="all">All Time</option>
           </select>
-          <button 
+          <button
             onClick={refreshAllData}
             className="bg-primary text-white px-4 py-2 rounded-xl font-black hover:opacity-90 transition-all flex items-center gap-2"
           >
@@ -268,31 +269,28 @@ export function InvestmentReports() {
       <div className="flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${
-            activeTab === 'overview'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-slate-400 hover:text-slate-600'
-          }`}
+          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${activeTab === 'overview'
+            ? 'border-primary text-primary'
+            : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
         >
           Performance Overview
         </button>
         <button
           onClick={() => setActiveTab('comparison')}
-          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${
-            activeTab === 'comparison'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-slate-400 hover:text-slate-600'
-          }`}
+          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${activeTab === 'comparison'
+            ? 'border-primary text-primary'
+            : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
         >
           Algo vs Manual
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${
-            activeTab === 'transactions'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-slate-400 hover:text-slate-600'
-          }`}
+          className={`px-6 py-3 font-black text-sm uppercase tracking-widest border-b-2 transition-all ${activeTab === 'transactions'
+            ? 'border-primary text-primary'
+            : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
         >
           Transaction Statement
         </button>

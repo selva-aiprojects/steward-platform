@@ -1,339 +1,242 @@
 import React, { useState } from 'react';
 import { Card } from '../components/ui/card';
-import { Zap, TrendingUp, TrendingDown, DollarSign, Shield, Target, BarChart3, Clock } from 'lucide-react';
+import {
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Shield,
+  Target,
+  BarChart3,
+  Clock,
+  Sparkles,
+  Activity,
+  Layers
+} from 'lucide-react';
 
 const AlgoStrategySelector = ({ onSelectStrategy, selectedStrategy }) => {
   const [activeTab, setActiveTab] = useState('all');
 
-  // Predefined algorithmic strategies
+  // Predefined algorithmic strategies with enhanced realistic metadata
   const strategies = [
     {
       id: 'momentum',
-      name: 'Momentum Trader',
+      name: 'Alpha Momentum',
       type: 'momentum',
       category: 'equities',
-      description: 'Capitalizes on the continuance of existing trends in the market',
+      description: 'Quant-driven trend following identifying relative strength anomalies in Nifty 50 constituents.',
       icon: <TrendingUp className="w-5 h-5" />,
       riskLevel: 'Medium',
-      avgReturns: '+12.4%',
-      avgWinRate: '68%',
+      avgReturns: '22.4% p.a.',
+      avgWinRate: '64%',
       avgHoldingTime: '2-5 days',
-      minCapital: '₹50,000',
-      features: ['Trend following', 'Volume analysis', 'Breakout detection'],
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20'
+      minCapital: '₹1.0L',
+      features: ['VWAP Alignment', 'ADX Strength', 'Order Flow Filter'],
+      color: 'from-blue-600 to-indigo-600',
+      bgColor: 'bg-blue-600/10',
+      borderColor: 'border-blue-600/20'
     },
     {
       id: 'mean-reversion',
-      name: 'Mean Reversion',
+      name: 'Statistical Arbitrage',
       type: 'mean_reversion',
       category: 'equities',
-      description: 'Exploits the tendency of prices to revert to their historical mean',
-      icon: <TrendingDown className="w-5 h-5" />,
+      description: 'Exploits price divergence from historical Z-score means using pair correlation models.',
+      icon: <Layers className="w-5 h-5" />,
       riskLevel: 'Low',
-      avgReturns: '+8.7%',
+      avgReturns: '14.7% p.a.',
       avgWinRate: '72%',
       avgHoldingTime: '1-3 days',
-      minCapital: '₹25,000',
-      features: ['Statistical arbitrage', 'Bollinger bands', 'RSI signals'],
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/20'
+      minCapital: '₹2.5L',
+      features: ['Cointegration', 'Mean Convergence', 'Market Neutral'],
+      color: 'from-emerald-600 to-teal-600',
+      bgColor: 'bg-emerald-600/10',
+      borderColor: 'border-emerald-600/20'
     },
     {
       id: 'breakout',
-      name: 'Breakout Hunter',
+      name: 'Volatility Hunter',
       type: 'breakout',
       category: 'equities',
-      description: 'Identifies stocks breaking out of key resistance/support levels',
+      description: 'Aggressive capture of multi-session consolidation breakouts with high volume confirmation.',
       icon: <Zap className="w-5 h-5" />,
       riskLevel: 'High',
-      avgReturns: '+18.2%',
-      avgWinRate: '58%',
-      avgHoldingTime: '1-2 days',
-      minCapital: '₹75,000',
-      features: ['Price pattern recognition', 'Volume confirmation', 'Stop loss'],
-      color: 'from-purple-500 to-violet-500',
-      bgColor: 'bg-purple-500/10',
-      borderColor: 'border-purple-500/20'
+      avgReturns: '32.2% p.a.',
+      avgWinRate: '52%',
+      avgHoldingTime: '1 day',
+      minCapital: '₹75k',
+      features: ['Range Expansion', 'Pocket Pivot', 'Tight Stop-Loss'],
+      color: 'from-orange-600 to-red-600',
+      bgColor: 'bg-orange-600/10',
+      borderColor: 'border-orange-600/20'
     },
     {
-      id: 'swing-trade',
-      name: 'Swing Trader',
-      type: 'swing_trade',
-      category: 'equities',
-      description: 'Captures short to medium-term gains over several days to weeks',
-      icon: <BarChart3 className="w-5 h-5" />,
-      riskLevel: 'Medium',
-      avgReturns: '+10.3%',
-      avgWinRate: '65%',
-      avgHoldingTime: '3-10 days',
-      minCapital: '₹40,000',
-      features: ['Technical indicators', 'Support/resistance', 'Risk management'],
-      color: 'from-orange-500 to-amber-500',
-      bgColor: 'bg-orange-500/10',
-      borderColor: 'border-orange-500/20'
-    },
-    {
-      id: 'options-straddle',
-      name: 'Options Straddle',
-      type: 'options_straddle',
+      id: 'options-income',
+      name: 'Theta Harvester',
+      type: 'options',
       category: 'options',
-      description: 'Neutral strategy profiting from high volatility regardless of direction',
-      icon: <Target className="w-5 h-5" />,
+      description: 'Delta-neutral option selling with dynamic gamma hedging for consistent decay capture.',
+      icon: <Clock className="w-5 h-5" />,
       riskLevel: 'Medium-High',
-      avgReturns: '+15.6%',
-      avgWinRate: '62%',
-      avgHoldingTime: '1-5 days',
-      minCapital: '₹1,00,000',
-      features: ['Volatility analysis', 'Delta neutral', 'Theta decay'],
-      color: 'from-pink-500 to-rose-500',
-      bgColor: 'bg-pink-500/10',
-      borderColor: 'border-pink-500/20'
-    },
-    {
-      id: 'pairs-trading',
-      name: 'Pairs Trading',
-      type: 'pairs_trading',
-      category: 'equities',
-      description: 'Exploits correlation between two related securities',
-      icon: <DollarSign className="w-5 h-5" />,
-      riskLevel: 'Low-Medium',
-      avgReturns: '+9.1%',
-      avgWinRate: '70%',
-      avgHoldingTime: '1-2 weeks',
-      minCapital: '₹60,000',
-      features: ['Correlation analysis', 'Cointegration', 'Market neutral'],
-      color: 'from-teal-500 to-cyan-500',
-      bgColor: 'bg-teal-500/10',
-      borderColor: 'border-teal-500/20'
+      avgReturns: '28.6% p.a.',
+      avgWinRate: '78%',
+      avgHoldingTime: 'Weekly',
+      minCapital: '₹5.0L',
+      features: ['Straddle Optimization', 'VIX Sensitivity', 'Dynamic Rolling'],
+      color: 'from-purple-600 to-indigo-600',
+      bgColor: 'bg-purple-600/10',
+      borderColor: 'border-purple-600/20'
     },
     {
       id: 'carry-trade',
-      name: 'Carry Trade',
-      type: 'carry_trade',
+      name: 'Currency Carry',
+      type: 'carry',
       category: 'currencies',
-      description: 'Profits from interest rate differentials between currencies',
-      icon: <Clock className="w-5 h-5" />,
+      description: 'Interest rate differential capture across USD/INR and major pairs with macro hedging.',
+      icon: <Globe className="w-5 h-5" />,
       riskLevel: 'Medium',
-      avgReturns: '+7.8%',
-      avgWinRate: '75%',
-      avgHoldingTime: '2-4 weeks',
-      minCapital: '₹30,000',
-      features: ['Interest rate analysis', 'Forward points', 'Risk hedging'],
-      color: 'from-indigo-500 to-blue-500',
-      bgColor: 'bg-indigo-500/10',
-      borderColor: 'border-indigo-500/20'
+      avgReturns: '9.8% p.a.',
+      avgWinRate: '82%',
+      avgHoldingTime: 'Monthly',
+      minCapital: '₹50k',
+      features: ['Swap Rate Arb', 'Macro Alignment', 'Low Volatile Yield'],
+      color: 'from-sky-600 to-cyan-600',
+      bgColor: 'bg-sky-600/10',
+      borderColor: 'border-sky-600/20'
     },
     {
-      id: 'volatility',
-      name: 'Volatility Capture',
-      type: 'volatility',
-      category: 'options',
-      description: 'Capitalizes on periods of high market volatility',
-      icon: <Shield className="w-5 h-5" />,
+      id: 'indices-scalp',
+      name: 'Flash Index Scalper',
+      type: 'scalping',
+      category: 'indices',
+      description: 'Ultra high-frequency execution targeting tick-level momentum on BankNifty / Nifty.',
+      icon: <Activity className="w-5 h-5" />,
       riskLevel: 'High',
-      avgReturns: '+22.1%',
-      avgWinRate: '55%',
-      avgHoldingTime: '1-3 days',
-      minCapital: '₹1,50,000',
-      features: ['VIX analysis', 'Implied volatility', 'Gamma scalping'],
-      color: 'from-red-500 to-orange-500',
-      bgColor: 'bg-red-500/10',
-      borderColor: 'border-red-500/20'
+      avgReturns: '45.1% p.a.',
+      avgWinRate: '58%',
+      avgHoldingTime: 'Minutes',
+      minCapital: '₹1.5L',
+      features: ['L2 Order Flow', 'Flash Execution', 'Hedge Guard'],
+      color: 'from-rose-600 to-pink-600',
+      bgColor: 'bg-rose-600/10',
+      borderColor: 'border-rose-600/20'
     }
   ];
 
-  const filteredStrategies = activeTab === 'all' 
-    ? strategies 
+  const filteredStrategies = activeTab === 'all'
+    ? strategies
     : strategies.filter(strategy => strategy.category === activeTab);
 
-  const handleSelect = (strategy) => {
-    onSelectStrategy(strategy);
-  };
-
-  const getRiskColor = (riskLevel) => {
-    switch(riskLevel.toLowerCase()) {
-      case 'low': return 'text-green-600 bg-green-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'low-medium': return 'text-amber-600 bg-amber-100';
-      case 'medium-high': return 'text-orange-600 bg-orange-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Category Tabs */}
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-8">
+      {/* Premium Glass Tabs */}
+      <div className="flex items-center p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit">
         {[
-          { id: 'all', label: 'All Strategies' },
+          { id: 'all', label: 'All Models' },
           { id: 'equities', label: 'Equities' },
           { id: 'options', label: 'Options' },
-          { id: 'currencies', label: 'Currencies' }
+          { id: 'indices', label: 'Indices' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeTab === tab.id
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
+                ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
+                : 'text-slate-500 hover:text-slate-300'
+              }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Strategy Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStrategies.map((strategy) => (
-          <Card
+          <div
             key={strategy.id}
-            className={`p-5 cursor-pointer transition-all duration-300 border-2 ${
-              selectedStrategy?.id === strategy.id
-                ? 'ring-2 ring-primary ring-offset-2 border-primary'
-                : strategy.borderColor
-            } hover:shadow-lg hover:border-primary/40 ${
-              selectedStrategy?.id === strategy.id ? strategy.bgColor : 'hover:bg-slate-50'
-            }`}
-            onClick={() => handleSelect(strategy)}
+            onClick={() => onSelectStrategy(strategy)}
+            className={`group relative overflow-hidden p-6 rounded-3xl border transition-all duration-500 cursor-pointer ${selectedStrategy?.id === strategy.id
+                ? `${strategy.borderColor} bg-white/5 ring-1 ring-primary/30 shadow-[0_0_30px_rgba(59,130,246,0.1)]`
+                : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900'
+              }`}
           >
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2 rounded-lg bg-gradient-to-r ${strategy.color} text-white`}>
+            {/* Hover Shine Effect */}
+            <div className="absolute top-0 -left-[100%] group-hover:left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-[-25deg] transition-all duration-1000" />
+
+            <div className="flex justify-between items-start mb-6">
+              <div className={`p-3 rounded-2xl bg-gradient-to-br ${strategy.color} text-white shadow-lg`}>
                 {strategy.icon}
               </div>
-              <div className={`px-2 py-1 rounded-full text-xs font-bold ${getRiskColor(strategy.riskLevel)}`}>
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter ${strategy.riskLevel.includes('High') ? 'bg-red-500/10 text-red-500' :
+                  strategy.riskLevel.includes('Low') ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'
+                }`}>
+                <Shield size={10} />
                 {strategy.riskLevel}
               </div>
             </div>
 
-            <h3 className="font-black text-slate-900 text-lg mb-2">{strategy.name}</h3>
-            <p className="text-slate-600 text-sm mb-4 line-clamp-2">{strategy.description}</p>
+            <h3 className="text-xl font-black text-white mb-2 leading-tight">
+              {strategy.name}
+            </h3>
+            <p className="text-slate-400 text-xs leading-relaxed mb-6 line-clamp-2">
+              {strategy.description}
+            </p>
 
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Avg Returns:</span>
-                <span className="font-black text-green-600">{strategy.avgReturns}</span>
+            <div className="grid grid-cols-2 gap-y-4 gap-x-6 mb-6">
+              <div>
+                <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Target Yield</div>
+                <div className="text-sm font-black text-white">{strategy.avgReturns}</div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Win Rate:</span>
-                <span className="font-black">{strategy.avgWinRate}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Holding Time:</span>
-                <span className="font-black">{strategy.avgHoldingTime}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Min Capital:</span>
-                <span className="font-black">{strategy.minCapital}</span>
+              <div>
+                <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Success Rate</div>
+                <div className="text-sm font-black text-slate-200">{strategy.avgWinRate}</div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-1 mb-4">
-              {strategy.features.slice(0, 2).map((feature, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md font-medium"
-                >
-                  {feature}
+            <div className="flex flex-wrap gap-1.5 mb-8">
+              {strategy.features.map((f, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                  {f}
                 </span>
               ))}
-              {strategy.features.length > 2 && (
-                <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md font-medium">
-                  +{strategy.features.length - 2} more
-                </span>
-              )}
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">
-                {strategy.category}
-              </span>
-              <div className={`w-4 h-4 rounded-full ${
-                selectedStrategy?.id === strategy.id ? 'bg-primary' : 'bg-slate-300'
-              }`} />
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800/50">
+              <div>
+                <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Min Capital</div>
+                <div className="text-xs font-black text-white">{strategy.minCapital}</div>
+              </div>
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedStrategy?.id === strategy.id
+                    ? 'bg-primary text-white'
+                    : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
+                  }`}
+              >
+                {selectedStrategy?.id === strategy.id ? 'Optimizing...' : 'Deploy'}
+                <ChevronRight size={12} />
+              </button>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
-
-      {/* Selected Strategy Details */}
-      {selectedStrategy && (
-        <Card className="p-6 border-primary/30 bg-gradient-to-r from-primary/5 to-slate-50">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-black text-slate-900 mb-2">
-                Selected: {selectedStrategy.name}
-              </h3>
-              <p className="text-slate-600">{selectedStrategy.description}</p>
-            </div>
-            <button
-              onClick={() => onSelectStrategy(null)}
-              className="text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center p-3 bg-white rounded-lg border">
-              <div className="text-2xl font-black text-slate-900">{selectedStrategy.avgReturns}</div>
-              <div className="text-xs text-slate-500 uppercase tracking-widest">Avg Returns</div>
-            </div>
-            <div className="text-center p-3 bg-white rounded-lg border">
-              <div className="text-2xl font-black text-slate-900">{selectedStrategy.avgWinRate}</div>
-              <div className="text-xs text-slate-500 uppercase tracking-widest">Win Rate</div>
-            </div>
-            <div className="text-center p-3 bg-white rounded-lg border">
-              <div className="text-2xl font-black text-slate-900">{selectedStrategy.avgHoldingTime}</div>
-              <div className="text-xs text-slate-500 uppercase tracking-widest">Holding Time</div>
-            </div>
-            <div className="text-center p-3 bg-white rounded-lg border">
-              <div className="text-2xl font-black text-slate-900">{selectedStrategy.minCapital}</div>
-              <div className="text-xs text-slate-500 uppercase tracking-widest">Min Capital</div>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <h4 className="font-black text-slate-900 mb-2">Strategy Features:</h4>
-            <div className="flex flex-wrap gap-2">
-              {selectedStrategy.features.map((feature, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${
-                selectedStrategy.riskLevel.toLowerCase().includes('low') ? 'bg-green-500' :
-                selectedStrategy.riskLevel.toLowerCase().includes('medium') ? 'bg-yellow-500' :
-                'bg-red-500'
-              }`} />
-              <span className="text-sm font-medium">Risk Level: {selectedStrategy.riskLevel}</span>
-            </div>
-            <button
-              onClick={() => onSelectStrategy(selectedStrategy)}
-              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition-opacity"
-            >
-              Deploy Strategy
-            </button>
-          </div>
-        </Card>
-      )}
     </div>
   );
 };
+
+// Internal icon for consistency
+const ChevronRight = ({ size, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+);
+
+const Globe = ({ size, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+  </svg>
+);
 
 export default AlgoStrategySelector;

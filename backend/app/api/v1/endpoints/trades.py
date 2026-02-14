@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.api.v1 import deps
 from app import schemas
 import random
@@ -160,3 +160,53 @@ def seed_paper_orders_for_traders(
 
     db.commit()
     return {"status": "ok", "users_processed": users_done, "orders_created": created}
+@router.get("/daily-pnl", response_model=List[Dict[str, Any]])
+def get_daily_pnl(
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = None,
+) -> Any:
+    """
+    Get daily PnL summary for a user.
+    """
+    # Simply grouping trades by day and calculating PnL
+    query = db.query(models.trade.Trade)
+    if user_id:
+        query = query.join(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == user_id)
+    
+    trades = query.all()
+    
+    from collections import defaultdict
+    daily_stats = defaultdict(lambda: {"user": 0.0, "agent": 0.0})
+    
+    for t in trades:
+        date_str = t.timestamp.strftime("%a") # e.g. "Mon"
+        pnl_str = (t.pnl or "0%").replace("%", "")
+        try:
+            pnl_val = float(pnl_str)
+        except:
+            pnl_val = 0.0
+            
+        if t.execution_mode == "MANUAL":
+            daily_stats[date_str]["user"] += pnl_val
+        else:
+            daily_stats[date_str]["agent"] += pnl_val
+            
+    # Convert to expected format
+    result = []
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    for day in days:
+        if day in daily_stats:
+            result.append({
+                "name": day,
+                "user": round(daily_stats[day]["user"], 2),
+                "agent": round(daily_stats[day]["agent"], 2)
+            })
+        else:
+            # Fallback for empty days to keep graph consistent
+            result.append({
+                "name": day,
+                "user": 0,
+                "agent": 0
+            })
+            
+    return result

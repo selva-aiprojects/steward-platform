@@ -194,7 +194,7 @@ Add to `frontend/.env`:
 
 ```env
 # API Configuration
-REACT_APP_API_URL=http://localhost:8100
+REACT_APP_API_URL=http://localhost:8000
 
 # Security
 REACT_APP_JWT_SECRET=your-jwt-secret
@@ -299,7 +299,7 @@ KITE_API_SECRET=your_actual_api_secret
 ```bash
 cd backend
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-python -u -m uvicorn app.main:socket_app --host 0.0.0.0 --port 8100 --log-level info
+python startup.py
 ```
 
 #### Frontend

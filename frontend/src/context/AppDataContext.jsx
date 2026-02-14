@@ -359,10 +359,54 @@ export const AppDataProvider = ({ children }) => {
         }
     };
 
+    // Enrich holdings with live market data
+    const enrichedHoldings = React.useMemo(() => {
+        if (!holdings || holdings.length === 0) return [];
+
+        // Create a map of live prices for O(1) lookup
+        const livePriceMap = {};
+
+        // Helper to populate map
+        const populateParams = (list) => {
+            if (Array.isArray(list)) {
+                list.forEach(item => {
+                    if (item && item.symbol) {
+                        livePriceMap[item.symbol] = item.price || item.last_price;
+                    }
+                });
+            }
+        };
+
+        populateParams(marketMovers.gainers);
+        populateParams(marketMovers.losers);
+        populateParams(marketMovers.currencies);
+        populateParams(marketMovers.metals);
+        populateParams(marketMovers.commodities);
+
+        return holdings.map(h => {
+            const livePrice = livePriceMap[h.symbol];
+            if (livePrice && livePrice > 0) {
+                // Calculate new PnL based on live price
+                const currentVal = livePrice * h.quantity;
+                const investVal = h.avg_price * h.quantity;
+                const pnl = currentVal - investVal;
+                const pnlPct = investVal > 0 ? (pnl / investVal) * 100 : 0;
+
+                return {
+                    ...h,
+                    current_price: livePrice,
+                    pnl: pnl,
+                    pnl_pct: pnlPct
+                };
+            }
+            return h;
+        });
+    }, [holdings, marketMovers]);
+
     return (
         <AppDataContext.Provider value={{
             summary,
-            holdings,
+            holdings: enrichedHoldings, // Use enriched holdings
             watchlist,
             trades,
             projections,

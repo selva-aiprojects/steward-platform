@@ -15,13 +15,44 @@ def get_portfolios(
 ) -> Any:
     """
     Get all portfolios or a specific user's portfolio.
+    Enriches each portfolio with computed total_value and today_pnl.
     """
     query = db.query(models.portfolio.Portfolio)
     if user_id:
         query = query.filter(models.portfolio.Portfolio.user_id == user_id)
     
     portfolios = query.offset(skip).limit(limit).all()
-    return portfolios
+    
+    # Enrich each portfolio with computed fields
+    results = []
+    for p in portfolios:
+        holdings = db.query(models.portfolio.Holding).filter(
+            models.portfolio.Holding.portfolio_id == p.id
+        ).all()
+        
+        holdings_value = sum(
+            (h.quantity or 0) * (h.current_price or 0) for h in holdings
+        )
+        today_pnl = sum(h.pnl or 0 for h in holdings)
+        total_trades = db.query(models.trade.Trade).filter(
+            models.trade.Trade.portfolio_id == p.id
+        ).count()
+        
+        result = schemas.PortfolioResponse(
+            id=p.id,
+            user_id=p.user_id,
+            name=p.name or "Primary Wealth Vault",
+            cash_balance=p.cash_balance or 0,
+            invested_amount=p.invested_amount or 0,
+            win_rate=p.win_rate or 0,
+            total_value=round((p.cash_balance or 0) + holdings_value, 2),
+            today_pnl=round(today_pnl, 2),
+            positions_count=len(holdings),
+            total_trades=total_trades
+        )
+        results.append(result)
+    
+    return results
 
 @router.get("/history", response_model=List[schemas.PortfolioHistoryPoint])
 def get_portfolio_history(
