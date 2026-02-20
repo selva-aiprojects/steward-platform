@@ -221,6 +221,15 @@ async def enhanced_market_analysis(
     Perform enhanced market analysis using multiple LLM providers and data sources
     """
     try:
+        # New orchestration/update controls are superadmin-only.
+        if current_user.role != "SUPERADMIN" and not current_user.is_superuser:
+            if request.orchestration_framework != "native":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only SUPERADMIN can use non-native orchestration frameworks"
+                )
+            request.auto_update_strategy = False
+
         # Fetch market data based on request parameters
         if request.data_source == "historical":
             # Fetch historical data for analysis

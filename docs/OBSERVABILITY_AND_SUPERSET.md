@@ -13,8 +13,8 @@
 - Request correlation:
   - Every HTTP response now includes `x-request-id`.
 
-Metrics endpoint:
-- `GET /metrics`
+Metrics endpoint (superadmin-only):
+- `GET /api/v1/logs/metrics`
 
 ## Start backend
 
@@ -81,4 +81,10 @@ Recommended:
 - Use Grafana + Prometheus for runtime health, SLOs, incident response.
 - Use Superset for business intelligence and historical SQL exploration.
 - If you want traces next, add OpenTelemetry (FastAPI + SQLAlchemy + httpx exporters).
+By default, the scrape config uses `user_id=999` (superadmin) in DEV.
+
+Manual check:
+```bash
+curl "http://localhost:8000/api/v1/logs/metrics?user_id=999"
+```
 

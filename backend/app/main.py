@@ -518,8 +518,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 Instrumentator(
     should_group_status_codes=True,
     should_ignore_untemplated=True,
-    excluded_handlers=["/metrics"],
-).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+).instrument(app)
 
 @app.get("/health")
 async def health_check():
