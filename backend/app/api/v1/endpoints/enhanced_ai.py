@@ -10,6 +10,7 @@ import json
 import logging
 import asyncio
 import httpx
+import time
 
 from app.core.rbac import get_current_user
 from app.core.database import SessionLocal
@@ -29,6 +30,7 @@ from app.schemas.ai_schemas import (
 )
 from app.services.enhanced_llm_service import enhanced_llm_service
 from app.services.data_integration import data_integration_service
+from app.observability.metrics import record_external_call, record_strategy_update
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -58,17 +60,22 @@ async def _fast_live_quote(symbol: str, exchange: str = "NSE") -> Dict:
 
     # 2) Kite with hard timeout
     try:
+        started = time.perf_counter()
         quote = await asyncio.wait_for(
             asyncio.to_thread(kite_service.get_quote, normalized_symbol, exchange),
             timeout=2.5,
         )
         if quote and quote.get("last_price"):
+            record_external_call("kite", "quote", time.perf_counter() - started, True)
             return quote
+        record_external_call("kite", "quote", time.perf_counter() - started, False)
     except Exception:
+        record_external_call("kite", "quote", None, False)
         pass
 
     # 3) Yahoo quote API with hard timeout
     try:
+        started = time.perf_counter()
         async with httpx.AsyncClient(timeout=httpx.Timeout(2.5), headers={"User-Agent": "Mozilla/5.0"}) as client:
             response = await client.get(
                 "https://query1.finance.yahoo.com/v7/finance/quote",
@@ -85,6 +92,7 @@ async def _fast_live_quote(symbol: str, exchange: str = "NSE") -> Dict:
                 if current_f is not None:
                     prev_f = float(prev) if prev is not None else current_f
                     change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
+                    record_external_call("yahoo_quote_api", "quote", time.perf_counter() - started, True)
                     return {
                         "symbol": normalized_symbol,
                         "exchange": exchange,
@@ -92,7 +100,9 @@ async def _fast_live_quote(symbol: str, exchange: str = "NSE") -> Dict:
                         "change": change,
                         "source": "yahoo_quote_api",
                     }
+            record_external_call("yahoo_quote_api", "quote", time.perf_counter() - started, False)
     except Exception:
+        record_external_call("yahoo_quote_api", "quote", None, False)
         pass
 
     return {}
@@ -187,6 +197,7 @@ def _apply_dynamic_strategy_update(user_id: int, symbol: str, params: Dict) -> D
         db.add(optimization_row)
         db.commit()
         db.refresh(optimization_row)
+        record_strategy_update(True)
         return {
             "updated": True,
             "strategy_id": strategy.id,
@@ -195,6 +206,7 @@ def _apply_dynamic_strategy_update(user_id: int, symbol: str, params: Dict) -> D
         }
     except Exception as e:
         db.rollback()
+        record_strategy_update(False)
         logger.error("Failed dynamic strategy update for user_id=%s symbol=%s: %s", user_id, symbol, e)
         return {"updated": False, "reason": "exception", "error": str(e)}
     finally:

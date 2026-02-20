@@ -11,6 +11,8 @@ import os
 import logging
 import httpx
 from datetime import datetime, timezone
+from prometheus_fastapi_instrumentator import Instrumentator
+from app.observability.middleware import RequestContextMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+app.add_middleware(RequestContextMiddleware)
 
 # Global CORS headers (handles preflight even if middleware/config fails)
 @app.middleware("http")
@@ -512,6 +515,11 @@ async def root():
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
+Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    excluded_handlers=["/metrics"],
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 @app.get("/health")
 async def health_check():

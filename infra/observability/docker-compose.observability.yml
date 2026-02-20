@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: stocksteward-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: stocksteward-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  superset-db:
+    image: postgres:15
+    container_name: stocksteward-superset-db
+    environment:
+      - POSTGRES_DB=superset
+      - POSTGRES_USER=superset
+      - POSTGRES_PASSWORD=superset
+    ports:
+      - "5433:5432"
+
+  superset-redis:
+    image: redis:7
+    container_name: stocksteward-superset-redis
+
+  superset:
+    image: apache/superset:4.1.2
+    container_name: stocksteward-superset
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=stocksteward-superset-secret
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://superset:superset@superset-db:5432/superset
+      - REDIS_HOST=superset-redis
+      - REDIS_PORT=6379
+    depends_on:
+      - superset-db
+      - superset-redis
+    command: >
+      /bin/bash -c "
+      superset db upgrade &&
+      superset fab create-admin
+      --username admin
+      --firstname Superset
+      --lastname Admin
+      --email admin@stocksteward.local
+      --password admin || true &&
+      superset init &&
+      superset run -h 0.0.0.0 -p 8088"
+

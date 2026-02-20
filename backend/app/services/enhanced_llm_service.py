@@ -6,10 +6,12 @@ Supports multiple LLM providers (Groq, OpenAI, Anthropic, Hugging Face) and inte
 import os
 import json
 import logging
+import time
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 import pandas as pd
 from app.core.config import settings
+from app.observability.metrics import record_external_call
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +256,7 @@ class EnhancedLLMService:
             }
         
         try:
+            started = time.perf_counter()
             response = self.clients['groq'].chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are StockSteward AI, a senior wealth steward and financial analyst specializing in the Indian stock market. Provide accurate, concise, and actionable financial insights. Always return valid JSON when requested."},
@@ -270,9 +273,11 @@ class EnhancedLLMService:
             # Parse JSON response
             try:
                 result = json.loads(content)
+                record_external_call("groq", "chat_completion", time.perf_counter() - started, True)
                 return result
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse JSON response from Groq: {content}")
+                record_external_call("groq", "chat_completion", time.perf_counter() - started, False)
                 return {
                     "error": "Failed to parse LLM response",
                     "raw_response": content
@@ -280,6 +285,7 @@ class EnhancedLLMService:
                 
         except Exception as e:
             logger.error(f"Error calling Groq API: {e}")
+            record_external_call("groq", "chat_completion", None, False)
             return {
                 "error": f"Groq API error: {str(e)}",
                 "fallback_response": "Market analysis pending: Temporary service disruption"
@@ -301,6 +307,7 @@ class EnhancedLLMService:
             }
         
         try:
+            started = time.perf_counter()
             response = self.clients['openai'].chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are StockSteward AI, a senior wealth steward and financial analyst specializing in the Indian stock market. Provide accurate, concise, and actionable financial insights. Always return valid JSON when requested."},
@@ -317,9 +324,11 @@ class EnhancedLLMService:
             # Parse JSON response
             try:
                 result = json.loads(content)
+                record_external_call("openai", "chat_completion", time.perf_counter() - started, True)
                 return result
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse JSON response from OpenAI: {content}")
+                record_external_call("openai", "chat_completion", time.perf_counter() - started, False)
                 return {
                     "error": "Failed to parse LLM response",
                     "raw_response": content
@@ -327,6 +336,7 @@ class EnhancedLLMService:
                 
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {e}")
+            record_external_call("openai", "chat_completion", None, False)
             return {
                 "error": f"OpenAI API error: {str(e)}",
                 "fallback_response": "Market analysis pending: Temporary service disruption"
@@ -348,6 +358,7 @@ class EnhancedLLMService:
             }
         
         try:
+            started = time.perf_counter()
             message = self.clients['anthropic'].messages.create(
                 max_tokens=2000,
                 temperature=temperature,
@@ -363,9 +374,11 @@ class EnhancedLLMService:
             # Parse JSON response
             try:
                 result = json.loads(content)
+                record_external_call("anthropic", "chat_completion", time.perf_counter() - started, True)
                 return result
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse JSON response from Anthropic: {content}")
+                record_external_call("anthropic", "chat_completion", time.perf_counter() - started, False)
                 return {
                     "error": "Failed to parse LLM response",
                     "raw_response": content
@@ -373,6 +386,7 @@ class EnhancedLLMService:
                 
         except Exception as e:
             logger.error(f"Error calling Anthropic API: {e}")
+            record_external_call("anthropic", "chat_completion", None, False)
             return {
                 "error": f"Anthropic API error: {str(e)}",
                 "fallback_response": "Market analysis pending: Temporary service disruption"
@@ -388,6 +402,7 @@ class EnhancedLLMService:
         Analyze using Hugging Face models (FinGPT, DeepSeek, etc.)
         """
         try:
+            started = time.perf_counter()
             from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
             import torch
             
@@ -409,7 +424,7 @@ class EnhancedLLMService:
                 
                 recommendation = "BUY" if positive_confidence > 0.6 else "SELL" if negative_confidence > 0.6 else "HOLD"
                 confidence = max(positive_confidence, negative_confidence) * 100
-                
+                record_external_call("huggingface", "finbert_local", time.perf_counter() - started, True)
                 return {
                     "recommendation": recommendation,
                     "confidence": round(confidence, 2),
@@ -458,13 +473,16 @@ class EnhancedLLMService:
                             
                             if start_idx != -1 and end_idx != 0:
                                 json_str = generated_text[start_idx:end_idx]
+                                record_external_call("huggingface", "inference", time.perf_counter() - started, True)
                                 return json.loads(json_str)
                             else:
+                                record_external_call("huggingface", "inference", time.perf_counter() - started, True)
                                 return {
                                     "raw_response": generated_text,
                                     "model_used": model_name
                                 }
                         except json.JSONDecodeError:
+                            record_external_call("huggingface", "inference", time.perf_counter() - started, False)
                             return {
                                 "raw_response": generated_text,
                                 "model_used": model_name
@@ -482,6 +500,7 @@ class EnhancedLLMService:
                     
         except Exception as e:
             logger.error(f"Error calling Hugging Face model {model_name}: {e}")
+            record_external_call("huggingface", "inference", None, False)
             return {
                 "error": f"Hugging Face error: {str(e)}",
                 "fallback_response": "Market analysis pending: Model service unavailable"

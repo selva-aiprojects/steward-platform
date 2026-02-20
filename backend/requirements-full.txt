@@ -18,3 +18,5 @@ langgraph==0.2.74
 crewai==0.119.0
 langchain-openai==0.3.7
 langchain-groq==0.2.4
+prometheus-client==0.21.1
+prometheus-fastapi-instrumentator==6.1.0

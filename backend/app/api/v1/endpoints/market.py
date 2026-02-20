@@ -8,6 +8,7 @@ import time
 import asyncio
 from datetime import datetime, timezone
 import httpx
+from app.observability.metrics import record_external_call
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ def _record_provider_result(provider: str, success: bool, latency_ms: Optional[f
     calls = max(stats["calls"], 1)
     stats["error_rate"] = round(stats["failures"] / calls, 4)
     _provider_stats[provider] = stats
+    record_external_call(
+        provider=provider,
+        operation="market_data_fetch",
+        latency_seconds=(latency_ms / 1000.0) if latency_ms is not None else None,
+        success=success,
+    )
 
 
 def _with_market_meta(payload: Dict[str, Any], source: str, status: str, as_of: Optional[str] = None) -> Dict[str, Any]:
