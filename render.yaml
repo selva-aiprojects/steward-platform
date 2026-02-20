@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: stocksteward-superset
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./infra/render/superset/Dockerfile
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: SUPERSET_ENV
+        value: production
+      - key: SUPERSET_SECRET_KEY
+        generateValue: true
+      - key: SUPERSET_LOAD_EXAMPLES
+        value: "no"
+      - key: SQLALCHEMY_DATABASE_URI
+        fromDatabase:
+          name: stocksteward-superset-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: stocksteward-superset-redis
+          property: connectionString
+      - key: SUPERSET_ADMIN_USERNAME
+        value: admin
+      - key: SUPERSET_ADMIN_FIRSTNAME
+        value: StockSteward
+      - key: SUPERSET_ADMIN_LASTNAME
+        value: Admin
+      - key: SUPERSET_ADMIN_EMAIL
+        value: admin@stocksteward.local
+      - key: SUPERSET_ADMIN_PASSWORD
+        generateValue: true
+
+  - type: web
+    name: stocksteward-prometheus
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./infra/render/prometheus/Dockerfile
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: BACKEND_SCHEME
+        value: https
+      - key: BACKEND_TARGET
+        # Set this to your backend host in Render dashboard if different.
+        value: stocksteward-ai.onrender.com
+      - key: METRICS_USER_ID
+        # Must be a valid SUPERADMIN user id in backend DB.
+        value: "999"
+      - key: METRICS_USER_ROLE
+        value: SUPERADMIN
+
+  - type: redis
+    name: stocksteward-superset-redis
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+databases:
+  - name: stocksteward-superset-db
+    databaseName: superset
+    user: superset
+    plan: starter

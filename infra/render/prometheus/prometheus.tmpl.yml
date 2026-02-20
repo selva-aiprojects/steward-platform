@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: stocksteward-backend
+    scheme: __BACKEND_SCHEME__
+    metrics_path: /api/v1/logs/metrics
+    static_configs:
+      - targets: ["__BACKEND_TARGET__"]
+    params:
+      user_id: ["__METRICS_USER_ID__"]
+    http_headers:
+      X-User-Role: ["__METRICS_USER_ROLE__"]
