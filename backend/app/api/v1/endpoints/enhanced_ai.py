@@ -8,6 +8,8 @@ from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
 import logging
+import asyncio
+import httpx
 
 from app.core.rbac import get_current_user
 from app.core.database import SessionLocal
@@ -34,6 +36,66 @@ logger = logging.getLogger(__name__)
 
 def _clamp(v: float, low: float, high: float) -> float:
     return max(low, min(high, v))
+
+
+async def _fast_live_quote(symbol: str, exchange: str = "NSE") -> Dict:
+    from app.services.kite_service import kite_service
+    from app.core.state import find_price_by_symbol
+
+    normalized_symbol = (symbol or "").upper()
+    lookup_symbol = normalized_symbol if normalized_symbol.endswith(".NS") else f"{normalized_symbol}.NS"
+
+    # 1) cache/state first
+    cached = find_price_by_symbol(lookup_symbol) or find_price_by_symbol(normalized_symbol)
+    if cached and cached.get("price"):
+        return {
+            "symbol": normalized_symbol,
+            "exchange": exchange,
+            "last_price": float(cached["price"]),
+            "change": float(cached.get("change", 0.0)),
+            "source": "state_cache",
+        }
+
+    # 2) Kite with hard timeout
+    try:
+        quote = await asyncio.wait_for(
+            asyncio.to_thread(kite_service.get_quote, normalized_symbol, exchange),
+            timeout=2.5,
+        )
+        if quote and quote.get("last_price"):
+            return quote
+    except Exception:
+        pass
+
+    # 3) Yahoo quote API with hard timeout
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.5), headers={"User-Agent": "Mozilla/5.0"}) as client:
+            response = await client.get(
+                "https://query1.finance.yahoo.com/v7/finance/quote",
+                params={"symbols": lookup_symbol},
+            )
+            response.raise_for_status()
+            payload = response.json() or {}
+            rows = (((payload.get("quoteResponse") or {}).get("result")) or [])
+            if rows:
+                row = rows[0]
+                current = row.get("regularMarketPrice")
+                prev = row.get("regularMarketPreviousClose")
+                current_f = float(current) if current is not None else None
+                if current_f is not None:
+                    prev_f = float(prev) if prev is not None else current_f
+                    change = 0.0 if prev_f == 0 else ((current_f - prev_f) / prev_f) * 100
+                    return {
+                        "symbol": normalized_symbol,
+                        "exchange": exchange,
+                        "last_price": current_f,
+                        "change": change,
+                        "source": "yahoo_quote_api",
+                    }
+    except Exception:
+        pass
+
+    return {}
 
 
 def _derive_strategy_update_params(analysis_result: Dict, market_dict: Dict) -> Dict:
@@ -167,8 +229,7 @@ async def enhanced_market_analysis(
             market_dict = processed_data.tail(1).to_dict('records')[0] if not processed_data.empty else {}
         else:
             # Use real-time data from existing services
-            from app.services.kite_service import kite_service
-            market_dict = kite_service.get_quote(request.symbol, request.exchange or "NSE")
+            market_dict = await _fast_live_quote(request.symbol, request.exchange or "NSE")
         
         # Get user context
         user_context = {

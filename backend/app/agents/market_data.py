@@ -1,6 +1,8 @@
 from typing import Any, Dict
 from app.agents.base import BaseAgent
 import logging
+import asyncio
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,6 @@ class MarketDataAgent(BaseAgent):
         from app.core.config import settings
         from app.core.state import find_price_by_symbol
         import yfinance as yf
-        import asyncio
         
         symbol = context.get("symbol", "RELIANCE").upper()
         # Standardize symbol for lookups
@@ -50,7 +51,10 @@ class MarketDataAgent(BaseAgent):
         # 2. Attempt real fetch from Kite in LIVE mode
         if mode == "LIVE_TRADING" and settings.ZERODHA_ACCESS_TOKEN:
             try:
-                quote = kite_service.get_quote(symbol, exchange)
+                quote = await asyncio.wait_for(
+                    asyncio.to_thread(kite_service.get_quote, symbol, exchange),
+                    timeout=2.5
+                )
                 if quote and quote.get("last_price"):
                     return {
                         "market_data": {
@@ -65,11 +69,46 @@ class MarketDataAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"Kite quote failed for {symbol}: {e}")
 
-        # 3. Last Resort: Live fetch via yfinance
+        # 3. Fast HTTP fallback against Yahoo chart endpoint
         try:
-            ticker = yf.Ticker(lookup_symbol)
-            # Use fast_info for minimal latency
-            info = ticker.fast_info
+            async with httpx.AsyncClient(timeout=httpx.Timeout(2.0), headers={"User-Agent": "Mozilla/5.0"}) as client:
+                response = await client.get(
+                    f"https://query1.finance.yahoo.com/v8/finance/chart/{lookup_symbol}",
+                    params={"range": "5d", "interval": "1d"}
+                )
+                response.raise_for_status()
+                payload = response.json() or {}
+                result = ((payload.get("chart") or {}).get("result") or [None])[0]
+                if result:
+                    closes = ((((result.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or [])
+                    valid = []
+                    for value in closes:
+                        try:
+                            if value is not None:
+                                valid.append(float(value))
+                        except Exception:
+                            continue
+                    if valid:
+                        current_price = valid[-1]
+                        previous_close = valid[-2] if len(valid) > 1 else current_price
+                        change_pct = 0.0 if previous_close == 0 else ((current_price - previous_close) / previous_close) * 100
+                        return {
+                            "market_data": {
+                                "symbol": symbol,
+                                "current_price": round(current_price, 4),
+                                "change_pct": round(change_pct, 4),
+                                "source": "Yahoo Chart API Fallback"
+                            }
+                        }
+        except Exception as e:
+            logger.warning(f"Yahoo chart fallback failed for {symbol}: {e}")
+
+        # 4. Last resort: yfinance with hard timeout
+        try:
+            info = await asyncio.wait_for(
+                asyncio.to_thread(lambda: yf.Ticker(lookup_symbol).fast_info),
+                timeout=2.5
+            )
             current_price = info.get("last_price") or info.get("lastPrice")
             
             if current_price:
@@ -84,7 +123,7 @@ class MarketDataAgent(BaseAgent):
         except Exception as e:
             logger.error(f"MarketDataAgent live fallback failed: {e}")
 
-        # 4. Final Absolute Fallback - ONLY if all real sources fail
+        # 5. Final absolute fallback
         return {
             "market_data": {
                 "symbol": symbol,

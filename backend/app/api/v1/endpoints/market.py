@@ -110,7 +110,7 @@ async def _chart_quotes(symbols: list[str], timeout_s: int = 4) -> Dict[str, Dic
     return quotes
 
 
-async def _quote_batch(symbols: list[str], timeout_s: int = 4) -> Dict[str, Dict[str, Any]]:
+async def _quote_batch(symbols: list[str], timeout_s: int = 2) -> Dict[str, Dict[str, Any]]:
     timeout = httpx.Timeout(timeout_s)
     headers = {"User-Agent": "Mozilla/5.0"}
     params = {"symbols": ",".join(symbols)}
@@ -163,7 +163,7 @@ def _chart_quotes_sync(symbols: list[str], timeout_s: int = 3) -> Dict[str, Dict
     return quotes
 
 
-async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 4):
+async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 2):
     global _yf_failure_streak, _yf_cooldown_until
     now = time.time()
     if now < _yf_cooldown_until:
@@ -300,7 +300,7 @@ async def get_market_movers() -> Any:
 
     try:
         started = time.time()
-        chart_quotes = await _quote_batch(watchlist, timeout_s=4)
+        chart_quotes = await _quote_batch(watchlist, timeout_s=2)
         raw_quotes: Dict[str, Dict[str, Any]] = {}
         for ticker_symbol, quote in chart_quotes.items():
             clean_symbol = ticker_symbol.replace('.NS', '')
@@ -355,11 +355,14 @@ async def get_market_movers() -> Any:
     except Exception as e:
         logger.error(f"Error fetching market movers from chart API: {e}")
         _record_provider_result("yahoo_chart_api", False, error=str(e))
+        # Fail fast with stale cache if available instead of waiting through slower providers.
+        if stale_movers:
+            return _with_market_meta(stale_movers, stale_movers.get("source", "cache"), "STALE", stale_movers.get("as_of"))
         # yfinance fallback
         try:
             yf_started = time.time()
             import pandas as pd
-            data = await _yf_download(watchlist, period="5d", timeout_s=4)
+            data = await _yf_download(watchlist, period="5d", timeout_s=2)
             raw_quotes = {}
             for ticker_symbol in watchlist:
                 if isinstance(data.columns, pd.MultiIndex):
