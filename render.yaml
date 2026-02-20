@@ -63,4 +63,4 @@ databases:
   - name: stocksteward-superset-db
     databaseName: superset
     user: superset
-    plan: starter
+    plan: basic-256mb
