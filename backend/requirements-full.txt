@@ -13,3 +13,8 @@ scipy==1.11.4
 numpy==1.24.3
 pandas==2.1.4
 TA-Lib==0.4.28
+langchain==0.3.19
+langgraph==0.2.74
+crewai==0.119.0
+langchain-openai==0.3.7
+langchain-groq==0.2.4

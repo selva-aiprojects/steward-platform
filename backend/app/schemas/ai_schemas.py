@@ -14,6 +14,12 @@ class LLMProvider(str, Enum):
     ANTHROPIC = "anthropic"
     HUGGINGFACE = "huggingface"
 
+class OrchestrationFramework(str, Enum):
+    NATIVE = "native"
+    LANGCHAIN = "langchain"
+    LANGGRAPH = "langgraph"
+    CREWAI = "crewai"
+
 class AnalysisType(str, Enum):
     COMPREHENSIVE = "comprehensive"
     TECHNICAL = "technical"
@@ -45,6 +51,14 @@ class MarketAnalysisRequest(BaseModel):
     llm_provider: LLMProvider = Field(default=LLMProvider.GROQ, description="LLM provider to use")
     model: Optional[str] = Field(None, description="Specific model to use (if provider supports multiple models)")
     analysis_type: AnalysisType = Field(default=AnalysisType.COMPREHENSIVE, description="Type of analysis to perform")
+    orchestration_framework: OrchestrationFramework = Field(
+        default=OrchestrationFramework.NATIVE,
+        description="Execution framework: native/langchain/langgraph/crewai"
+    )
+    auto_update_strategy: bool = Field(
+        default=True,
+        description="Automatically apply bounded strategy parameter updates from model output"
+    )
     include_risk_management: bool = Field(default=True, description="Include risk management suggestions")
 
 class TechnicalSignals(BaseModel):

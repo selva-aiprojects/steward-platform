@@ -7,9 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
+import logging
 
 from app.core.rbac import get_current_user
+from app.core.database import SessionLocal
 from app.models.user import User
+from app.models.portfolio import Portfolio
+from app.models.strategy import Strategy
+from app.models.optimization import StrategyOptimizationResult
 from app.schemas.ai_schemas import (
     MarketAnalysisRequest,
     MarketAnalysisResponse,
@@ -24,6 +29,114 @@ from app.services.enhanced_llm_service import enhanced_llm_service
 from app.services.data_integration import data_integration_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _clamp(v: float, low: float, high: float) -> float:
+    return max(low, min(high, v))
+
+
+def _derive_strategy_update_params(analysis_result: Dict, market_dict: Dict) -> Dict:
+    confidence = float(analysis_result.get("confidence", 55.0))
+    confidence_scale = _clamp(confidence / 100.0, 0.1, 1.0)
+    recommendation = str(analysis_result.get("recommendation", "HOLD")).upper()
+
+    current_price = None
+    for key in ["last_price", "current_price", "price", "close"]:
+        try:
+            if key in market_dict and market_dict.get(key) is not None:
+                current_price = float(market_dict[key])
+                break
+        except Exception:
+            continue
+    if current_price is None or current_price <= 0:
+        current_price = 100.0
+
+    target_price = float(analysis_result.get("target_price", current_price))
+    stop_loss_price = float(analysis_result.get("stop_loss", current_price * 0.98))
+    delta_up = abs((target_price - current_price) / current_price)
+    delta_down = abs((current_price - stop_loss_price) / current_price)
+
+    entry_threshold = _clamp(0.005 + (delta_up * 0.5), 0.001, 0.05)
+    exit_threshold = _clamp(0.003 + (delta_down * 0.5), 0.001, 0.03)
+
+    if recommendation == "BUY":
+        take_profit = _clamp(max(delta_up, 0.02), 0.02, 0.30)
+        stop_loss = _clamp(max(delta_down, 0.01), 0.01, 0.15)
+    elif recommendation == "SELL":
+        take_profit = _clamp(max(delta_down, 0.02), 0.02, 0.30)
+        stop_loss = _clamp(max(delta_up, 0.01), 0.01, 0.15)
+    else:
+        take_profit = 0.03
+        stop_loss = 0.02
+
+    position_size = int(10000 * confidence_scale)
+    if recommendation == "HOLD":
+        position_size = int(position_size * 0.5)
+
+    return {
+        "entry_threshold": round(entry_threshold, 4),
+        "exit_threshold": round(exit_threshold, 4),
+        "stop_loss": round(stop_loss, 4),
+        "take_profit": round(take_profit, 4),
+        "position_size": max(1000, position_size),
+    }
+
+
+def _apply_dynamic_strategy_update(user_id: int, symbol: str, params: Dict) -> Dict:
+    db = SessionLocal()
+    try:
+        portfolio = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
+        if not portfolio:
+            return {"updated": False, "reason": "portfolio_not_found"}
+
+        strategy_query = db.query(Strategy).filter(Strategy.portfolio_id == portfolio.id)
+        if symbol:
+            strategy_query = strategy_query.filter(Strategy.symbol == symbol)
+        strategy = (
+            strategy_query
+            .filter(Strategy.status.in_(["RUNNING", "ACTIVE"]))
+            .order_by(Strategy.id.desc())
+            .first()
+        )
+        if not strategy:
+            strategy = (
+                db.query(Strategy)
+                .filter(Strategy.portfolio_id == portfolio.id)
+                .order_by(Strategy.id.desc())
+                .first()
+            )
+        if not strategy:
+            return {"updated": False, "reason": "strategy_not_found"}
+
+        optimization_row = StrategyOptimizationResult(
+            user_id=user_id,
+            strategy_name=strategy.name,
+            symbol=symbol or strategy.symbol,
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow(),
+            parameter_space={"source": "llm_dynamic_update", "type": "bounded_params"},
+            best_parameters=params,
+            best_score=0.0,
+            optimization_trace=[{"timestamp": datetime.utcnow().isoformat(), "params": params}],
+            execution_time=0.0,
+            status="COMPLETED",
+        )
+        db.add(optimization_row)
+        db.commit()
+        db.refresh(optimization_row)
+        return {
+            "updated": True,
+            "strategy_id": strategy.id,
+            "optimization_id": optimization_row.id,
+            "params": params,
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error("Failed dynamic strategy update for user_id=%s symbol=%s: %s", user_id, symbol, e)
+        return {"updated": False, "reason": "exception", "error": str(e)}
+    finally:
+        db.close()
 
 @router.post("/market-analysis", response_model=MarketAnalysisResponse)
 async def enhanced_market_analysis(
@@ -71,11 +184,21 @@ async def enhanced_market_analysis(
             user_context=user_context,
             llm_provider=request.llm_provider or "groq",
             model=request.model,
-            analysis_type=request.analysis_type or "comprehensive"
+            analysis_type=request.analysis_type or "comprehensive",
+            orchestration_framework=request.orchestration_framework or "native",
         )
         
         if "error" in result:
             raise HTTPException(status_code=500, detail=result.get("error", "Analysis failed"))
+
+        if request.auto_update_strategy:
+            params = _derive_strategy_update_params(result, market_dict if isinstance(market_dict, dict) else {})
+            strategy_update = _apply_dynamic_strategy_update(
+                user_id=current_user.id,
+                symbol=request.symbol.upper(),
+                params=params,
+            )
+            result["strategy_update"] = strategy_update
         
         return MarketAnalysisResponse(**result)
         
