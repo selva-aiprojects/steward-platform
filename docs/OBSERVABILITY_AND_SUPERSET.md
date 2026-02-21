@@ -33,6 +33,13 @@ URLs:
 - Grafana: `http://localhost:3001` (`admin` / `admin`)
 - Superset: `http://localhost:8088` (`admin` / `admin`)
 
+## Superadmin Observability Portal (In-App)
+
+Open:
+- `http://localhost:3000/admin/observability`
+
+This page embeds Grafana (live system pulse) and Superset (business intelligence) for superadmin users.
+
 ## Prometheus notes
 
 Config file:
@@ -63,6 +70,105 @@ histogram_quantile(0.95, sum(rate(stocksteward_external_call_latency_seconds_buc
 sum by (status) (increase(stocksteward_llm_strategy_updates_total[1h]))
 ```
 
+## Grafana Superadmin Dashboard (Auto Provisioned)
+
+Grafana auto-loads a dashboard named **Superadmin Observability** from:
+- `infra/observability/grafana/dashboards/superadmin.json`
+
+## Superadmin: Market + Strategy Realtime Panels
+
+5. Market movers (top change % by bucket):
+```promql
+topk(5, stocksteward_market_mover_change_pct{bucket="gainers"})
+```
+```promql
+bottomk(5, stocksteward_market_mover_change_pct{bucket="losers"})
+```
+
+6. Market mover prices:
+```promql
+stocksteward_market_mover_price
+```
+
+7. Market data source status (1 = active):
+```promql
+stocksteward_market_source_status
+```
+
+8. Macro indicators:
+```promql
+stocksteward_macro_indicator
+```
+
+9. Strategies by status:
+```promql
+stocksteward_strategy_count
+```
+
+10. Strategy PnL % by strategy:
+```promql
+stocksteward_strategy_pnl_pct
+```
+
+11. Average strategy PnL % by status:
+```promql
+stocksteward_strategy_avg_pnl_pct
+```
+
+12. Portfolio cash/invested/win-rate:
+```promql
+stocksteward_portfolio_cash_balance
+```
+```promql
+stocksteward_portfolio_invested_amount
+```
+```promql
+stocksteward_portfolio_win_rate
+```
+
+13. Holdings PnL:
+```promql
+stocksteward_holding_pnl
+```
+```promql
+stocksteward_holding_pnl_pct
+```
+
+14. Trade flow:
+```promql
+stocksteward_trade_count
+```
+```promql
+stocksteward_trade_count_recent
+```
+
+15. Trader/portfolio coverage:
+```promql
+stocksteward_user_count
+```
+```promql
+stocksteward_portfolio_count
+```
+```promql
+stocksteward_holding_count
+```
+
+16. Trade volume and average price:
+```promql
+stocksteward_trade_volume_recent
+```
+```promql
+stocksteward_trade_avg_price_recent
+```
+
+17. Total strategy/trade counts:
+```promql
+stocksteward_strategy_total
+```
+```promql
+stocksteward_trade_total
+```
+
 ## Apache Superset usage
 
 Superset is best for product/ops analytics from SQL tables rather than Prometheus time-series.
@@ -76,6 +182,46 @@ Recommended:
    - optimization results over time
 3. Combine Superset (business analytics) with Grafana (runtime/infra observability).
 
+## Demo Data Generator (More Traders + Investments)
+
+If you want richer dashboards quickly, run:
+```bash
+docker exec -i stocksteward-ai-backend-1 python /app/scripts/generate_demo_data.py
+```
+
+This will add more traders, portfolios, holdings, strategies, and trades without deleting existing data.
+
+## Superset Dashboard Bootstrap (Automatic)
+
+Run once to create a Superset dashboard connected to your app database:
+```bash
+docker exec -i stocksteward-ai-backend-1 python /app/scripts/bootstrap_superset_dashboard.py
+```
+
+This creates:
+- Database connection in Superset (`StockSteward`)
+- Datasets for `trades`, `strategies`, `portfolios`
+- Dashboard: **StockSteward Executive Overview**
+
+## Quick Bootstrap Helper
+
+If Superset is running in Docker and your app database is reachable, run:
+```bash
+docker exec -i stocksteward-ai-backend-1 \
+  env APP_DB_URI=postgresql+psycopg2://stocksteward:stocksteward@host.docker.internal:5432/stocksteward \
+  python /app/scripts/bootstrap_superset_dashboard.py
+```
+
+Extra datasets now included:
+- `trade_approvals`, `users`, `audit_logs`
+
+## Production Embed Gate
+
+To lock Superset embeds behind backend session validation:
+1. Set `SUPERSET_EMBED_URL` in backend environment.
+2. Ensure only superadmin users can access `/api/v1/admin/observability/embed-url`.
+3. Frontend will request the embed URL from backend (no hardcoded URL needed).
+
 ## Tooling advice
 
 - Use Grafana + Prometheus for runtime health, SLOs, incident response.
@@ -87,4 +233,3 @@ Manual check:
 ```bash
 curl "http://localhost:8000/api/v1/logs/metrics?user_id=999"
 ```
-

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -7,8 +5,11 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -18,8 +19,15 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     depends_on:
       - prometheus
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
 
   superset-db:
     image: postgres:15
@@ -36,27 +44,27 @@ services:
     container_name: stocksteward-superset-redis
 
   superset:
-    image: apache/superset:4.1.2
+    build:
+      context: ../..
+      dockerfile: infra/render/superset/Dockerfile
     container_name: stocksteward-superset
     ports:
       - "8088:8088"
     environment:
       - SUPERSET_SECRET_KEY=stocksteward-superset-secret
       - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://superset:superset@superset-db:5432/superset
-      - REDIS_HOST=superset-redis
-      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+psycopg2://superset:superset@superset-db:5432/superset
+      - REDIS_URL=redis://superset-redis:6379/0
+      - SUPERSET_ADMIN_USERNAME=admin
+      - SUPERSET_ADMIN_PASSWORD=admin
+      - SUPERSET_ADMIN_EMAIL=admin@stocksteward.local
     depends_on:
       - superset-db
       - superset-redis
-    command: >
-      /bin/bash -c "
-      superset db upgrade &&
-      superset fab create-admin
-      --username admin
-      --firstname Superset
-      --lastname Admin
-      --email admin@stocksteward.local
-      --password admin || true &&
-      superset init &&
-      superset run -h 0.0.0.0 -p 8088"
+    volumes:
+      - superset_home:/app/superset_home
 
+volumes:
+  prometheus_data:
+  grafana_data:
+  superset_home:

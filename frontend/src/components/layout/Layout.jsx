@@ -14,7 +14,7 @@ import ChatWidget from "../ChatWidget";
 export function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
-    const { user, logout, isAdmin } = useUser();
+    const { user, logout, isAdmin, isSuperAdmin } = useUser();
     const { theme, toggleTheme } = useTheme();
     const buildSha = process.env.REACT_APP_BUILD_SHA || process.env.REACT_APP_GIT_SHA || "";
     const buildTime = process.env.REACT_APP_BUILD_TIME || "";
@@ -116,6 +116,18 @@ export function Layout({ children }) {
                                 <FileText size={18} className={`${location.pathname === '/kyc' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
                                 <span>KYC Desk</span>
                             </NavLink>
+                            {isSuperAdmin && (
+                                <NavLink to="/admin/observability" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                    <ShieldCheck size={18} className={`${location.pathname === '/admin/observability' ? 'text-indigo-300' : 'text-slate-400 group-hover:text-indigo-300'} transition-colors`} />
+                                    <span>Observability</span>
+                                </NavLink>
+                            )}
+                            {isSuperAdmin && (
+                                <NavLink to="/reports/superset" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                    <FileText size={18} className={`${location.pathname === '/reports/superset' ? 'text-emerald-300' : 'text-slate-400 group-hover:text-emerald-300'} transition-colors`} />
+                                    <span>Superset Reports</span>
+                                </NavLink>
+                            )}
                         </>
                     )}
                 </nav>

@@ -1,12 +1,26 @@
 version: '3.8'
 
 services:
+  backend-db:
+    image: postgres:15
+    container_name: stocksteward-backend-db
+    environment:
+      - POSTGRES_DB=stocksteward
+      - POSTGRES_USER=stocksteward
+      - POSTGRES_PASSWORD=stocksteward
+    ports:
+      - "5432:5432"
+    volumes:
+      - backend_db_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    depends_on:
+      - backend-db
     environment:
       - APP_ENV=DEV
       - EXECUTION_MODE=PAPER_TRADING
@@ -14,8 +28,7 @@ services:
       - GLOBAL_KILL_SWITCH=false
       - HIGH_VALUE_TRADE_THRESHOLD=100000
       - DEFAULT_CONFIDENCE_THRESHOLD=0.6
-    env_file:
-      - ./infra/env.sample
+      - DATABASE_URL=postgresql://stocksteward:stocksteward@backend-db:5432/stocksteward
 
   frontend:
     build: ./frontend
@@ -26,3 +39,6 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+
+volumes:
+  backend_db_data:

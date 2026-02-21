@@ -50,9 +50,10 @@ echo "[superset] initializing superset..."
 superset init
 
 echo "[superset] starting web server..."
+WORKER_CLASS="${SUPERSET_GUNICORN_WORKER_CLASS:-gthread}"
 exec gunicorn \
   --bind "0.0.0.0:${PORT:-8088}" \
   --workers 2 \
-  --worker-class gevent \
+  --worker-class "${WORKER_CLASS}" \
   --timeout 120 \
   "superset.app:create_app()"

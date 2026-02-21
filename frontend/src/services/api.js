@@ -484,6 +484,40 @@ export const fetchMarketResearch = async () => {
     }
 };
 
+export const fetchMetricsSummary = async () => {
+    try {
+        const headers = getAuthHeaders();
+        if (!Object.keys(headers).length) {
+            return null;
+        }
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/logs/metrics/summary`, {
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to fetch metrics summary');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const fetchSupersetEmbedUrl = async () => {
+    try {
+        const headers = getAuthHeaders();
+        if (!Object.keys(headers).length) {
+            return null;
+        }
+        const response = await apiFetch(`${BASE_URL}${API_PREFIX}/admin/observability/embed-url`, {
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to fetch superset embed url');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 export const submitKycApplication = async (payload) => {
     try {
         const response = await apiFetch(`${BASE_URL}${API_PREFIX}/kyc/applications`, {

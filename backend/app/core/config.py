@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     # Market Data API Keys
     MARKETSTACK_API_KEY: Optional[str] = None
     TRUEDATA_API_KEY: Optional[str] = None
+
+    # Superset embedding (admin portal)
+    SUPERSET_EMBED_URL: Optional[str] = None
     
     model_config = SettingsConfigDict(
         env_file=".env",

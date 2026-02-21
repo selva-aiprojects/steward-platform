@@ -25,3 +25,17 @@ RESULTS_BACKEND = CACHE_CONFIG
 
 WTF_CSRF_ENABLED = True
 TALISMAN_ENABLED = False
+
+# Embed-friendly settings for local admin portal integration.
+ENABLE_CORS = True
+CORS_OPTIONS = {
+    "supports_credentials": True,
+    "origins": [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+}
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = False
+X_FRAME_OPTIONS = "ALLOWALL"

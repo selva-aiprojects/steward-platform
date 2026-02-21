@@ -5,6 +5,15 @@ import logging
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from prometheus_client.parser import text_string_to_metric_families
 from app.core.rbac import get_current_user
+from app.core.database import get_db
+from sqlalchemy.orm import Session
+from app.observability.metrics import (
+    update_market_metrics,
+    update_strategy_metrics,
+    update_portfolio_metrics,
+    update_trade_metrics,
+    update_user_metrics,
+)
 from app.models.user import User
 
 router = APIRouter()
@@ -35,12 +44,17 @@ def log_frontend_error(error: ErrorLog):
 
 
 @router.get("/metrics")
-def get_metrics(current_user: User = Depends(get_current_user)):
+def get_metrics(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Superadmin-only Prometheus metrics endpoint.
     """
     if current_user.role != "SUPERADMIN" and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Insufficient privileges")
+    update_market_metrics()
+    update_strategy_metrics(db)
+    update_portfolio_metrics(db)
+    update_trade_metrics(db)
+    update_user_metrics(db)
     payload = generate_latest()
     return Response(content=payload, media_type=CONTENT_TYPE_LATEST)
 

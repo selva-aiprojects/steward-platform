@@ -77,6 +77,9 @@ export function Dashboard() {
         return `INR ${num.toLocaleString()}`;
     };
 
+    const grafanaBase = process.env.REACT_APP_GRAFANA_URL || "http://localhost:3001";
+    const supersetBase = process.env.REACT_APP_SUPERSET_URL || "http://localhost:8088";
+
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
             case 'NSE':
@@ -358,6 +361,80 @@ export function Dashboard() {
                             </button>
                         </div>
                     </header >
+
+                    {user?.role === 'SUPERADMIN' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <Card className="p-6 border-slate-100 shadow-sm bg-white">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                    Superadmin Control
+                                </p>
+                                <h3 className="text-lg font-black text-slate-900 mb-2">Observability + BI</h3>
+                                <p className="text-xs text-slate-500 mb-4">
+                                    Open live system telemetry and business intelligence dashboards.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    <Link
+                                        to="/admin/observability"
+                                        className="px-3 py-2 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
+                                    >
+                                        Observability
+                                    </Link>
+                                    <Link
+                                        to="/reports/superset"
+                                        className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest"
+                                    >
+                                        Superset Reports
+                                    </Link>
+                                    <a
+                                        href={grafanaBase}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest border border-indigo-100"
+                                    >
+                                        Grafana Console
+                                    </a>
+                                    <a
+                                        href={supersetBase}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100"
+                                    >
+                                        Superset Console
+                                    </a>
+                                </div>
+                            </Card>
+                            <Card className="p-6 border-slate-100 shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-2">
+                                    Live System Pulse
+                                </p>
+                                <h3 className="text-lg font-black mb-2">Grafana Runtime Health</h3>
+                                <p className="text-xs text-slate-300 mb-4">
+                                    Real-time API latency, external provider health, and strategy throughput.
+                                </p>
+                                <Link
+                                    to="/admin/observability"
+                                    className="inline-flex px-3 py-2 rounded-lg bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    View Grafana Panels
+                                </Link>
+                            </Card>
+                            <Card className="p-6 border-slate-100 shadow-sm bg-gradient-to-br from-emerald-600 to-emerald-900 text-white">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100 mb-2">
+                                    Executive Reports
+                                </p>
+                                <h3 className="text-lg font-black mb-2">Superset BI</h3>
+                                <p className="text-xs text-emerald-100/80 mb-4">
+                                    Trade volumes, strategy outcomes, and portfolio intelligence from SQL.
+                                </p>
+                                <Link
+                                    to="/reports/superset"
+                                    className="inline-flex px-3 py-2 rounded-lg bg-white text-emerald-900 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Open Superset Reports
+                                </Link>
+                            </Card>
+                        </div>
+                    )}
 
                     {/* AI Intelligence Card */}
                     < div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group" >

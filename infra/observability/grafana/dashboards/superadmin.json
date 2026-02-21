@@ -1,0 +1,244 @@
+{
+  "uid": "superadmin-observability",
+  "title": "Superadmin Observability",
+  "tags": ["stocksteward", "superadmin"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Market Feed",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {
+          "expr": "max by (source, status) (stocksteward_market_source_status)",
+          "legendFormat": "{{source}} / {{status}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Users",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "sum(stocksteward_user_count)", "legendFormat": "users"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Portfolios",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_portfolio_count", "legendFormat": "portfolios"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total Trades",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_trade_total", "legendFormat": "trades"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Provider Failure Rate",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "100 * (sum(rate(stocksteward_external_calls_total{status=\"failure\"}[5m])) / clamp_min(sum(rate(stocksteward_external_calls_total[5m])), 1))", "legendFormat": "failure"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Strategy Success Rate",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "100 * (increase(stocksteward_llm_strategy_updates_total{status=\"success\"}[1h]) / clamp_min(increase(stocksteward_llm_strategy_updates_total[1h]), 1))", "legendFormat": "success"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4}
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Trades (1h)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_trade_count_recent{window=\"1h\"}", "legendFormat": "1h"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4}
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Trade Volume (1h)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_trade_volume_recent{window=\"1h\"}", "legendFormat": "1h"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 6, "y": 4, "w": 6, "h": 4}
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Strategies (Total)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_strategy_total", "legendFormat": "total"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 12, "y": 4, "w": 6, "h": 4}
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Avg Win Rate",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "avg(stocksteward_portfolio_win_rate)", "legendFormat": "win_rate"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 18, "y": 4, "w": 6, "h": 4}
+    },
+    {
+      "id": 11,
+      "type": "bargauge",
+      "title": "Top Gainers (Change %)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "topk(5, stocksteward_market_mover_change_pct{bucket=\"gainers\"})", "legendFormat": "{{symbol}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "gradient"},
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 6}
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Top Losers (Change %)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "bottomk(5, stocksteward_market_mover_change_pct{bucket=\"losers\"})", "legendFormat": "{{symbol}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "gradient"},
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 6}
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "Strategies by Status",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_strategy_count", "legendFormat": "{{status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "lcd"},
+      "gridPos": {"x": 0, "y": 14, "w": 8, "h": 6}
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Avg Strategy PnL (%)",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_strategy_avg_pnl_pct", "legendFormat": "{{status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 8, "y": 14, "w": 8, "h": 6}
+    },
+    {
+      "id": 15,
+      "type": "bargauge",
+      "title": "Users by Role",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_user_count", "legendFormat": "{{role}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "lcd"},
+      "gridPos": {"x": 16, "y": 14, "w": 8, "h": 6}
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Total Invested",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "sum(stocksteward_portfolio_invested_amount)", "legendFormat": "invested"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 0, "y": 20, "w": 8, "h": 5}
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Total Cash",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "sum(stocksteward_portfolio_cash_balance)", "legendFormat": "cash"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 8, "y": 20, "w": 8, "h": 5}
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Holding Count",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "stocksteward_holding_count", "legendFormat": "holdings"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "value", "graphMode": "none"},
+      "gridPos": {"x": 16, "y": 20, "w": 8, "h": 5}
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Top Holdings PnL",
+      "datasource": {"type": "prometheus", "uid": "PROMETHEUS"},
+      "targets": [
+        {"expr": "topk(10, stocksteward_holding_pnl)", "legendFormat": "{{symbol}}"}
+      ],
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "options": {"showHeader": true},
+      "gridPos": {"x": 0, "y": 25, "w": 24, "h": 8}
+    }
+  ],
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]}
+}

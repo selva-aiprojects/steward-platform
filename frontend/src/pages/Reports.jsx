@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from "../components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2 } from 'lucide-react';
+import { Calendar, TrendingUp, Shield, Activity, Download, Filter, TrendingDown, Target, RefreshCcw, Loader2, BarChart2 } from 'lucide-react';
 import { fetchTrades, fetchStrategies, fetchDailyPnL } from "../services/api";
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
@@ -39,7 +39,7 @@ const fallbackWatchlist = [
 ];
 
 export function Reports() {
-    const { user, selectedUser, isAdmin } = useUser();
+    const { user, selectedUser, isAdmin, isSuperAdmin } = useUser();
     const {
         trades: appTrades,
         strategies: appStrategies,
@@ -173,6 +173,24 @@ export function Reports() {
                     </Link>
                 </div>
             </div>
+
+            {isSuperAdmin && (
+                <div className="bg-gradient-to-r from-slate-900 to-emerald-900 p-6 rounded-xl border border-emerald-800 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-black mb-2">Superset Executive Reports</h2>
+                            <p className="text-emerald-100/80 mb-4">Deep-dive SQL analytics and executive dashboards.</p>
+                        </div>
+                        <Link
+                            to="/reports/superset"
+                            className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-black hover:opacity-90 transition-all flex items-center gap-2"
+                        >
+                            <BarChart2 size={18} />
+                            Open Superset Reports
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="p-6 border-slate-100 shadow-sm bg-white">
