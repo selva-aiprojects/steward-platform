@@ -14,11 +14,12 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> User:
     # Use query param fallback in dev if header is missing
-    if x_user_id is None and user_id_query is not None and settings.APP_ENV in {"DEV", "TEST"}:
+    app_env = (settings.APP_ENV or "DEV").upper()
+    if x_user_id is None and user_id_query is not None and app_env in {"DEV", "TEST"}:
         x_user_id = user_id_query
 
     if x_user_id is None:
-        if settings.APP_ENV in {"DEV", "QA", "UAT", "TEST"}:
+        if app_env in {"DEV", "QA", "UAT", "TEST"}:
             user = db.query(User).first()
             if user:
                 return user

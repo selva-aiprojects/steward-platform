@@ -50,11 +50,17 @@ def get_metrics(current_user: User = Depends(get_current_user), db: Session = De
     """
     if current_user.role != "SUPERADMIN" and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Insufficient privileges")
-    update_market_metrics()
-    update_strategy_metrics(db)
-    update_portfolio_metrics(db)
-    update_trade_metrics(db)
-    update_user_metrics(db)
+    
+    try:
+        update_market_metrics()
+        update_strategy_metrics(db)
+        update_portfolio_metrics(db)
+        update_trade_metrics(db)
+        update_user_metrics(db)
+    except Exception as e:
+        logger.error(f"Metrics update during scrape failed: {e}")
+        # We don't fail the request, just return what metrics we have
+        
     payload = generate_latest()
     return Response(content=payload, media_type=CONTENT_TYPE_LATEST)
 

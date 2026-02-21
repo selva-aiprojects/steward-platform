@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Core Platform (pointing to Neon via .env)
+  backend:
+    build: 
+      context: ./backend
+    container_name: stocksteward-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    environment:
+      - APP_ENV=DEV
+      - DISABLE_BACKGROUND_TASKS=0
+
+  frontend:
+    build: ./frontend
+    container_name: stocksteward-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  # Observability Stack (Analytical Layer)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: stocksteward-prometheus
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: stocksteward-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards
+
+  superset-db:
+    image: postgres:15
+    container_name: stocksteward-superset-db
+    environment:
+      - POSTGRES_DB=superset
+      - POSTGRES_USER=superset
+      - POSTGRES_PASSWORD=superset
+    ports:
+      - "5433:5432"
+
+  superset:
+    build:
+      context: .
+      dockerfile: infra/render/superset/Dockerfile
+    container_name: stocksteward-superset
+    ports:
+      - "8088:8088"
+    environment:
+      - PORT=8088
+      - SUPERSET_SECRET_KEY=stocksteward-superset-secret
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://superset:superset@superset-db:5432/superset
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - superset-db

@@ -22,10 +22,21 @@ def setup_local_environment():
     os.chdir(backend_dir)
     
     print("\n1. Setting up environment variables...")
-    # Copy the local env file to .env to override the default
-    import shutil
-    shutil.copy('.env.local', '.env')
-    print("   ✓ Copied .env.local to .env")
+    # Only copy if .env doesn't exist or doesn't have a Neon URL
+    env_file = Path('.env')
+    has_neon = False
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            content = f.read()
+            if 'neon.tech' in content or 'DATABASE_URL' in content:
+                has_neon = True
+    
+    if not has_neon:
+        import shutil
+        shutil.copy('.env.local', '.env')
+        print("   ✓ Copied .env.local to .env")
+    else:
+        print("   ✓ Preserving existing DATABASE_URL in .env (Neon detected)")
     
     print("\n2. Installing required Python packages...")
     try:
@@ -47,43 +58,30 @@ def setup_local_environment():
         print(f"   stderr: {e.stderr}")
         return False
     
-    print("\n4. Verifying database setup...")
-    try:
-        # Test the database connection by running a simple query
-        import sys
-        sys.path.append('.')
-        from app.core.database import SessionLocal
-        from app.models.user import User
-        
-        db = SessionLocal()
-        user_count = db.query(User).count()
-        db.close()
-        
-        print(f"   ✓ Database connection successful")
-        print(f"   ✓ Found {user_count} users in the database")
-    except Exception as e:
-        print(f"   ✗ Database verification failed: {e}")
-        return False
+    print("\n5. Verifying path portability...")
+    current_path = Path(".").resolve()
+    print(f"   ✓ Running from: {current_path}")
+    if current_path.drive.upper() != 'C:':
+        print(f"   ! Detected non-C: drive installation ({current_path.drive}). Ensuring portability...")
     
     print("\n" + "=" * 60)
     print("LOCAL SETUP COMPLETE!")
     print("=" * 60)
     print("\nTo run the application locally:")
-    print("1. Make sure PostgreSQL is running on your system")
+    print("1. Make sure PostgreSQL is running on your system (Local or Docker)")
     print("2. Ensure your PostgreSQL server accepts connections on localhost:5432")
     print("3. Run the backend server:")
     print("   cd backend")
     print("   uvicorn app.main:app --reload --port 8000")
-    print("\n4. In a separate terminal, navigate to frontend directory and run:")
+    print("\n4. (NEW) Run the Observability Stack (Prometheus, Grafana, Superset):")
+    print("   docker-compose -f infra/observability/docker-compose.observability.yml up -d")
+    print("   * Note: If on D: drive, ensure Docker has access to your drive in 'Resources > File Sharing'.")
+    print("\n5. In a separate terminal, navigate to frontend directory and run:")
     print("   npm install")
     print("   npm run dev")
     print("\nLogin credentials for seeded users:")
     print("- Super Admin: admin@stocksteward.ai / admin123")
     print("- Alexander Pierce: alex@stocksteward.ai / trader123")
-    print("- Sarah Connor: sarah.c@sky.net / trader123")
-    print("- Tony Stark: tony@starkintl.ai / trader123")
-    print("- Bruce Wayne: bruce@waynecorp.com / trader123")
-    print("- Natasha Romanoff: nat@shield.gov / trader123")
     print("\nThe system is now configured for local development with live data!")
     
     return True

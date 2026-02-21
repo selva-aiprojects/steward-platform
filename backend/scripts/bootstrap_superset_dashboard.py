@@ -14,10 +14,13 @@ SESSION = requests.Session()
 SUPERSET_URL = os.getenv("SUPERSET_URL", "http://localhost:8088").rstrip("/")
 SUPERSET_USER = os.getenv("SUPERSET_USER", "admin")
 SUPERSET_PASSWORD = os.getenv("SUPERSET_PASSWORD", "admin")
-APP_DB_URI = os.getenv(
-    "APP_DB_URI",
-    "postgresql+psycopg2://stocksteward:stocksteward@host.docker.internal:5432/stocksteward",
-)
+# Default to DATABASE_URL if APP_DB_URI is not set
+APP_DB_URI = os.getenv("APP_DB_URI") or os.getenv("DATABASE_URL")
+if not APP_DB_URI:
+    APP_DB_URI = "postgresql+psycopg2://stocksteward:stocksteward@host.docker.internal:5432/stocksteward"
+elif "postgresql://" in APP_DB_URI and "+psycopg2" not in APP_DB_URI:
+    APP_DB_URI = APP_DB_URI.replace("postgresql://", "postgresql+psycopg2://")
+
 DB_NAME = os.getenv("SUPERSET_DB_NAME", "StockSteward")
 
 
@@ -93,18 +96,27 @@ def list_datasets(token: str):
 
 
 def ensure_dataset(token: str, csrf: str, database_id: int, table_name: str, schema: str = "public") -> Dict[str, Any]:
-    for ds in list_datasets(token):
-        if ds.get("table_name") == table_name and ds.get("database", {}).get("id") == database_id:
-            return ds
-    payload = {
-        "database": database_id,
-        "schema": schema,
-        "table_name": table_name,
-    }
-    resp = _request("POST", "/api/v1/dataset/", token=token, csrf=csrf, json=payload)
-    if not resp.ok:
-        raise RuntimeError(f"Dataset create failed ({table_name}): {resp.status_code} {resp.text}")
-    return resp.json().get("result") or resp.json()
+    # Retry loop as Superset sometimes takes time to sync metadata from a newly added DB
+    last_error = ""
+    for attempt in range(1, 4):
+        for ds in list_datasets(token):
+            if ds.get("table_name") == table_name and ds.get("database", {}).get("id") == database_id:
+                return ds
+        
+        payload = {
+            "database": database_id,
+            "schema": schema,
+            "table_name": table_name,
+        }
+        resp = _request("POST", "/api/v1/dataset/", token=token, csrf=csrf, json=payload)
+        if resp.ok:
+            return resp.json().get("result") or resp.json()
+        
+        last_error = f"{resp.status_code} {resp.text}"
+        print(f"[superset] Dataset create retry {attempt}/3 for {table_name}: {last_error}")
+        time.sleep(3) # Wait for Superset to probe the DB
+        
+    raise RuntimeError(f"Dataset create failed ({table_name}) after retries: {last_error}")
 
 
 def list_charts(token: str):
