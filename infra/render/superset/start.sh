@@ -49,6 +49,30 @@ superset fab create-admin \
 echo "[superset] initializing superset..."
 superset init
 
+echo "[superset] granting public role permissions..."
+python - <<'PY'
+from superset import security_manager
+from flask_appbuilder.security.sqla.models import Role
+import logging
+
+try:
+    public_role = security_manager.find_role("Public")
+    gamma_role = security_manager.find_role("Gamma")
+    if public_role and gamma_role:
+        public_role.permissions = gamma_role.permissions
+        security_manager.get_session.commit()
+        print("[superset] successfully synchronized Public role with Gamma permissions")
+    else:
+        print("[superset] WARNING: Public or Gamma role not found")
+except Exception as e:
+    print(f"[superset] ERROR synchronized Public role: {e}")
+PY
+
+if [ -f "/app/scripts/bootstrap_superset_dashboard.py" ]; then
+  echo "[superset] running dashboard bootstrap..."
+  python /app/scripts/bootstrap_superset_dashboard.py || echo "[superset] WARNING: bootstrap failed but continuing..."
+fi
+
 echo "[superset] starting web server..."
 WORKER_CLASS="${SUPERSET_GUNICORN_WORKER_CLASS:-gthread}"
 exec gunicorn \

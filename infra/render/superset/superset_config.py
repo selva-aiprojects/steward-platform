@@ -7,23 +7,32 @@ SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
     os.getenv("DATABASE_URL", "sqlite:////app/superset_home/superset.db"),
 )
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
 SECRET_KEY = os.getenv("SUPERSET_SECRET_KEY", "unsafe-dev-key-change-me")
 
 FEATURE_FLAGS = {
     "ALERT_REPORTS": True,
 }
 
-CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",
-    "CACHE_REDIS_URL": REDIS_URL,
-    "CACHE_DEFAULT_TIMEOUT": 300,
-}
+# Robust cache configuration
+REDIS_URL = os.getenv("REDIS_URL")
+if REDIS_URL:
+    CACHE_CONFIG = {
+        "CACHE_TYPE": "RedisCache",
+        "CACHE_REDIS_URL": REDIS_URL,
+        "CACHE_DEFAULT_TIMEOUT": 300,
+    }
+    DATA_CACHE_CONFIG = CACHE_CONFIG
+    RESULTS_BACKEND = CACHE_CONFIG
+else:
+    CACHE_CONFIG = {
+        "CACHE_TYPE": "SimpleCache",
+        "CACHE_DEFAULT_TIMEOUT": 300,
+    }
+    DATA_CACHE_CONFIG = CACHE_CONFIG
+    RESULTS_BACKEND = None # Disable results backend if no Redis
 
-DATA_CACHE_CONFIG = CACHE_CONFIG
-RESULTS_BACKEND = CACHE_CONFIG
-
-WTF_CSRF_ENABLED = True
+WTF_CSRF_ENABLED = False
 TALISMAN_ENABLED = False
 
 # Embed-friendly settings for local admin portal integration.
@@ -39,3 +48,8 @@ CORS_OPTIONS = {
 SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = False
 X_FRAME_OPTIONS = "ALLOWALL"
+
+# Public access for embedding
+PUBLIC_ROLE_LIKE = "Gamma"
+PUBLIC_ROLE_LIKE_GAMMA = True
+AUTH_ROLE_PUBLIC = "Public"

@@ -42,24 +42,10 @@ app = FastAPI(
 )
 app.add_middleware(RequestContextMiddleware)
 
-# Global CORS headers (handles preflight even if middleware/config fails)
-@app.middleware("http")
-async def add_cors_headers(request, call_next):
-    if request.method == "OPTIONS":
-        response = Response(status_code=204)
-    else:
-        response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Max-Age"] = "600"
-    return response
-
 # CORS
-raw_origins = (settings.CORS_ORIGINS or "").strip()
-allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
-if not allowed_origins:
-    allowed_origins = ["*"]
+allowed_origins = ["*"]
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
