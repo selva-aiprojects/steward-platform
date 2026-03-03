@@ -389,7 +389,7 @@ export function TradingHub() {
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-slate-950 p-6 relative">
+                        <div className="flex-1 bg-slate-950 p-6 relative min-h-[400px]">
                             <div className="absolute top-8 left-8 z-10 p-6 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl">
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Mark Price</p>
                                 <p className="text-2xl font-black text-white">₹{currentPrice.toLocaleString()}</p>

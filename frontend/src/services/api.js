@@ -50,8 +50,19 @@ const apiFetch = async (url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Automatically include auth headers in all requests
+    const authHeaders = getAuthHeaders();
+    const mergedOptions = {
+        ...options,
+        headers: {
+            ...authHeaders,
+            ...options.headers
+        },
+        signal: controller.signal
+    };
+
     try {
-        return await fetch(url, { ...options, signal: controller.signal });
+        return await fetch(url, mergedOptions);
     } finally {
         clearTimeout(timeoutId);
     }

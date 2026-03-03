@@ -123,12 +123,46 @@ const MiniChart = ({ color = "#3b82f6", label, value, change }) => {
                     {change >= 0 ? '+' : ''}{change}%
                 </p>
             </div>
-            <div className="w-16 h-10">
+            <div className="w-16 h-10 min-h-[40px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data}>
                         <Area type="monotone" dataKey="v" stroke={color} fill={color} fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
                 </ResponsiveContainer>
+            </div>
+        </div>
+    );
+};
+
+// --- Confirmation Handshake Animation ---
+const ConfirmationOverlay = ({ show, onComplete }) => {
+    useEffect(() => {
+        if (show) {
+            const timer = setTimeout(onComplete, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [show, onComplete]);
+
+    if (!show) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="flex flex-col items-center">
+                <div className="relative h-32 w-32 mb-6">
+                    <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-ping" />
+                    <div className="absolute inset-0 border-4 border-primary rounded-full animate-slow-spin flex items-center justify-center">
+                        <Lock size={48} className="text-primary" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-[0.2em] mb-2 animate-pulse">Security Handshake</h2>
+                <p className="text-sm font-bold text-primary uppercase tracking-widest">Validating Order Fingerprint...</p>
+                <div className="mt-8 flex gap-2">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className={`h-1.5 w-8 rounded-full bg-primary/20 overflow-hidden`}>
+                            <div className="h-full bg-primary animate-progress" style={{ animationDelay: `${i * 0.2}s` }} />
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -156,6 +190,7 @@ export default function TradingPlatform() {
     const [activeTab, setActiveTab] = useState('CHART'); // CHART, ORDER_HISTORY, STRATEGIES
     const [activeHoldings, setActiveHoldings] = useState([]);
     const [logs, setLogs] = useState([]);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
     // Live price simulation
     const currentPrice = useMemo(() => {
@@ -185,6 +220,13 @@ export default function TradingPlatform() {
 
     const handleExecuteTrade = async () => {
         if (!user || orderQty <= 0) return;
+
+        // Show the institutional handshake first
+        setShowConfirmation(true);
+    };
+
+    const onHandshakeComplete = async () => {
+        setShowConfirmation(false);
         setExecuting(true);
         try {
             const data = {
@@ -229,6 +271,7 @@ export default function TradingPlatform() {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-300 p-2 md:p-4 flex flex-col gap-4 font-sans select-none overflow-hidden max-h-screen">
+            <ConfirmationOverlay show={showConfirmation} onComplete={onHandshakeComplete} />
             {/* Top Bar: Live Stats */}
             <div className="flex flex-wrap items-center gap-4 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl backdrop-blur-md">
                 <div className="flex items-center gap-3 pr-4 border-r border-slate-800">
@@ -270,7 +313,15 @@ export default function TradingPlatform() {
 
                     <div className="flex flex-col">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ready Capital</span>
-                        <span className="text-sm font-bold text-primary">₹{summary?.cash_balance?.toLocaleString() || '0'}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">₹{summary?.cash_balance?.toLocaleString() || '0'}</span>
+                            <button
+                                onClick={() => window.location.href = '/portfolio'}
+                                className="px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-black rounded border border-primary/20 hover:bg-primary/20 transition-all"
+                            >
+                                TOP UP
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -350,7 +401,7 @@ export default function TradingPlatform() {
                             </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col bg-slate-950 p-4 relative">
+                        <div className="flex-1 flex flex-col bg-slate-950 p-4 relative min-h-[400px]">
                             <div className="absolute top-8 left-8 z-10 p-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl">
                                 <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Live Feed</h4>
                                 <p className="text-xl font-black text-white">₹{currentPrice.toLocaleString()}</p>
@@ -579,6 +630,27 @@ export default function TradingPlatform() {
                 </div>
             </div>
 
+            <style jsx="true">{`
+                @keyframes slow-spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-slow-spin {
+                    animation: slow-spin 8s linear infinite;
+                }
+                @keyframes progress {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .animate-progress {
+                    animation: progress 1.5s infinite;
+                }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+            `}</style>
         </div>
     );
 }

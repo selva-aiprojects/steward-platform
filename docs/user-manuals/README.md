@@ -4,6 +4,7 @@ This directory contains role-specific user manuals for the StockSteward AI platf
 
 ## Available Manuals
 
+- **STEWARD_PRO_USER_MANUAL.md** - **NEW** guide for the Institutional Terminal, Tactical Hub, and Training Academy mode.
 - **TRADER_USER_MANUAL.md** - Comprehensive guide for traders covering trading features, portfolio management, and risk controls
 - **AUDITOR_USER_MANUAL.md** - Complete documentation for auditors covering compliance monitoring, surveillance, and investigation tools  
 - **BUSINESS_OWNER_USER_MANUAL.md** - Detailed instructions for business owners covering business oversight, team management, and strategic planning
