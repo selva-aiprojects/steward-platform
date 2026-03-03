@@ -2,6 +2,7 @@
 
 This repo now includes a Render Blueprint at `render.yaml` for:
 
+- `stocksteward-grafana` (Grafana dashboard)
 - `stocksteward-superset` (Superset web app)
 - `stocksteward-prometheus` (Prometheus scraper)
 - `stocksteward-superset-redis` (Redis)
@@ -43,7 +44,14 @@ Superset admin credentials are created from env vars:
 
 Both are configured in the Blueprint (password generated automatically).
 
-## 5. Notes
+## 5. Frontend Integration
+
+For the reports to load in your browser, you must set these environment variables in your **Frontend** Render service:
+
+- `REACT_APP_GRAFANA_URL`: The URL of your `stocksteward-grafana` service.
+- `REACT_APP_SUPERSET_URL`: The URL of your `stocksteward-superset` service.
+
+## 6. Notes
 
 - Render may warn that `version` in Docker Compose is obsolete; this is unrelated to Blueprint deployment.
 - Prometheus service in this setup is private monitoring infra; expose only if needed.

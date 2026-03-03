@@ -12,14 +12,16 @@ export default function Observability() {
   const [summary, setSummary] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [embedUrl, setEmbedUrl] = useState(null);
+  const [grafanaEmbedUrl, setGrafanaEmbedUrl] = useState(null);
 
   const grafanaBase = process.env.REACT_APP_GRAFANA_URL || DEFAULT_GRAFANA;
   const supersetBase = process.env.REACT_APP_SUPERSET_URL || DEFAULT_SUPERSET;
   const grafanaUid = process.env.REACT_APP_GRAFANA_DASHBOARD_UID || DEFAULT_GRAFANA_UID;
-  const grafanaUrl = useMemo(
-    () => `${grafanaBase}/d/${grafanaUid}/${grafanaUid}?orgId=1&kiosk&refresh=5s`,
-    [grafanaBase, grafanaUid]
-  );
+
+  const grafanaUrl = useMemo(() => {
+    if (grafanaEmbedUrl) return grafanaEmbedUrl;
+    return `${grafanaBase}/d/${grafanaUid}/${grafanaUid}?orgId=1&kiosk&refresh=5s`;
+  }, [grafanaBase, grafanaUid, grafanaEmbedUrl]);
   const supersetUrl = useMemo(() => {
     if (embedUrl) return embedUrl;
     return (
@@ -51,8 +53,11 @@ export default function Observability() {
     const loadEmbedUrl = async () => {
       const data = await fetchSupersetEmbedUrl();
       if (!mounted) return;
-      if (data?.url) {
-        setEmbedUrl(data.url);
+      if (data?.superset_url) {
+        setEmbedUrl(data.superset_url);
+      }
+      if (data?.grafana_url) {
+        setGrafanaEmbedUrl(data.grafana_url);
       }
     };
     loadEmbedUrl();
@@ -65,16 +70,28 @@ export default function Observability() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
-        <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
-          Superadmin Only
-        </h2>
-        <p className="text-slate-600 text-sm">
-          Observability dashboards are restricted to superadmin access.
+      <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-xl max-w-2xl mx-auto mt-12">
+        <div className="h-20 w-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Access Restrained</h2>
+        <p className="text-slate-500 mb-6">
+          Your current role (<span className="text-rose-600 font-bold">{user?.role}</span>) does not possess the <span className="font-bold text-slate-900">SUPERADMIN</span> clearance required for the executive control room.
         </p>
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Troubleshooting Information</p>
+          <ul className="text-xs text-slate-600 space-y-1 font-medium">
+            <li>• User ID: {user?.id}</li>
+            <li>• Email: {user?.email}</li>
+            <li>• Normalized Role: {user?.role}</li>
+          </ul>
+        </div>
       </div>
     );
   }
+
+  const isLocalOnProd = (window.location.hostname !== 'localhost' &&
+    (grafanaUrl.includes('localhost') || supersetUrl.includes('localhost')));
 
   return (
     <div className="space-y-6">
@@ -92,21 +109,19 @@ export default function Observability() {
           <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-2xl p-2">
             <button
               onClick={() => setTab("grafana")}
-              className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
-                tab === "grafana"
-                  ? "bg-white text-slate-900"
-                  : "text-white/70 hover:text-white"
-              }`}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${tab === "grafana"
+                ? "bg-white text-slate-900"
+                : "text-white/70 hover:text-white"
+                }`}
             >
               Live System
             </button>
             <button
               onClick={() => setTab("superset")}
-              className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
-                tab === "superset"
-                  ? "bg-white text-slate-900"
-                  : "text-white/70 hover:text-white"
-              }`}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${tab === "superset"
+                ? "bg-white text-slate-900"
+                : "text-white/70 hover:text-white"
+                }`}
             >
               Business Intel
             </button>
@@ -150,6 +165,20 @@ export default function Observability() {
           {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Updating..."}
         </div>
       </div>
+
+      {isLocalOnProd && (
+        <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 animate-pulse">
+          <div className="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+            <h3 className="font-black uppercase text-xs tracking-widest">Localhost URL Detected in Production</h3>
+          </div>
+          <p className="text-xs mt-2 font-medium opacity-80">
+            The dashboard URLs current point to <span className="font-bold underline">localhost</span>.
+            When using the platform on Render, you must configure <span className="font-mono bg-white/50 px-1">REACT_APP_GRAFANA_URL</span> and <span className="font-mono bg-white/50 px-1">REACT_APP_SUPERSET_URL</span>
+            in your environment variables to point to your live observability instances.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
         {tab === "grafana" ? (

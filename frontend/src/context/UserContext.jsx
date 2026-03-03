@@ -12,9 +12,12 @@ export const UserProvider = ({ children }) => {
 
     const normalizeRole = (role) => {
         if (!role) return 'TRADER';
-        if (role === 'ADMIN') return 'SUPERADMIN';
-        if (role === 'USER') return 'TRADER';
-        return role;
+        const r = String(role).toUpperCase();
+        if (r === 'ADMIN' || r === 'SUPERADMIN') return 'SUPERADMIN';
+        if (r === 'USER' || r === 'TRADER') return 'TRADER';
+        if (r === 'BUSINESS_OWNER') return 'BUSINESS_OWNER'; // Added BUSINESS_OWNER normalization
+        if (r === 'AUDITOR') return 'AUDITOR'; // Added AUDITOR normalization
+        return r;
     };
 
     useEffect(() => {

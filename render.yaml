@@ -63,6 +63,14 @@ services:
     ipAllowList: []
     maxmemoryPolicy: allkeys-lru
 
+  - type: web
+    name: stocksteward-grafana
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./infra/render/grafana/Dockerfile
+    plan: starter
+    autoDeploy: true
+
 databases:
   - name: stocksteward-superset-db
     databaseName: superset
