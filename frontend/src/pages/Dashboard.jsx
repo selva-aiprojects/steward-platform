@@ -700,7 +700,7 @@ export function Dashboard() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="h-[350px] w-full">
+                            <div className="h-[350px] w-full min-h-[350px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={curveToRender}>
                                         <defs>
