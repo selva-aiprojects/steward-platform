@@ -26,7 +26,7 @@ async def get_live_market_data():
     """Fetch live market data to enrich AI responses"""
     try:
         # Fetch market movers (top gainers and losers)
-        from app.main import last_market_movers
+        from app.core.state import last_market_movers
         return last_market_movers
     except Exception as e:
         logger.error(f"Error fetching live market data: {e}")

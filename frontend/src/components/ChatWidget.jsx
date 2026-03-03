@@ -41,7 +41,19 @@ const ChatWidget = () => {
             setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
         } catch (error) {
             console.error("Chat error:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting to the neural network. Please check your connection and try again." }]);
+            let errorMessage = "I'm having trouble connecting to the neural network. Please check your connection and try again.";
+
+            if (error.response) {
+                if (error.response.status === 401) {
+                    errorMessage = "Your session has expired or you're not logged in. Please log in again to use the AI chat.";
+                } else if (error.response.status === 500) {
+                    errorMessage = "The AI processing unit is currently offline. Falling back to base systems. Please try again in a few moments.";
+                }
+            } else if (error.request) {
+                errorMessage = "Network connection failed. The AI backend may be down or unreachable. Check if you're connected to the live environment.";
+            }
+
+            setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
         } finally {
             setLoading(false);
         }
