@@ -50,7 +50,7 @@ import {
     fetchStrategies,
     fetchExchangeStatus
 } from "../services/api";
-
+import { Link } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
 
