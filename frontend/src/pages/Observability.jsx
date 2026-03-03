@@ -20,6 +20,10 @@ export default function Observability() {
 
   const grafanaUrl = useMemo(() => {
     if (grafanaEmbedUrl) return grafanaEmbedUrl;
+    // If grafanaBase is a full share URL (contains /d/ or is from grafana.net), return it as is
+    if (grafanaBase.includes('/d/') || grafanaBase.includes('grafana.net')) {
+      return grafanaBase;
+    }
     return `${grafanaBase}/d/${grafanaUid}/${grafanaUid}?orgId=1&kiosk&refresh=5s`;
   }, [grafanaBase, grafanaUid, grafanaEmbedUrl]);
   const supersetUrl = useMemo(() => {

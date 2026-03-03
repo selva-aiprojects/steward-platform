@@ -128,8 +128,8 @@ export function Layout({ children }) {
                             )}
                             {isSuperAdmin && (
                                 <NavLink to="/reports/superset" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                                    <FileText size={18} className={`${location.pathname === '/reports/superset' ? 'text-emerald-300' : 'text-slate-400 group-hover:text-emerald-300'} transition-colors`} />
-                                    <span>Superset Reports</span>
+                                    <ShieldCheck size={18} className={`${location.pathname === '/reports/superset' ? 'text-emerald-300' : 'text-slate-400 group-hover:text-emerald-300'} transition-colors`} />
+                                    <span>Executive IQ</span>
                                 </NavLink>
                             )}
                         </>
