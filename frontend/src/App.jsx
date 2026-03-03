@@ -18,6 +18,7 @@ import { useNavigate, useLocation, Navigate } from "react-router-dom"
 import InvestmentDashboard from "./pages/InvestmentDashboard"
 import InvestmentReports from "./pages/InvestmentReports"
 import StrategySelectionPage from "./pages/StrategySelection"
+import TradingPlatform from "./pages/TradingPlatform"
 import Observability from "./pages/Observability"
 import SupersetReports from "./pages/SupersetReports"
 
@@ -53,6 +54,7 @@ function App() {
               <Route path="/kyc" element={<KYC />} />
               <Route path="/" element={<RequireAuth><Layout><Dashboard /></Layout></RequireAuth>} />
               <Route path="/trading" element={<RequireAuth><Layout><TradingHub /></Layout></RequireAuth>} />
+              <Route path="/terminal" element={<RequireAuth><Layout><TradingPlatform /></Layout></RequireAuth>} />
               <Route path="/portfolio" element={
                 <RequireAuth>
                   <Layout>

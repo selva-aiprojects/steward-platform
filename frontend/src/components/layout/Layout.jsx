@@ -65,19 +65,23 @@ export function Layout({ children }) {
                         <>
                             <NavLink to="/trading" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                                 <Zap size={18} className={`${location.pathname === '/trading' ? 'text-green-400' : 'text-slate-400 group-hover:text-green-400'} transition-colors`} />
-                                <span>Trading Hub</span>
+                                <span>Tactical Hub</span>
+                            </NavLink>
+                            <NavLink to="/terminal" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <Activity size={18} className={`${location.pathname === '/terminal' ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-400'} transition-colors`} />
+                                <span>Institutional Terminal</span>
                             </NavLink>
                             <NavLink to="/portfolio" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                                 <Briefcase size={18} className={`${location.pathname === '/portfolio' ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} />
-                                <span>Portfolio</span>
+                                <span>Portfolio Overview</span>
                             </NavLink>
                             <NavLink to="/investment" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                                 <Activity size={18} className={`${location.pathname === '/investment' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'} transition-colors`} />
-                                <span>Investment</span>
+                                <span>Wealth Mandates</span>
                             </NavLink>
                             <NavLink to="/strategies" onClick={closeMenu} className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-bold group ${isActive ? 'bg-white/10 text-white border border-white/5 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                                 <Zap size={18} className={`${location.pathname === '/strategies' ? 'text-purple-400' : 'text-slate-400 group-hover:text-purple-400'} transition-colors`} />
-                                <span>Strategy Selection</span>
+                                <span>Algo Mandates</span>
                             </NavLink>
                         </>
                     )}

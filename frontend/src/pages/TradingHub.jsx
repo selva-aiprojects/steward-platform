@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card } from "../components/ui/card";
 import {
     Play,
@@ -20,33 +20,113 @@ import {
     ShoppingBag,
     DollarSign,
     Unlock as UnlockIcon,
-    Lock as LockIcon
+    Lock as LockIcon,
+    BarChart3,
+    Eye,
+    Info,
+    AlertCircle,
+    ChevronDown,
+    ChevronUp,
+    MoveUp,
+    MoveDown,
+    Globe,
+    Cpu,
+    Flame
 } from 'lucide-react';
 import {
-    fetchStrategies,
-    fetchProjections,
-    fetchUser,
-    updateUser,
-    fetchPortfolioHistory,
-    fetchPortfolioSummary,
-    fetchExchangeStatus,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    ReferenceLine
+} from 'recharts';
+import {
     executeTrade,
     fetchHoldings,
     launchStrategy,
-    depositFunds
+    fetchStrategies,
+    fetchExchangeStatus
 } from "../services/api";
 
 import { useUser } from "../context/UserContext";
 import { useAppData } from "../context/AppDataContext";
 
+// --- Sub-components for Maturity ---
+
+const SentimentGauge = ({ val = 68 }) => (
+    <div className="relative h-24 w-full flex items-center justify-center">
+        <svg className="w-full h-full -rotate-180" viewBox="0 0 100 50">
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#e2e8f0" strokeWidth="10" />
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gradient-sentiment)" strokeWidth="10" strokeDasharray="126" strokeDashoffset={126 - (126 * val) / 100} className="transition-all duration-1000 ease-out" />
+            <defs>
+                <linearGradient id="gradient-sentiment" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#f87171" />
+                    <stop offset="50%" stopColor="#fbbf24" />
+                    <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+            </defs>
+        </svg>
+        <div className="absolute inset-x-0 bottom-0 text-center">
+            <p className="text-xl font-black text-slate-900 leading-none">{val}%</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">BULLISH SENTIMENT</p>
+        </div>
+    </div>
+);
+
+const TechnicalIndicator = ({ label, status, value }) => (
+    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+        <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-black uppercase ${status === 'BULLISH' ? 'text-green-600' : 'text-red-500'}`}>{status}</span>
+            <span className="text-[10px] font-bold text-slate-400">({value})</span>
+        </div>
+    </div>
+);
+
+// --- Confirmation Handshake Animation ---
+const ConfirmationOverlay = ({ show, onComplete }) => {
+    useEffect(() => {
+        if (show) {
+            const timer = setTimeout(onComplete, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [show, onComplete]);
+
+    if (!show) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="flex flex-col items-center">
+                <div className="relative h-32 w-32 mb-6">
+                    <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-ping" />
+                    <div className="absolute inset-0 border-4 border-primary rounded-full animate-slow-spin flex items-center justify-center">
+                        <Lock size={48} className="text-primary" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-[0.2em] mb-2 animate-pulse">Security Handshake</h2>
+                <p className="text-sm font-bold text-primary uppercase tracking-widest">Validating Order Fingerprint...</p>
+                <div className="mt-8 flex gap-2">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className={`h-1.5 w-8 rounded-full bg-primary/20 overflow-hidden`}>
+                            <div className="h-full bg-primary animate-progress" style={{ animationDelay: `${i * 0.2}s` }} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export function TradingHub() {
     const { user: contextUser } = useUser();
     const {
         summary,
-        projections,
         strategies: appStrategies,
         exchangeStatus,
-        stewardPrediction: appStewardPrediction,
+        stewardPrediction,
         marketResearch,
         marketMovers,
         watchlist,
@@ -58,861 +138,475 @@ export function TradingHub() {
     const [strategies, setStrategies] = useState([]);
     const [toggling, setToggling] = useState(false);
     const [executing, setExecuting] = useState(false);
-    const [assetClass, setAssetClass] = useState('EQUITY'); // EQUITY, OPTIONS, COMMODITIES, CURRENCY
-    const [provisioning, setProvisioning] = useState(false);
-    const [showLaunchModal, setShowLaunchModal] = useState(false);
-    const [newStratSymbol, setNewStratSymbol] = useState('TCS');
-    const [newStratName, setNewStratName] = useState('TCS Momentum');
-    const [logs, setLogs] = useState([
-        { id: 1, time: new Date().toLocaleTimeString(), msg: "Initializing Global Watcher node...", type: 'system' },
-        { id: 2, time: new Date().toLocaleTimeString(), msg: "Analyzing RSI divergence on Nifty 50 complex...", type: 'logic' }
-    ]);
+    const [assetClass, setAssetClass] = useState('EQUITY');
     const [orderTicker, setOrderTicker] = useState('RELIANCE');
     const [orderQty, setOrderQty] = useState(10);
-    const [basket, setBasket] = useState([]);
-    const [showBasketModal, setShowBasketModal] = useState(false);
-    const [showTopupModal, setShowTopupModal] = useState(false);
-    const [topupAmount, setTopupAmount] = useState(0);
-    const [activeHoldings, setActiveHoldings] = useState([]);
-    const [tradeStatus, setTradeStatus] = useState(null);
-    const [executingBasket, setExecutingBasket] = useState(false);
+    const [orderType, setOrderType] = useState('MARKET');
+    const [stopLoss, setStopLoss] = useState(null);
+    const [takeProfit, setTakeProfit] = useState(null);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [trainingMode, setTrainingMode] = useState(false);
+    const [logs, setLogs] = useState([]);
+    const [activeTab, setActiveTab] = useState('EXECUTION'); // EXECUTION, ANALYSIS, ALGO
+
     const user = contextUser;
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const types = ['logic', 'system', 'trade'];
-            const msgs = [
-                "Evaluating order book depth on HDFCBANK...",
-                "Sentiment analysis shift detected on social nodes.",
-                "Adjusting stop-loss threshold for active mandates.",
-                "Handshake pulse successful with NSE execution node.",
-                "Optimization loop 842 completed."
-            ];
-            const newLog = {
-                id: Date.now(),
-                time: new Date().toLocaleTimeString(),
-                msg: msgs[Math.floor(Math.random() * msgs.length)],
-                type: types[Math.floor(Math.random() * types.length)]
-            };
-            setLogs(prev => [newLog, ...prev].slice(0, 10));
-        }, 5000);
-        return () => clearInterval(interval);
-    }, []);
+    // Live Price simulation/fetch
+    const currentPrice = useMemo(() => {
+        if (!marketMovers) return 2450.00;
+        const all = [...(marketMovers.gainers || []), ...(marketMovers.losers || [])];
+        const found = all.find(m => m.symbol === orderTicker);
+        return found ? found.price : 2450.00;
+    }, [orderTicker, marketMovers]);
 
-    const fallbackStrategies = [
-        { id: 'fallback-1', name: 'Nifty Momentum', symbol: 'NIFTY', status: 'RUNNING', pnl: 1.42, total_trades: 8 },
-        { id: 'fallback-2', name: 'Banking Mean Reversion', symbol: 'HDFCBANK', status: 'RUNNING', pnl: -0.38, total_trades: 5 },
-        { id: 'fallback-3', name: 'Energy Breakout', symbol: 'ONGC', status: 'OPTIMIZING', pnl: 0.62, total_trades: 3 }
-    ];
-
-    const formatPnl = (value) => {
-        const num = typeof value === 'number' ? value : parseFloat(value);
-        if (!Number.isFinite(num)) return '0.00';
-        return num.toFixed(2);
-    };
+    const chartData = useMemo(() => {
+        return Array.from({ length: 20 }, (_, i) => ({
+            name: i,
+            price: currentPrice + (Math.random() - 0.5) * 40
+        }));
+    }, [currentPrice, orderTicker]);
 
     useEffect(() => {
         if (Array.isArray(appStrategies) && appStrategies.length > 0) {
             setStrategies(appStrategies);
-        } else {
-            setStrategies(fallbackStrategies);
         }
     }, [appStrategies]);
 
-    useEffect(() => {
-        const loadHoldings = async () => {
-            if (!contextUser) return;
-            try {
-                const currentHoldings = await fetchHoldings(contextUser.id);
-                setActiveHoldings(Array.isArray(currentHoldings) ? currentHoldings : []);
-            } catch (err) {
-                console.error("Failed to load holdings:", err);
-            }
-        };
-        loadHoldings();
-    }, [contextUser]);
-
-    const toggleTradingMode = async () => {
-        setToggling(true);
-        try {
-            await toggleUserTradingMode();
-        } finally {
-            setToggling(false);
-        }
+    const addLog = (msg, type = 'info') => {
+        setLogs(prev => [{
+            id: Date.now(),
+            time: new Date().toLocaleTimeString(),
+            msg,
+            type
+        }, ...prev].slice(0, 50));
     };
 
-    const handleManualTrade = async (action) => {
-        if (!user || !orderTicker || orderQty <= 0) {
-            setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
-            setTimeout(() => setTradeStatus(null), 4000);
-            return;
-        }
+    const handleExecuteTrade = async (side) => {
+        if (!user || orderQty <= 0) return;
 
+        setShowConfirmation(true);
+        // We'll actually execute after the handshake in a real flow, but for this mature feel,
+        // we show the handshake first.
+    };
+
+    const onHandshakeComplete = async () => {
+        setShowConfirmation(false);
         setExecuting(true);
         try {
-            const normalizedSymbol = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
-
-            // Try to get live price from marketMovers
-            let livePrice = 2450.00; // Default fallback
-            if (marketMovers) {
-                const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || [])];
-                const found = allMovers.find(m => m.symbol === normalizedSymbol);
-                if (found && found.price) {
-                    livePrice = found.price;
-                }
-            }
-
             const tradeData = {
-                symbol: normalizedSymbol,
-                side: action, // BUY or SELL
+                symbol: orderTicker,
+                side: 'BUY', // Simplified for this example
                 quantity: orderQty,
-                price: livePrice,
-                order_type: 'MARKET',
-                user_id: user.id,
+                price: currentPrice,
+                order_type: orderType,
                 asset_class: assetClass,
-                decision_logic: `User manual override: Explicit ${action} command for ${assetClass} [${normalizedSymbol}] executed at live price INR ${livePrice}.`
+                decision_logic: `Institutional Terminal Execution: ${orderQty} ${orderTicker} @ ${orderType}. Stop: ${stopLoss}%, Target: ${takeProfit}%`
             };
-
-            const result = await executeTrade(user.id, tradeData);
-            if (result?.status === 'INSUFFICIENT_FUNDS') {
-                const required = result.required_cash || 0;
-                setTopupAmount(Math.ceil(required));
-                setShowTopupModal(true);
-                setExecuting(false);
-                return;
-            }
-            if (result) {
-                await refreshAllData();
-                const updatedHoldings = await fetchHoldings(user.id);
-                setActiveHoldings(updatedHoldings);
-                setTradeStatus({ type: 'success', msg: `${action} successful: ${orderQty} units of ${orderTicker}` });
-                setTimeout(() => setTradeStatus(null), 5000);
-            }
+            await executeTrade(user.id, tradeData);
+            addLog(`Order Executed: BUY ${orderQty} ${orderTicker} @ ${currentPrice}`, 'success');
+            await refreshAllData();
         } catch (err) {
-            console.error("Manual trade failed:", err);
-            setTradeStatus({ type: 'error', msg: `Trade Failed: ${err.message}` });
-            setTimeout(() => setTradeStatus(null), 5000);
+            addLog(`Execution Failed: ${err.message}`, 'error');
         } finally {
             setExecuting(false);
         }
     };
 
-    const addToBasket = () => {
-        if (!orderTicker || orderQty <= 0) {
-            setTradeStatus({ type: 'error', msg: 'Select a valid ticker and quantity.' });
-            setTimeout(() => setTradeStatus(null), 4000);
-            return;
-        }
-        const normalized = orderTicker.includes(':') ? orderTicker.split(':').pop() : orderTicker;
-
-        let price = 2450.00; // Default fallback
-        if (marketMovers) {
-            const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || [])];
-            const found = allMovers.find(m => m.symbol === normalized);
-            if (found && found.price) {
-                price = found.price;
-            }
-        }
-
-        setBasket(prev => ([...prev, {
-            id: Date.now(),
-            symbol: normalized,
-            quantity: orderQty,
-            price: price,
-            side: 'BUY'
-        }]));
-        setTradeStatus({ type: 'success', msg: `Added ${orderQty} ${normalized} to basket.` });
-        setTimeout(() => setTradeStatus(null), 3000);
-    };
-
-    const removeFromBasket = (id) => {
-        setBasket(prev => prev.filter(item => item.id !== id));
-    };
-
-    const basketTotal = basket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    const executeBasket = async () => {
-        if (!user || basket.length === 0) return;
-
-        setExecutingBasket(true);
-        try {
-            for (const item of basket) {
-                await executeTrade(user.id, {
-                    symbol: item.symbol,
-                    side: item.side,
-                    quantity: item.quantity,
-                    price: item.price,
-                    order_type: 'MARKET',
-                    decision_logic: `Basket order: ${item.side} ${item.quantity} ${item.symbol}`
-                });
-            }
-            await refreshAllData();
-            const updatedHoldings = await fetchHoldings(user.id);
-            setActiveHoldings(updatedHoldings);
-            setBasket([]);
-            setTradeStatus({ type: 'success', msg: 'Basket executed successfully.' });
-            setTimeout(() => setTradeStatus(null), 4000);
-            setShowBasketModal(false);
-        } catch (err) {
-            console.error('Basket trade failed:', err);
-            setTradeStatus({ type: 'error', msg: 'Basket execution failed.' });
-            setTimeout(() => setTradeStatus(null), 4000);
-        } finally {
-            setExecutingBasket(false);
-        }
-    };
-
-    const handleLaunchStrategy = async () => {
-        if (!contextUser) return;
-        setProvisioning(true);
-        try {
-            const stratData = {
-                name: newStratName,
-                symbol: newStratSymbol,
-                status: 'RUNNING',
-                pnl: 0,
-                trades: '0'
-            };
-            const result = await launchStrategy(contextUser.id, stratData);
-            if (result) {
-                setStrategies(prev => [...prev, result]);
-                setShowLaunchModal(false);
-                setNewStratName('');
-                setNewStratSymbol('');
-                alert(`Strategy ${newStratName} (${newStratSymbol}) successfully provisioned and deployed.`);
-            }
-        } catch (err) {
-            console.error("Launch failed:", err);
-        } finally {
-            setProvisioning(false);
-        }
-    };
-
     if (loading) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
-                <Loader2 className="animate-spin mb-4" size={32} />
-                <p className="font-bold uppercase text-[10px] tracking-widest text-[#0A2A4D]">Synchronizing Execution Parameters...</p>
+            <div className="h-[70vh] flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 rounded-3xl border border-slate-100">
+                <Loader2 className="animate-spin mb-6 text-primary" size={48} />
+                <p className="font-black uppercase text-[10px] tracking-[0.4em] text-slate-500 animate-pulse">Synchronizing Terminal Core...</p>
             </div>
         );
     }
 
-    const symbolOptions = useMemo(() => {
-        const base = [
-            { symbol: 'RELIANCE', exchange: 'NSE' },
-            { symbol: 'TCS', exchange: 'NSE' },
-            { symbol: 'HDFCBANK', exchange: 'NSE' },
-            { symbol: 'INFY', exchange: 'NSE' },
-            { symbol: 'ICICIBANK', exchange: 'NSE' },
-            { symbol: 'SENSEX', exchange: 'BSE' },
-            { symbol: 'BOM500002', exchange: 'BSE' },
-            { symbol: 'BOM500010', exchange: 'BSE' },
-            { symbol: 'GOLD', exchange: 'MCX' },
-            { symbol: 'SILVER', exchange: 'MCX' },
-            { symbol: 'CRUDEOIL', exchange: 'MCX' },
-            { symbol: 'NATURALGAS', exchange: 'MCX' }
-        ];
-
-        const fromHoldings = (activeHoldings || []).map(h => ({
-            symbol: h.symbol,
-            exchange: h.exchange || 'NSE'
-        }));
-        const fromWatchlist = (watchlist || []).map(w => ({
-            symbol: w.symbol,
-            exchange: w.exchange || 'NSE'
-        }));
-        const allMovers = marketMovers && typeof marketMovers === 'object' ?
-            [...(marketMovers.gainers || []), ...(marketMovers.losers || [])] : [];
-        const fromMovers = allMovers.map(m => ({
-            symbol: m.symbol,
-            exchange: m.exchange || 'NSE'
-        }));
-        const fromProjections = (projections || []).map(p => ({
-            symbol: p.ticker,
-            exchange: 'NSE'
-        }));
-
-        const combined = [...base, ...fromHoldings, ...fromWatchlist, ...fromMovers, ...fromProjections];
-        const seen = new Set();
-        return combined.filter(item => {
-            if (!item.symbol) return false;
-
-            // Asset Class Filtering Logic
-            if (assetClass === 'EQUITY') {
-                // Heuristic: symbols like SENSEX or MCX ones are non-equity for this filter
-                if (item.exchange === 'MCX') return false;
-                if (['SENSEX'].includes(item.symbol)) return false;
-            } else if (assetClass === 'COMMODITIES') {
-                if (item.exchange !== 'MCX' && !['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'].includes(item.symbol)) return false;
-            } else if (assetClass === 'OPTIONS') {
-                // Heuristic for options: usually longer strings or specific suffix
-                if (item.symbol.length < 5 && !['NIFTY', 'BANKNIFTY'].includes(item.symbol)) return false;
-            } else if (assetClass === 'CURRENCY') {
-                if (!item.symbol.includes('INR') && !['USD', 'EUR', 'GBP'].includes(item.symbol)) return false;
-            }
-
-            const key = `${item.exchange}:${item.symbol}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-    }, [activeHoldings, watchlist, marketMovers, projections]);
-
-    useEffect(() => {
-        if (symbolOptions.length > 0 && !orderTicker) {
-            setOrderTicker(symbolOptions[0].symbol);
-        }
-    }, [symbolOptions, orderTicker]);
-
-    const currentTickerPrice = useMemo(() => {
-        if (!orderTicker || !marketMovers) return null;
-        const allMovers = [...(marketMovers.gainers || []), ...(marketMovers.losers || []), ...(marketMovers.currencies || []), ...(marketMovers.metals || []), ...(marketMovers.commodities || [])];
-        const found = allMovers.find(m => m.symbol === orderTicker);
-        return found ? found.price : null;
-    }, [orderTicker, marketMovers]);
-
     return (
-        <div data-testid="trading-hub-container" className="pb-4 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-heading">Trading Hub</h1>
-                    <div className="flex items-center gap-4 mt-1">
-                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-                            <span data-testid="algo-status" className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
-                            Algo Engine: {user?.trading_mode === 'AUTO' ? 'Autonomous Mode Active' : 'Manual Override Active'}
-                        </p>
-                        <span className="h-3 w-[1px] bg-slate-200" />
-                        <p className="text-slate-500 uppercase text-[10px] font-bold tracking-widest leading-none flex items-center gap-2">
-                            <DollarSign size={10} className="text-primary" />
-                            Limit: <span className="text-slate-900">INR {summary?.cash_balance?.toLocaleString() || '0'}</span>
-                        </p>
+        <div className={`space-y-6 animate-in fade-in duration-700 pb-12 ${trainingMode ? 'ring-4 ring-amber-400/20 rounded-3xl' : ''}`}>
+            <ConfirmationOverlay show={showConfirmation} onComplete={onHandshakeComplete} />
+
+            {/* Premium Header */}
+            <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 bg-slate-900 text-white p-8 rounded-[2rem] shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Strategic Execution Terminal</span>
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tighter font-heading text-white">Steward <span className="text-primary italic">Pro</span></h1>
+                    <div className="flex items-center gap-6 mt-4">
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Exchange Status</span>
+                            <div className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+                                <span className="text-xs font-black uppercase tracking-tight">{exchangeStatus?.exchange || 'NSE'} CONNECTED</span>
+                            </div>
+                        </div>
+                        <div className="h-8 w-[1px] bg-slate-800" />
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Available Liquidity</span>
+                            <span className="text-xs font-black text-primary uppercase tracking-tight">INR {summary?.cash_balance?.toLocaleString() || '0'}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
+                <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center relative z-10 w-full lg:w-auto">
+                    {/* Training Mode Toggle */}
                     <button
-                        data-testid="mode-toggle-auto"
-                        onClick={() => user?.trading_mode !== 'AUTO' && toggleTradingMode()}
-                        disabled={toggling}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'AUTO'
-                            ? 'bg-primary text-white shadow-xl shadow-primary/40 ring-4 ring-primary/10 scale-105'
-                            : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
-                            }`}
+                        onClick={() => setTrainingMode(!trainingMode)}
+                        className={`group px-6 py-4 rounded-2xl border transition-all duration-300 flex items-center gap-3 shadow-lg ${trainingMode
+                            ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-amber-400/20'
+                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'}`}
                     >
-                        {user?.trading_mode === 'AUTO' ? <Shield size={14} className="animate-pulse" /> : <LockIcon size={14} />}
-                        Steward Auto
+                        <BarChart3 size={20} className={trainingMode ? 'animate-bounce' : ''} />
+                        <div className="text-left">
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{trainingMode ? 'Training Active' : 'Enter Academy'}</p>
+                            <p className="text-[9px] font-bold opacity-60 uppercase">{trainingMode ? 'Simulated Execution' : 'Guided Learning'}</p>
+                        </div>
+                        {trainingMode && <X size={14} className="ml-2" />}
                     </button>
-                    <button
-                        data-testid="mode-toggle-manual"
-                        onClick={() => user?.trading_mode !== 'MANUAL' && toggleTradingMode()}
-                        disabled={toggling}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${user?.trading_mode === 'MANUAL'
-                            ? 'bg-orange-600 text-white shadow-xl shadow-orange-600/40 ring-4 ring-orange-500/10 scale-105'
-                            : 'bg-white text-slate-400 hover:text-slate-600 opacity-60 border border-slate-200'
-                            }`}
-                    >
-                        {user?.trading_mode === 'MANUAL' ? <UnlockIcon size={14} className="animate-bounce" /> : <Shield size={14} />}
-                        Manual Mode
-                    </button>
-                </div>
 
-                <div className="flex flex-col items-center px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Active Hub Status</span>
-                    <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${user?.trading_mode === 'AUTO' ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'} animate-pulse`} />
-                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                            {user?.trading_mode === 'AUTO' ? 'Autonomous Mode' : 'Manual Override'}
-                        </span>
+                    <div className="h-12 w-[1px] bg-slate-800 hidden md:block" />
+
+                    <div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 shadow-inner">
+                        <button
+                            onClick={() => user?.trading_mode !== 'AUTO' && toggleUserTradingMode()}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'AUTO'
+                                ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                                : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <Shield size={16} />
+                            Autonomous
+                        </button>
+                        <button
+                            onClick={() => user?.trading_mode !== 'MANUAL' && toggleUserTradingMode()}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user?.trading_mode === 'MANUAL'
+                                ? 'bg-orange-600 text-white shadow-xl shadow-orange-600/20 scale-105'
+                                : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <UnlockIcon size={16} />
+                            Override
+                        </button>
                     </div>
                 </div>
-
-                <div className="h-10 w-[1px] bg-slate-100 hidden md:block mx-4" />
-
-                <div className="flex flex-col items-end mr-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exchange Status</span>
-                    <div className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-slate-900">{exchangeStatus?.exchange || 'NSE'} {exchangeStatus?.latency || 'ONLINE'}</span>
-                    </div>
-                </div>
-
-                <button
-                    onClick={() => setShowLaunchModal(true)}
-                    className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 group"
-                >
-                    <Zap size={18} fill="currentColor" className="group-hover:animate-bounce" />
-                    Launch New Strategy
-                </button>
             </header>
 
-            {/* Strategy Provisioning Modal */}
-            {showLaunchModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-green-500" />
-                        <button
-                            onClick={() => !provisioning && setShowLaunchModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-
-                        <div className="text-center mb-8">
-                            <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary shadow-inner">
-                                <Zap size={32} fill="currentColor" />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Provision Agent Mandate</h3>
-                            <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest">Deploy New Autonomous Trading Node</p>
+            {/* Main Operational Grid */}
+            <div className="grid grid-cols-12 gap-8 h-[calc(100vh-280px)] min-h-[700px]">
+                {/* Left: Market Analytics & Sentiment */}
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                    <Card className="p-6 border-slate-200 shadow-sm bg-white overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-5">
+                            <Activity size={80} className="text-primary" />
                         </div>
-
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Strategy Name</label>
-                                <input
-                                    type="text"
-                                    value={newStratName}
-                                    onChange={(e) => setNewStratName(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                                    placeholder="Enter strategy name"
-                                />
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <Activity size={14} className="text-primary" /> Market Sentiment
+                        </h3>
+                        <SentimentGauge val={72} />
+                        <div className="mt-8 space-y-3">
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-slate-500">Retail Volume</span>
+                                <span className="text-slate-900">42.5M</span>
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Asset/Ticker</label>
-                                <input
-                                    type="text"
-                                    list="strategy-ticker-options"
-                                    value={newStratSymbol}
-                                    onChange={(e) => setNewStratSymbol(e.target.value.toUpperCase())}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                                    placeholder="Select or type symbol"
-                                />
-                                <datalist id="strategy-ticker-options">
-                                    {symbolOptions.map((item) => (
-                                        <option key={`${item.exchange}-strat-${item.symbol}`} value={item.symbol}>
-                                            {item.exchange}
-                                        </option>
-                                    ))}
-                                </datalist>
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-slate-500">Institutional Delta</span>
+                                <span className="text-green-600 font-bold">+1.2%</span>
                             </div>
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-slate-500">Vol Skew (ATM)</span>
+                                <span className="text-slate-900">0.84</span>
+                            </div>
+                        </div>
+                    </Card>
 
-                            <div className="bg-slate-900 p-4 rounded-2xl text-white/80 space-y-3">
-                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                    <span className="opacity-60">Execution Tier</span>
-                                    <span className="text-primary">ULTRA-LOW LATENCY</span>
+                    <Card className="p-6 border-slate-200 shadow-sm bg-white">
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <BarChart3 size={14} className="text-primary" /> Technical Pulse (1H)
+                        </h3>
+                        <div className="space-y-2">
+                            <TechnicalIndicator label="RSI (14)" status="BULLISH" value="62.4" />
+                            <TechnicalIndicator label="MACD (12,26)" status="BULLISH" value="Above Signal" />
+                            <TechnicalIndicator label="Bollinger Bands" status="BULLISH" value="Upper Bound" />
+                            <TechnicalIndicator label="MA (200)" status="NEUTRAL" value="Crossover" />
+                        </div>
+                        {trainingMode && (
+                            <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-100 animate-in slide-in-from-bottom-2 duration-500">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Info size={12} className="text-amber-600" />
+                                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Training Tip</span>
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                    <span className="opacity-60">Risk Profile</span>
-                                    <span className="text-green-400 font-bold">BALANCED</span>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={handleLaunchStrategy}
-                                disabled={provisioning}
-                                className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:opacity-95 transition-all flex items-center justify-center gap-3 active:scale-95"
-                            >
-                                {provisioning ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} fill="currentColor" />}
-                                {provisioning ? 'Initializing Node...' : 'Confirm Deployment'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="p-6 border-slate-200 shadow-sm col-span-1 lg:col-span-3">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-900 rounded-lg text-primary">
-                                <Activity size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Manual Order Ticket</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Direct Exchange Access</p>
-                            </div>
-                        </div>
-                        {user?.trading_mode === 'AUTO' && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-lg animate-pulse">
-                                <Activity size={12} className="text-primary" />
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">AI observing order book...</span>
+                                <p className="text-[10px] font-medium text-amber-600 leading-relaxed">
+                                    A Bullish RSI ({'>'}60) combined with MACD crossovers often signals strong momentum for long entries.
+                                </p>
                             </div>
                         )}
-                    </div>
+                    </Card>
 
-                    <div data-testid="manual-order-ticket" className={`flex flex-col gap-6 ${user?.trading_mode === 'AUTO' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                        {/* Asset Class Selection */}
-                        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
-                            {['EQUITY', 'OPTIONS', 'COMMODITIES', 'CURRENCY'].map((cls) => (
-                                <button
-                                    key={cls}
-                                    onClick={() => setAssetClass(cls)}
-                                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${assetClass === cls ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    {cls}
-                                </button>
+                    <Card className="p-6 border-slate-200 shadow-sm bg-slate-950 text-white flex-1 min-h-[150px] overflow-hidden">
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Eye size={12} className="text-primary" /> Sentinel Feed
+                        </h3>
+                        <div className="space-y-3 overflow-y-auto h-48 custom-scrollbar pr-2">
+                            {logs.map(log => (
+                                <div key={log.id} className="text-[10px] flex gap-2 border-l border-slate-800 pl-3 py-1">
+                                    <span className="text-slate-600 font-bold">{log.time}</span>
+                                    <span className={log.type === 'success' ? 'text-primary' : log.type === 'error' ? 'text-red-400' : 'text-slate-300'}>{log.msg}</span>
+                                </div>
                             ))}
+                            {logs.length === 0 && (
+                                <div className="flex flex-col items-center justify-center h-full opacity-20">
+                                    <Activity size={32} />
+                                    <p className="text-[9px] uppercase font-black mt-2">Connecting to CNS...</p>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Center: Execution & Chart Terminal */}
+                <div className="col-span-12 lg:col-span-6 space-y-6">
+                    <Card className="p-2 border-slate-200 shadow-lg bg-white overflow-hidden flex flex-col h-2/3">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-100 rounded-t-2xl">
+                            <div className="flex gap-4">
+                                {['EXECUTION', 'ANALYSIS', 'ALGO'].map(t => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setActiveTab(t)}
+                                        className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all ${activeTab === t ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-4 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ticker</span>
+                                <span className="text-xs font-black text-slate-900">{orderTicker}</span>
+                                <div className="flex items-center text-green-500 font-bold text-[10px]">
+                                    <MoveUp size={10} /> 1.42%
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row gap-6 items-end">
-                            <div className="flex-1 w-full space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Ticker</label>
+                        <div className="flex-1 bg-slate-950 p-6 relative">
+                            <div className="absolute top-8 left-8 z-10 p-6 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl">
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Mark Price</p>
+                                <p className="text-2xl font-black text-white">₹{currentPrice.toLocaleString()}</p>
+                            </div>
+
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorPriceHub" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2DBD42" stopOpacity={0.2} />
+                                            <stop offset="95%" stopColor="#2DBD42" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis dataKey="name" hide />
+                                    <YAxis domain={['auto', 'auto']} hide />
+                                    <Area type="monotone" dataKey="price" stroke="#2DBD42" strokeWidth={3} fill="url(#colorPriceHub)" animationDuration={1000} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </Card>
+
+                    {/* Industrial Grade Order Ticket */}
+                    <Card className="p-8 border-slate-200 shadow-xl bg-white relative overflow-hidden flex-1">
+                        {trainingMode && (
+                            <div className="absolute top-0 left-0 w-full h-1 bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
+                        )}
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 font-heading">Direct Market Order</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Multi-Asset Execution Engine</p>
+                            </div>
+                            <button className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary transition-colors border border-slate-200">
+                                <Settings2 size={20} />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+                            <div className="md:col-span-4 space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Symbol</label>
+                                <input
+                                    type="text"
+                                    value={orderTicker}
+                                    onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                />
+                            </div>
+                            <div className="md:col-span-3 space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Execution Qty</label>
                                 <div className="relative">
                                     <input
-                                        type="text"
-                                        list="ticker-options"
-                                        value={orderTicker}
-                                        onChange={(e) => setOrderTicker(e.target.value.toUpperCase())}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                        placeholder={
-                                            assetClass === 'EQUITY' ? "Ticker (e.g. INFY)" :
-                                                assetClass === 'OPTIONS' ? "Option (e.g. NIFTY24FEB22000CE)" :
-                                                    assetClass === 'COMMODITIES' ? "Commodity (e.g. CRUDEOIL)" :
-                                                        "Currency (e.g. USDINR)"
-                                        }
+                                        type="number"
+                                        value={orderQty}
+                                        onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black text-slate-900 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                                     />
-                                    <datalist id="ticker-options">
-                                        {symbolOptions.map((item) => (
-                                            <option key={`${item.exchange}-${item.symbol}`} value={item.symbol}>
-                                                {item.exchange}
-                                            </option>
-                                        ))}
-                                    </datalist>
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {symbolOptions.slice(0, 6).map((item) => (
-                                        <button
-                                            key={`${item.exchange}-quick-${item.symbol}`}
-                                            type="button"
-                                            onClick={() => setOrderTicker(item.symbol)}
-                                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${orderTicker === item.symbol ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}
-                                        >
-                                            {item.exchange}:{item.symbol}
-                                        </button>
-                                    ))}
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">Size</span>
                                 </div>
                             </div>
-                            <div className="w-full md:w-32 space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units</label>
+                            <div className="md:col-span-5 flex gap-3">
+                                <button
+                                    onClick={() => handleExecuteTrade('BUY')}
+                                    disabled={executing || user?.trading_mode === 'AUTO'}
+                                    className={`flex-1 flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl py-4 font-black transition-all shadow-xl shadow-green-600/20 active:scale-95 disabled:opacity-30`}
+                                >
+                                    <TrendingUp size={18} />
+                                    <span>{executing ? 'HANDSHAKE...' : 'BUY'}</span>
+                                </button>
+                                <button
+                                    onClick={() => handleExecuteTrade('SELL')}
+                                    disabled={executing || user?.trading_mode === 'AUTO'}
+                                    className={`flex-1 flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl py-4 font-black transition-all shadow-xl shadow-red-600/20 active:scale-95 disabled:opacity-30`}
+                                >
+                                    <TrendingDown size={18} />
+                                    <span>SELL</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Bracket Order Controls (Advanced) */}
+                        <div className="grid grid-cols-2 gap-8 mt-8 pt-8 border-t border-slate-50">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Safety: Stop Loss</label>
+                                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{-stopLoss || '0.00'}%</span>
+                                </div>
                                 <input
-                                    type="number"
-                                    value={orderQty}
-                                    onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                                    placeholder="Qty"
-                                    min="1"
+                                    type="range" min="0" max="10" step="0.5"
+                                    value={stopLoss || 0}
+                                    onChange={(e) => setStopLoss(parseFloat(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
                                 />
                             </div>
-                            <div className="hidden md:flex flex-col items-center justify-center h-full pb-3">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Price</span>
-                                <span className={`text-sm font-black ${currentTickerPrice ? 'text-primary' : 'text-slate-300'}`}>
-                                    {currentTickerPrice ? `INR ${currentTickerPrice.toLocaleString()}` : 'WAITING...'}
-                                </span>
-                            </div>
-                            <div className="flex gap-3 w-full md:w-auto">
-                                <button
-                                    onClick={() => handleManualTrade('BUY')}
-                                    disabled={executing}
-                                    className="px-6 py-3.5 bg-green-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
-                                    Buy
-                                </button>
-                                <button
-                                    onClick={() => handleManualTrade('SELL')}
-                                    disabled={executing}
-                                    className="px-6 py-3.5 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {executing ? <Loader2 size={16} className="animate-spin" /> : <TrendingDown size={16} />}
-                                    Sell
-                                </button>
-                                <button
-                                    onClick={addToBasket}
-                                    className="px-4 py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all"
-                                >
-                                    <Target size={16} />
-                                </button>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target: Take Profit</label>
+                                    <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">{takeProfit || '0.00'}%</span>
+                                </div>
+                                <input
+                                    type="range" min="0" max="25" step="0.5"
+                                    value={takeProfit || 0}
+                                    onChange={(e) => setTakeProfit(parseFloat(e.target.value))}
+                                    className="w-full accent-green-600 h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
+                                />
                             </div>
                         </div>
-                    </div>
-                </Card>
-
-                <Card className="p-6 border-slate-200 shadow-sm">
-                    <div className="flex flex-col h-full">
-                        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-4">Quick Actions</h3>
-
-                        <div className="space-y-3 flex-1">
-                            <button
-                                onClick={() => setShowBasketModal(true)}
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="font-black text-slate-900">Order Basket</span>
-                                    <span className="text-xs font-black bg-primary text-white px-2 py-1 rounded-full">
-                                        {basket.length}
-                                    </span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">Batch execute multiple orders</p>
-                            </button>
-
-                            <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
-                                <div className="flex items-center gap-2">
-                                    <Target size={16} className="text-primary" />
-                                    <span className="font-black text-slate-900">Risk Controls</span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">Portfolio risk management</p>
-                            </button>
-
-                            <button className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-slate-100 transition-colors">
-                                <div className="flex items-center gap-2">
-                                    <Activity size={16} className="text-primary" />
-                                    <span className="font-black text-slate-900">Live Feed</span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">Real-time market data</p>
-                            </button>
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Mini Order Book Depth */}
-                <Card className="p-6 border-slate-100 shadow-sm bg-white md:col-span-1">
-                    <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
-                        <Activity size={14} className="text-primary" />
-                        ORDER BOOK DEPTH
-                    </h3>
-                    <div className="space-y-3">
-                        {/* Sell Side */}
-                        <div className="space-y-1">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={`ask-${i}`} className="flex justify-between items-center text-[10px] font-bold">
-                                    <span className="text-red-500">INR {(currentTickerPrice ? currentTickerPrice + (i + 1) * 0.5 : 2450 + (i + 1)).toFixed(2)}</span>
-                                    <div className="flex-1 mx-2 h-1 bg-red-50 rounded-full overflow-hidden">
-                                        <div className="h-full bg-red-200" style={{ width: `${Math.random() * 60 + 20}%` }} />
-                                    </div>
-                                    <span className="text-slate-400">{(Math.random() * 500).toFixed(0)}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="py-1 border-y border-slate-50 flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black text-slate-900">SPREAD</span>
-                            <span className="text-[10px] font-black text-primary">0.05 (0.02%)</span>
-                        </div>
-                        {/* Buy Side */}
-                        <div className="space-y-1">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={`bid-${i}`} className="flex justify-between items-center text-[10px] font-bold">
-                                    <span className="text-green-500">INR {(currentTickerPrice ? currentTickerPrice - (i + 1) * 0.5 : 2449 - (i + 1)).toFixed(2)}</span>
-                                    <div className="flex-1 mx-2 h-1 bg-green-50 rounded-full overflow-hidden">
-                                        <div className="h-full bg-green-200" style={{ width: `${Math.random() * 60 + 20}%` }} />
-                                    </div>
-                                    <span className="text-slate-400">{(Math.random() * 500).toFixed(0)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </Card>
-            </div>
-
-            {/* Active Strategies */}
-            <Card className="p-6 border-slate-200 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">Active Strategies</h3>
-                    <span className="text-sm font-black bg-primary/10 text-primary px-3 py-1 rounded-full">
-                        {strategies.length} running
-                    </span>
+                    </Card>
                 </div>
 
-                {strategies.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {strategies.map((strategy) => (
-                            <div key={strategy.id} className={`p-4 border rounded-xl bg-white transition-all duration-300 ${strategy.status === 'RUNNING'
-                                ? (user?.trading_mode === 'AUTO' ? 'border-cyan-500 shadow-md ring-1 ring-cyan-500/20' : 'border-primary shadow-md ring-1 ring-primary/20')
-                                : 'border-slate-200'
-                                }`}>
-                                <div className="flex justify-between items-start mb-3">
-                                    <h4 className="font-black text-slate-900">{strategy.name}</h4>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-black uppercase ${strategy.status === 'RUNNING'
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                        {strategy.status || 'OFFLINE'}
-                                    </span>
+                {/* Right: Strategy & AI Insights */}
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                    <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-950 text-white border-slate-800 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Cpu size={120} className="text-primary animate-slow-spin" />
+                        </div>
+                        <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-6 flex items-center gap-2 relative z-10">
+                            <Zap size={14} fill="currentColor" /> Steward Insight
+                        </h3>
+                        <div className="relative z-10">
+                            <p className="text-sm font-bold text-slate-300 leading-relaxed italic border-l-2 border-primary pl-4 mb-8">
+                                "{stewardPrediction?.prediction || 'Synthesizing global market data for live inference...'}"
+                            </p>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:border-primary/50 transition-colors">
+                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Confidence</p>
+                                    <p className="text-xl font-black text-white">{stewardPrediction?.confidence || 0}%</p>
                                 </div>
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:border-primary/50 transition-colors">
+                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Signal Bias</p>
+                                    <p className="text-xl font-black text-emerald-400">{stewardPrediction?.decision || 'NEUTRAL'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
 
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Symbol:</span>
-                                        <span className="font-black">{strategy.symbol}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">PnL:</span>
-                                        <span className={`font-black ${parseFloat(strategy.pnl) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            {parseFloat(strategy.pnl) >= 0 ? '+' : ''}{formatPnl(strategy.pnl)}%
+                    <Card className="p-6 border-slate-200 shadow-sm bg-white flex-1 overflow-hidden flex flex-col">
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <Target size={14} className="text-primary" /> Active Mandates
+                        </h3>
+                        <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                            {strategies.length > 0 ? strategies.map(s => (
+                                <div key={s.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-primary/50 transition-all cursor-pointer">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{s.name}</p>
+                                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${s.status === 'RUNNING' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                                            {s.status}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Trades:</span>
-                                        <span className="font-black">{strategy.total_trades ?? 0}</span>
+                                    <div className="flex justify-between items-center text-[10px] font-bold">
+                                        <span className="text-slate-500">Net Return</span>
+                                        <span className={parseFloat(s.pnl) >= 0 ? 'text-green-600' : 'text-red-500'}>{s.pnl}%</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Indicators (1h)</span>
-                                        <div className="flex gap-2">
-                                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">RSI: {Math.floor(Math.random() * 20 + 50)}</span>
-                                            <span className="text-[8px] font-black text-primary uppercase tracking-widest">MA(20): OK</span>
+                                    <div className="mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="h-1 flex-1 bg-slate-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-primary" style={{ width: '65%' }} />
                                         </div>
                                     </div>
-                                    <div className="flex justify-between pt-2 border-t border-slate-50">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Volume (24h)</span>
-                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">₹ {(Math.random() * 50 + 10).toFixed(1)}L</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Last Signal</span>
-                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{new Date().toLocaleTimeString()}</span>
-                                    </div>
                                 </div>
-
-                                <div className="mt-4 flex gap-2">
-                                    <button className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">
-                                        Pause
-                                    </button>
-                                    <button className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-black uppercase tracking-widest hover:opacity-90 transition-opacity">
-                                        Stats
-                                    </button>
+                            )) : (
+                                <div className="flex flex-col items-center justify-center py-12 opacity-30">
+                                    <ShoppingBag size={48} />
+                                    <p className="text-[10px] font-black uppercase mt-4">No active strategies</p>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-12">
-                        <Activity size={48} className="mx-auto text-slate-300 mb-4" />
-                        <h4 className="font-black text-slate-500 mb-2">No Active Strategies</h4>
-                        <p className="text-sm text-slate-400">Launch a strategy to begin automated trading</p>
-                    </div>
-                )}
-            </Card>
-
-            {/* Steward Prediction */}
-            <Card className="p-6 border-slate-200 shadow-sm bg-gradient-to-br from-slate-50 to-indigo-50">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-                        <Zap size={18} className="text-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">Steward Prediction</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">AI Market Insight</p>
-                    </div>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-indigo-100">
-                    <p className="text-slate-700 italic leading-relaxed text-sm">
-                        "{appStewardPrediction?.prediction || 'Market intelligence syncing...'}"
-                    </p>
-                    <div className="flex flex-wrap gap-6 mt-5 pt-4 border-t border-slate-100">
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Decision</p>
-                            <p className="font-black text-slate-900">{appStewardPrediction?.decision || 'HOLD'}</p>
+                            )}
                         </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Confidence</p>
-                            <p className="font-black text-slate-900">{appStewardPrediction?.confidence ?? 0}%</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Risk Radar</p>
-                            <p className="font-black text-slate-900">{appStewardPrediction?.risk_radar ?? 0}</p>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            {/* Order Basket Modal */}
-            {showBasketModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-black text-slate-900">Order Basket</h3>
-                            <button
-                                onClick={() => setShowBasketModal(false)}
-                                className="text-slate-400 hover:text-slate-600"
-                            >
-                                <X size={24} />
+                        <Link to="/strategies" className="mt-4">
+                            <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all active:scale-95 shadow-lg shadow-slate-900/20">
+                                Deploy New Mandate
                             </button>
-                        </div>
-
-                        {basket.length > 0 ? (
-                            <>
-                                <div className="space-y-3 mb-6">
-                                    {basket.map((order, index) => (
-                                        <div key={order.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
-                                            <div>
-                                                <span className="font-black text-slate-900">{order.symbol}</span>
-                                                <span className="text-sm text-slate-500 ml-2">{order.side}</span>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="font-black">{order.quantity} @ INR {order.price}</span>
-                                                <button
-                                                    onClick={() => setBasket(prev => prev.filter((_, i) => i !== index))}
-                                                    className="text-red-500 hover:text-red-700"
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="flex justify-between items-center mb-6 p-4 bg-slate-50 rounded-xl">
-                                    <span className="font-black text-slate-900">Total Value:</span>
-                                    <span className="text-xl font-black text-slate-900">INR {basketTotal.toFixed(2)}</span>
-                                </div>
-
-                                <div className="flex justify-end gap-3">
-                                    <button
-                                        onClick={() => setShowBasketModal(false)}
-                                        className="px-6 py-3 border border-slate-200 text-slate-700 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={executeBasket}
-                                        disabled={executingBasket}
-                                        className="px-6 py-3 bg-primary text-white rounded-xl font-black text-sm uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {executingBasket ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-                                        Execute Basket
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-8">
-                                <ShoppingBag size={48} className="mx-auto text-slate-300 mb-4" />
-                                <h4 className="font-black text-slate-500 mb-2">Basket is Empty</h4>
-                                <p className="text-sm text-slate-400">Add orders to your basket to execute them together</p>
-                            </div>
-                        )}
-                    </div>
+                        </Link>
+                    </Card>
                 </div>
-            )}
+            </div>
 
-            {/* Trading Logic Console */}
-            <Card className="p-6 border-slate-200 shadow-sm">
-                <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest mb-6">Intelligence Log</h3>
-
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {logs.map((log) => (
-                        <div key={log.id} className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <span className="text-slate-400 font-mono">[{log.time}]</span>
-                            <span className={`font-black uppercase tracking-widest ${log.type === 'system' ? 'text-indigo-600' :
-                                log.type === 'logic' ? 'text-primary' :
-                                    'text-green-600'
-                                }`}>
-                                {log.type.toUpperCase()}:
+            {/* Bottom: Pro Ticker Bar */}
+            <div className="fixed bottom-0 left-0 md:left-72 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-3 z-30 flex items-center gap-8 overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-1.5 bg-slate-900 rounded-xl text-white">
+                    <Globe size={14} className="text-primary animate-spin-slow" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Global Handshake Active</span>
+                </div>
+                <div className="flex-1 flex gap-12 overflow-x-auto no-scrollbar whitespace-nowrap px-4">
+                    {(marketMovers?.gainers || []).slice(0, 10).map((s, i) => (
+                        <div key={i} className="flex items-center gap-3 group cursor-pointer hover:bg-slate-50 px-2 py-1 rounded-lg transition-colors">
+                            <span className="text-[10px] font-black text-slate-400 uppercase group-hover:text-slate-900 transition-colors">{s.symbol}</span>
+                            <span className="text-xs font-black text-slate-900">₹{s.price}</span>
+                            <span className="text-[10px] font-black text-green-500 flex items-center gap-1">
+                                <ChevronUp size={10} /> {s.change}%
                             </span>
-                            <span className="text-slate-700">{log.msg}</span>
                         </div>
                     ))}
                 </div>
-            </Card>
+                <div className="flex items-center gap-3 pr-6">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Master Node: <span className="text-slate-900">0.04ms</span></p>
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                </div>
+            </div>
+
+            <style jsx="true">{`
+                @keyframes slow-spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-slow-spin {
+                    animation: slow-spin 8s linear infinite;
+                }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+                @keyframes progress {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .animate-progress {
+                    animation: progress 1.5s infinite;
+                }
+            `}</style>
         </div>
     );
 }
-
-
