@@ -75,10 +75,16 @@ class Settings(BaseSettings):
     # Security & API Keys
     API_V1_STR: str = "/api/v1"
     # CORS (comma-separated list or "*")
-    CORS_ORIGINS: str = "*"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    ALLOW_DEMO_AUTH: bool = False
+    ALLOW_DEV_USER_FALLBACK: bool = False
+    ALLOW_HEADER_IDENTITY: bool = True
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 20
+    TRADE_RATE_LIMIT_PER_MINUTE: int = 60
+    IDEMPOTENCY_TTL_SECONDS: int = 300
 
     # JWT Settings
-    SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"  # Change this in production!
+    SECRET_KEY: str = "dev-insecure-secret-change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
@@ -109,6 +115,11 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        if self.APP_ENV == "PROD" and self.SECRET_KEY == "dev-insecure-secret-change-me":
+            raise ValueError("SECRET_KEY must be overridden in PROD environment")
+        if self.APP_ENV == "PROD" and self.CORS_ORIGINS.strip() == "*":
+            raise ValueError("CORS_ORIGINS cannot be '*' in PROD")
         
         # Load secrets from encrypted storage if not set in environment
         from app.utils.secrets_manager import secrets_manager
@@ -147,5 +158,21 @@ class Settings(BaseSettings):
         if normalized in {"DEV", "QA", "UAT", "PROD"}:
             return normalized
         raise ValueError("APP_ENV must be DEV, QA, UAT, or PROD")
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("SECRET_KEY must be set")
+        return v.strip()
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        raw = (self.CORS_ORIGINS or "").strip()
+        if not raw:
+            return []
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 settings = Settings()

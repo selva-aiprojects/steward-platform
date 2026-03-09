@@ -145,9 +145,12 @@ class LLMService:
                 if id_match:
                     user_id = int(id_match.group(1))
 
-        # Default to 1 if still not found
+        # If user identity is unavailable, return generic safe response without account access.
         if not user_id:
-            user_id = 1
+            return (
+                "**Offline Intelligence:** user context is missing.\n"
+                "Please log in again or include a valid user context to query portfolio, strategy, or trade history."
+            )
         
         from app.core.database import SessionLocal
         from app.models.portfolio import Portfolio

@@ -31,10 +31,17 @@ class TradeService:
                 db.close()
 
         # Prepare initial context
-        # In a real app, we'd fetch the user_id from the authenticated session
+        if not trade_proposal.get("user_id"):
+            return {
+                "status": "INVALID_REQUEST",
+                "reason": "Missing user_id in trade proposal",
+                "trace_id": trade_proposal.get("request_id") or "missing-user-id",
+                "trace": []
+            }
+
         context = {
             "request_id": trade_proposal.get("request_id"),
-            "user_id": trade_proposal.get("user_id", 1), # Use provided user_id
+            "user_id": trade_proposal.get("user_id"),
             "symbol": trade_proposal.get("symbol"),
             "manual_override": trade_proposal,
             "execution_mode": trade_proposal.get("execution_mode"),

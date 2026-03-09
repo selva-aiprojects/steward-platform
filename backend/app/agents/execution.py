@@ -55,9 +55,18 @@ class ExecutionAgent(BaseAgent):
                 db = SessionLocal()
                 try:
                     p = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
-                    portfolio_id = p.id if p else 1
+                    portfolio_id = p.id if p else None
                 finally:
                     db.close()
+
+            if not portfolio_id:
+                return {
+                    "execution_result": {
+                        "status": "FAILED",
+                        "mode": mode,
+                        "reason": "No portfolio found for user"
+                    }
+                }
 
             broker = PaperTradingEngine(portfolio_id=portfolio_id)
             

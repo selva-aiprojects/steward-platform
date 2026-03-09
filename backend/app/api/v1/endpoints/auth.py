@@ -1,9 +1,10 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.auth import verify_password, create_access_token
 from app.core.config import settings
+from app.core.rate_limit import rate_limiter
 from app import models, schemas
 
 router = APIRouter()
@@ -13,9 +14,20 @@ router = APIRouter()
 @router.post("/login/", response_model=schemas.LoginResponseWithToken)
 def login(
     payload: schemas.LoginRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     try:
+        client_host = request.client.host if request.client else "unknown"
+        if not rate_limiter.allow(
+            key=f"auth-login:{client_host}",
+            limit=settings.AUTH_RATE_LIMIT_PER_MINUTE,
+            window_seconds=60,
+        ):
+            raise HTTPException(status_code=429, detail="Too many login attempts. Please retry later.")
+
+        app_env = (settings.APP_ENV or "DEV").upper()
+        demo_auth_enabled = settings.ALLOW_DEMO_AUTH and app_env != "PROD"
         user = db.query(models.user.User).filter(models.user.User.email == payload.email).first()
 
         # Define default passwords
@@ -27,7 +39,12 @@ def login(
         }
 
         # Auto-provision default users if missing (fresh DB on hosted env)
-        if not user and payload.email in default_passwords and payload.password == default_passwords[payload.email]:
+        if (
+            demo_auth_enabled
+            and not user
+            and payload.email in default_passwords
+            and payload.password == default_passwords[payload.email]
+        ):
             from app.core.auth import get_password_hash
             # Determine role based on email
             role_map = {
@@ -60,7 +77,12 @@ def login(
             db.commit()
             db.refresh(user)
         # If a seeded account exists with a different password, reset to default for demo access
-        elif user and payload.email in default_passwords and payload.password == default_passwords[payload.email]:
+        elif (
+            demo_auth_enabled
+            and user
+            and payload.email in default_passwords
+            and payload.password == default_passwords[payload.email]
+        ):
             if not verify_password(payload.password, user.hashed_password):
                 from app.core.auth import get_password_hash
                 user.hashed_password = get_password_hash(payload.password)

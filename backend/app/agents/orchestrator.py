@@ -46,14 +46,17 @@ class OrchestratorAgent(BaseAgent):
         context["confidence_threshold"] = context.get("confidence_threshold") or settings.DEFAULT_CONFIDENCE_THRESHOLD
         context["approval_threshold"] = context.get("approval_threshold") or settings.HIGH_VALUE_TRADE_THRESHOLD
         
-        # Ensure user_id is valid
+        # Ensure user_id is present; no implicit fallback identity.
         if not context.get("user_id"):
-            # Try to get from trade_proposal if present
-            proposal = context.get("manual_override") # TradeService puts it here
-            if proposal and proposal.get("user_id"):
-                context["user_id"] = proposal.get("user_id")
-            else:
-                context["user_id"] = 1 # Absolute fallback
+            proposal = context.get("manual_override")  # TradeService puts it here
+            context["user_id"] = proposal.get("user_id") if proposal else None
+        if not context.get("user_id"):
+            return {
+                "status": "INVALID_REQUEST",
+                "reason": "Missing user_id in trade context",
+                "trace_id": trace_id,
+                "trace": []
+            }
         
         # decision trace log
         trace = []

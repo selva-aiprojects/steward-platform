@@ -1,7 +1,5 @@
 from typing import Dict, List, Any
 from app.services.broker.base import BrokerInterface
-import uuid
-from datetime import datetime
 
 class PaperTradingEngine(BrokerInterface):
     """
@@ -71,6 +69,7 @@ class PaperTradingEngine(BrokerInterface):
             
             # 3. Record Trade
             trade = Trade(
+                user_id=portfolio.user_id,
                 portfolio_id=self.portfolio_id,
                 symbol=symbol,
                 action=action,
@@ -100,25 +99,48 @@ class PaperTradingEngine(BrokerInterface):
 
     async def get_positions(self) -> List[Dict[str, Any]]:
         """
-        Return list of positions.
+        Return list of current holdings for the portfolio.
         """
-        positions_list = []
-        for sym, data in self._positions.items():
-            positions_list.append({
-                "symbol": sym,
-                "quantity": data["quantity"],
-                "avg_price": data["avg_price"]
-            })
-        return positions_list
+        from app.models.portfolio import Holding
+        from app.core.database import SessionLocal
+
+        db = self.db or SessionLocal()
+        try:
+            holdings = db.query(Holding).filter(Holding.portfolio_id == self.portfolio_id).all()
+            return [
+                {
+                    "symbol": h.symbol,
+                    "quantity": h.quantity,
+                    "avg_price": h.avg_price,
+                    "current_price": h.current_price,
+                    "pnl": h.pnl,
+                    "pnl_pct": h.pnl_pct,
+                }
+                for h in holdings
+            ]
+        finally:
+            if not self.db:
+                db.close()
 
     async def get_pnl(self) -> Dict[str, float]:
         """
-        Calculate PnL.
-        NOTE: Unrealized requires current market price. Passing 0 or mock for now as engine 
-        doesn't inherently know market price without an input or fetch.
+        Return portfolio-level cash and holding PnL.
         """
-        return {
-            "realized_pnl": self._realized_pnl,
-            "unrealized_pnl": 0.0,  # Needs current market price feeds to calculate
-            "cash_balance": self._cash_balance
-        }
+        from app.models.portfolio import Portfolio, Holding
+        from app.core.database import SessionLocal
+
+        db = self.db or SessionLocal()
+        try:
+            portfolio = db.query(Portfolio).filter(Portfolio.id == self.portfolio_id).first()
+            if not portfolio:
+                raise Exception(f"Portfolio {self.portfolio_id} not found")
+            holdings = db.query(Holding).filter(Holding.portfolio_id == self.portfolio_id).all()
+            unrealized_pnl = sum(float(h.pnl or 0.0) for h in holdings)
+            return {
+                "realized_pnl": 0.0,
+                "unrealized_pnl": unrealized_pnl,
+                "cash_balance": float(portfolio.cash_balance or 0.0),
+            }
+        finally:
+            if not self.db:
+                db.close()

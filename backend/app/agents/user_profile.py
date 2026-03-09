@@ -19,25 +19,15 @@ class UserProfileAgent(BaseAgent):
         from app.models.user import User
         from app.models.portfolio import Portfolio
         
-        user_id = context.get("user_id", 1) # Default to 1 for demo
+        user_id = context.get("user_id")
+        if not user_id:
+            raise ValueError("Missing user_id for user profile lookup")
         
         db = SessionLocal()
         try:
             user = db.query(User).filter(User.id == user_id).first()
             if not user:
-                # Fallback to default if not found
-                return {
-                    "user_profile": {
-                        "id": user_id,
-                        "risk_tolerance": "MODERATE",
-                        "trading_mode": "AUTO",
-                        "max_drawdown_limit": 0.10,
-                        "allowed_sectors": "ALL",
-                        "trading_suspended": False,
-                        "approval_threshold": None,
-                        "confidence_threshold": None
-                    }
-                }
+                raise ValueError(f"User {user_id} not found")
             
             portfolio = db.query(Portfolio).filter(Portfolio.user_id == user.id).first()
             portfolio_id = portfolio.id if portfolio else None

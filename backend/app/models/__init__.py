@@ -10,4 +10,5 @@ from .trade_approval import TradeApproval
 from .kyc import KYCApplication
 from .optimization import PortfolioOptimizationResult, StrategyOptimizationResult
 from .social_sentiment import SocialSentiment
+from .trade_event import TradeEvent
 

@@ -11,10 +11,12 @@ pipelines:
         script:
           - cd backend
           - pip install -r requirements.txt
-          - pip install pylint pytest httpx
+          - pip install pylint pytest httpx bandit
           - pylint app --fail-under=8.0 --disable=C0111,C0103
           - export PYTHONPATH=$PYTHONPATH:.
-          - pytest
+          - python -m compileall app
+          - pytest tests -q --maxfail=1
+          - bandit -q -r app -x app/test_cases,app/test_data
     - step:
         name: Build Frontend
         image: node:18
@@ -22,9 +24,8 @@ pipelines:
           - node
         script:
           - cd frontend
-          - npm install
-          - # npm run build
-          - echo "Frontend build passed"
+          - npm ci
+          - npm run build
   branches:
     main:
       - step:

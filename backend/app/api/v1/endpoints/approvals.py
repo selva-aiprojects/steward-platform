@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional, Any, Dict
-import json
+from typing import List, Optional, Any
 from app.core.database import get_db
-from app.core.rbac import get_current_user, require_roles
+from app.core.rbac import require_roles
 from app import models, schemas
-from app.services.trade_service import TradeService
+from app.application.trade_application_service import TradeApplicationService
 
 router = APIRouter()
+trade_app_service = TradeApplicationService()
 
 
 @router.get("/", response_model=List[schemas.ApprovalResponse])
@@ -31,35 +31,24 @@ def list_approvals(
 async def approve_trade(
     approval_id: int,
     approver_id: Optional[int] = None,
+    reason: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
-    approval = db.query(models.trade_approval.TradeApproval).filter(models.trade_approval.TradeApproval.id == approval_id).first()
-    if not approval:
-        raise HTTPException(status_code=404, detail="Approval request not found")
-    if approval.status not in ["PENDING", "REJECTED"]:
-        raise HTTPException(status_code=400, detail=f"Approval already {approval.status}")
-
-    approval.status = "APPROVED"
-    approval.approver_id = approver_id
-    db.add(approval)
-
-    if approver_id is not None:
-        db_log = models.AuditLog(
-            action="APPROVE_TRADE",
-            admin_id=approver_id,
-            target_user_id=approval.user_id,
-            details=f"Approval {approval.id} executed",
-            reason="High-value trade approval"
+    if approver_id is not None and approver_id != current_user.id:
+        raise HTTPException(status_code=400, detail="approver_id must match authenticated user")
+    try:
+        return await trade_app_service.approve_order(
+            db=db,
+            actor_user=current_user,
+            approval_id=approval_id,
+            reason=reason,
         )
-        db.add(db_log)
-    db.commit()
-    db.refresh(approval)
-
-    trade_payload: Dict[str, Any] = json.loads(approval.trade_payload)
-    trade_payload["approval_id"] = approval.id
-    service = TradeService()
-    return await service.execute_trade(trade_payload)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.post("/{approval_id}/reject")
@@ -70,25 +59,17 @@ def reject_trade(
     db: Session = Depends(get_db),
     current_user: models.user.User = Depends(require_roles(["SUPERADMIN", "BUSINESS_OWNER"])),
 ) -> Any:
-    approval = db.query(models.trade_approval.TradeApproval).filter(models.trade_approval.TradeApproval.id == approval_id).first()
-    if not approval:
-        raise HTTPException(status_code=404, detail="Approval request not found")
-    if approval.status == "EXECUTED":
-        raise HTTPException(status_code=400, detail="Approval already executed")
-
-    approval.status = "REJECTED"
-    approval.reason = reason
-    approval.approver_id = approver_id
-    db.add(approval)
-
-    if approver_id is not None:
-        db_log = models.AuditLog(
-            action="REJECT_TRADE",
-            admin_id=approver_id,
-            target_user_id=approval.user_id,
-            details=f"Approval {approval.id} rejected",
-            reason=reason or "High-value trade rejected"
+    if approver_id is not None and approver_id != current_user.id:
+        raise HTTPException(status_code=400, detail="approver_id must match authenticated user")
+    try:
+        return trade_app_service.cancel_order(
+            db=db,
+            actor_user=current_user,
+            approval_id=approval_id,
+            reason=reason,
         )
-        db.add(db_log)
-    db.commit()
-    return {"status": "rejected", "approval_id": approval.id}
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc

@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from typing import Dict, Any, List, Optional
-from app.api.v1 import deps
 from app import schemas
 import random
 from datetime import datetime, timedelta
@@ -11,10 +10,17 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app import models
 from app.core.rbac import get_current_user
+from app.core.config import settings
+from app.core.idempotency import idempotency_store
+from app.core.rate_limit import rate_limiter
+from app.application.trade_application_service import TradeApplicationService
+
+trade_app_service = TradeApplicationService()
 
 @router.get("/", response_model=List[schemas.TradeResponse])
 def list_trades(
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
     user_id: int = None,
     skip: int = 0,
     limit: int = 100,
@@ -22,45 +28,103 @@ def list_trades(
     """
     Retrieve trades.
     """
-    query = db.query(models.trade.Trade)
-    if user_id:
-        query = query.join(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == user_id)
-    
-    trades = query.offset(skip).limit(limit).all()
-    return trades
+    try:
+        return trade_app_service.list_trades(
+            db=db,
+            actor_user=current_user,
+            requested_user_id=user_id,
+            skip=skip,
+            limit=limit,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 @router.post("/", response_model=schemas.TradeResult)
-async def execute_trade_endpoint(proposal: schemas.TradeProposal) -> Any:
+async def execute_trade_endpoint(
+    proposal: schemas.TradeProposal,
+    request: Request,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+) -> Any:
     """
     Execute a trade. 
     This is the standard endpoint hit by the frontend 'executeTrade' service.
     """
-    from app.services.trade_service import TradeService
     trade_dict = proposal.model_dump()
-    if not trade_dict.get("price"):
-        trade_dict["price"] = 100.0
-        
-    service = TradeService()
-    return await service.execute_trade(trade_dict)
+    try:
+        client_host = request.client.host if request.client else "unknown"
+        rate_key = f"trade:{current_user.id}:{client_host}"
+        if not rate_limiter.allow(
+            key=rate_key,
+            limit=settings.TRADE_RATE_LIMIT_PER_MINUTE,
+            window_seconds=60,
+        ):
+            raise HTTPException(status_code=429, detail="Trade rate limit exceeded")
+
+        cache_key = None
+        if idempotency_key:
+            cache_key = f"{current_user.id}:{idempotency_key}:execute"
+            cached = idempotency_store.get(cache_key)
+            if cached is not None:
+                return cached
+
+        result = await trade_app_service.submit_order(
+            db=db,
+            actor_user=current_user,
+            proposal=trade_dict,
+        )
+        if cache_key:
+            idempotency_store.put(cache_key, result, settings.IDEMPOTENCY_TTL_SECONDS)
+        return result
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 @router.post("/paper/order", response_model=schemas.TradeResult)
-async def create_paper_order(proposal: schemas.TradeProposal) -> Any:
+async def create_paper_order(
+    proposal: schemas.TradeProposal,
+    request: Request,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+) -> Any:
     """
     Submit a Paper Trading Order.
     Triggers the full Agentic Logic: User -> Market -> Strategy -> Trade -> Risk -> Execution.
     """
-    from app.services.trade_service import TradeService
-    
-    # Convert Pydantic model to dict for internal flow
     trade_dict = proposal.model_dump()
-    trade_dict["execution_mode"] = "PAPER_TRADING"
-    
-    # Default to Market Order if price is missing
-    if not trade_dict.get("price"):
-        trade_dict["price"] = 100.0 # Mock current price if not provided
-        
-    service = TradeService()
-    return await service.execute_trade(trade_dict)
+    try:
+        client_host = request.client.host if request.client else "unknown"
+        rate_key = f"trade-paper:{current_user.id}:{client_host}"
+        if not rate_limiter.allow(
+            key=rate_key,
+            limit=settings.TRADE_RATE_LIMIT_PER_MINUTE,
+            window_seconds=60,
+        ):
+            raise HTTPException(status_code=429, detail="Trade rate limit exceeded")
+
+        cache_key = None
+        if idempotency_key:
+            cache_key = f"{current_user.id}:{idempotency_key}:paper"
+            cached = idempotency_store.get(cache_key)
+            if cached is not None:
+                return cached
+
+        result = await trade_app_service.submit_order(
+            db=db,
+            actor_user=current_user,
+            proposal=trade_dict,
+            force_execution_mode="PAPER_TRADING",
+        )
+        if cache_key:
+            idempotency_store.put(cache_key, result, settings.IDEMPOTENCY_TTL_SECONDS)
+        return result
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/paper/seed-all")
@@ -163,50 +227,17 @@ def seed_paper_orders_for_traders(
 @router.get("/daily-pnl", response_model=List[Dict[str, Any]])
 def get_daily_pnl(
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
     user_id: Optional[int] = None,
 ) -> Any:
     """
     Get daily PnL summary for a user.
     """
-    # Simply grouping trades by day and calculating PnL
-    query = db.query(models.trade.Trade)
-    if user_id:
-        query = query.join(models.portfolio.Portfolio).filter(models.portfolio.Portfolio.user_id == user_id)
-    
-    trades = query.all()
-    
-    from collections import defaultdict
-    daily_stats = defaultdict(lambda: {"user": 0.0, "agent": 0.0})
-    
-    for t in trades:
-        date_str = t.timestamp.strftime("%a") # e.g. "Mon"
-        pnl_str = (t.pnl or "0%").replace("%", "")
-        try:
-            pnl_val = float(pnl_str)
-        except:
-            pnl_val = 0.0
-            
-        if t.execution_mode == "MANUAL":
-            daily_stats[date_str]["user"] += pnl_val
-        else:
-            daily_stats[date_str]["agent"] += pnl_val
-            
-    # Convert to expected format
-    result = []
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    for day in days:
-        if day in daily_stats:
-            result.append({
-                "name": day,
-                "user": round(daily_stats[day]["user"], 2),
-                "agent": round(daily_stats[day]["agent"], 2)
-            })
-        else:
-            # Fallback for empty days to keep graph consistent
-            result.append({
-                "name": day,
-                "user": 0,
-                "agent": 0
-            })
-            
-    return result
+    try:
+        return trade_app_service.get_daily_pnl(
+            db=db,
+            actor_user=current_user,
+            requested_user_id=user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
