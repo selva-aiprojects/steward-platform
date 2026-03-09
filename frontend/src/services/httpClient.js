@@ -1,6 +1,26 @@
 import io from 'socket.io-client';
 
-const RAW_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+const isLocalHost = (hostname = '') => LOCAL_HOSTS.has(String(hostname).toLowerCase());
+
+const getRuntimeOrigin = () => {
+  if (typeof window === 'undefined') return '';
+  return window.location?.origin || '';
+};
+
+const resolveApiBaseUrl = () => {
+  const configured = (process.env.REACT_APP_API_URL || '').trim();
+  if (configured) return configured;
+
+  const runtimeOrigin = getRuntimeOrigin();
+  if (runtimeOrigin) return runtimeOrigin;
+
+  // Non-browser fallback keeps local scripts and tests working.
+  return 'http://localhost:8000';
+};
+
+const RAW_API_URL = resolveApiBaseUrl();
 const HAS_VERSIONED_PATH = RAW_API_URL.includes('/api/v1');
 
 export const BASE_URL = RAW_API_URL.replace(/[\/?]+$/, '');
@@ -8,6 +28,14 @@ export const API_PREFIX = HAS_VERSIONED_PATH ? '' : '/api/v1';
 export const SOCKET_URL = HAS_VERSIONED_PATH ? BASE_URL.replace(/\/api\/v1$/, '') : BASE_URL;
 export const REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_API_TIMEOUT_MS || 12000);
 const REQUEST_RETRY_COUNT = Number(process.env.REACT_APP_API_RETRY_COUNT || 1);
+
+if (
+  typeof window !== 'undefined' &&
+  !isLocalHost(window.location.hostname) &&
+  BASE_URL.includes('localhost')
+) {
+  console.warn('[HTTP Client] Localhost API URL detected in non-local runtime:', BASE_URL);
+}
 
 console.log('API Connection:', BASE_URL);
 

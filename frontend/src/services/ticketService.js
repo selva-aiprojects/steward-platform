@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { BASE_URL, API_PREFIX } from './httpClient';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
-const API_URL = `${BASE_URL}/tickets`;
+const API_URL = `${BASE_URL}${API_PREFIX}/tickets`;
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');

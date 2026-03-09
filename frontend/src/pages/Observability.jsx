@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useUser } from "../context/UserContext";
 import { fetchMetricsSummary, fetchSupersetEmbedUrl } from "../services/api";
 
-const DEFAULT_GRAFANA = "http://localhost:3001";
-const DEFAULT_SUPERSET = "http://localhost:8088";
 const DEFAULT_GRAFANA_UID = "superadmin-observability";
 
 export default function Observability() {
@@ -14,12 +12,13 @@ export default function Observability() {
   const [embedUrl, setEmbedUrl] = useState(null);
   const [grafanaEmbedUrl, setGrafanaEmbedUrl] = useState(null);
 
-  const grafanaBase = process.env.REACT_APP_GRAFANA_URL || DEFAULT_GRAFANA;
-  const supersetBase = process.env.REACT_APP_SUPERSET_URL || DEFAULT_SUPERSET;
+  const grafanaBase = (process.env.REACT_APP_GRAFANA_URL || "").trim();
+  const supersetBase = (process.env.REACT_APP_SUPERSET_URL || "").trim();
   const grafanaUid = process.env.REACT_APP_GRAFANA_DASHBOARD_UID || DEFAULT_GRAFANA_UID;
 
   const grafanaUrl = useMemo(() => {
     if (grafanaEmbedUrl) return grafanaEmbedUrl;
+    if (!grafanaBase) return null;
     // If grafanaBase is a full share URL (contains /d/ or is from grafana.net), return it as is
     if (grafanaBase.includes('/d/') || grafanaBase.includes('grafana.net')) {
       return grafanaBase;
@@ -28,10 +27,8 @@ export default function Observability() {
   }, [grafanaBase, grafanaUid, grafanaEmbedUrl]);
   const supersetUrl = useMemo(() => {
     if (embedUrl) return embedUrl;
-    return (
-      process.env.REACT_APP_SUPERSET_URL ||
-      `${supersetBase}/superset/dashboard/stocksteward-executive-overview/`
-    );
+    if (supersetBase) return supersetBase;
+    return null;
   }, [embedUrl, supersetBase]);
 
   useEffect(() => {
@@ -94,8 +91,10 @@ export default function Observability() {
     );
   }
 
-  const isLocalOnProd = (window.location.hostname !== 'localhost' &&
-    (grafanaUrl.includes('localhost') || supersetUrl.includes('localhost')));
+  const isLocalOnProd = (
+    window.location.hostname !== 'localhost' &&
+    ((grafanaUrl && grafanaUrl.includes('localhost')) || (supersetUrl && supersetUrl.includes('localhost')))
+  );
 
   return (
     <div className="space-y-6">
@@ -185,7 +184,7 @@ export default function Observability() {
       )}
 
       <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-        {tab === "grafana" ? (
+        {tab === "grafana" && grafanaUrl ? (
           <div className="h-[80vh]">
             <iframe
               title="Grafana Superadmin Observability"
@@ -195,7 +194,7 @@ export default function Observability() {
               allow="fullscreen"
             />
           </div>
-        ) : (
+        ) : tab === "superset" && supersetUrl ? (
           <div className="h-[80vh]">
             <iframe
               title="Superset Business Intelligence"
@@ -204,6 +203,15 @@ export default function Observability() {
               frameBorder="0"
               allow="fullscreen"
             />
+          </div>
+        ) : (
+          <div className="h-[40vh] flex items-center justify-center bg-slate-50">
+            <div className="text-center px-6">
+              <p className="text-sm font-black uppercase tracking-widest text-slate-700">Dashboard URL Not Configured</p>
+              <p className="text-xs text-slate-500 mt-2">
+                Configure live observability URLs with <span className="font-mono">REACT_APP_GRAFANA_URL</span> and <span className="font-mono">REACT_APP_SUPERSET_URL</span>.
+              </p>
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 // frontend/src/services/investmentService.js
 
 import { fetchPortfolioSummary, fetchHoldings, fetchStrategies } from './api';
+import { BASE_URL, API_PREFIX } from './httpClient';
 
 /**
  * Investment Service - Handles all investment-related API operations
@@ -82,7 +83,7 @@ export const investmentService = {
       // Get auth token from localStorage (same as main API service)
       const token = localStorage.getItem('stocksteward_token');
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/strategies/`, {
+      const response = await fetch(`${BASE_URL}${API_PREFIX}/strategies/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

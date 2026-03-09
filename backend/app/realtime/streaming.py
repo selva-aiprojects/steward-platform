@@ -281,6 +281,21 @@ async def market_feed(sio: socketio.AsyncServer):
                                 "exchange": exchange,
                                 "symbol": symbol,
                             }
+                else:
+                    last_market_movers.update(
+                        {
+                            "gainers": [],
+                            "losers": [],
+                            "currencies": [],
+                            "metals": [],
+                            "commodities": [],
+                            "source": "provider_unavailable",
+                            "status": "UNAVAILABLE",
+                            "as_of": _now_iso(),
+                        }
+                    )
+                    await sio.emit("market_movers", last_market_movers, room="market_data")
+                    await sio.emit("macro_indicators", last_macro_indicators, room="market_data")
 
             ticker_batch = []
             if raw_quotes:

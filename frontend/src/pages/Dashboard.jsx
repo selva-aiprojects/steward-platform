@@ -77,8 +77,8 @@ export function Dashboard() {
         return `INR ${num.toLocaleString()}`;
     };
 
-    const grafanaBase = process.env.REACT_APP_GRAFANA_URL || "http://localhost:3001";
-    const supersetBase = process.env.REACT_APP_SUPERSET_URL || "http://localhost:8088";
+    const grafanaBase = (process.env.REACT_APP_GRAFANA_URL || "").trim();
+    const supersetBase = (process.env.REACT_APP_SUPERSET_URL || "").trim();
 
     const exchangeClass = (exchange) => {
         switch ((exchange || '').toUpperCase()) {
@@ -385,22 +385,26 @@ export function Dashboard() {
                                     >
                                         Superset Reports
                                     </Link>
-                                    <a
-                                        href={grafanaBase}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest border border-indigo-100"
-                                    >
-                                        Grafana Console
-                                    </a>
-                                    <a
-                                        href={supersetBase}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100"
-                                    >
-                                        Superset Console
-                                    </a>
+                                    {grafanaBase && (
+                                        <a
+                                            href={grafanaBase}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest border border-indigo-100"
+                                        >
+                                            Grafana Console
+                                        </a>
+                                    )}
+                                    {supersetBase && (
+                                        <a
+                                            href={supersetBase}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100"
+                                        >
+                                            Superset Console
+                                        </a>
+                                    )}
                                 </div>
                             </Card>
                             <Card className="p-6 border-slate-100 shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white">
