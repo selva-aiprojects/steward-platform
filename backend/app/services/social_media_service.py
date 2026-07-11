@@ -15,6 +15,7 @@ import aiohttp
 from app.core.database import SessionLocal
 from app.models.social_sentiment import SocialSentiment
 from app.services.enhanced_llm_service import EnhancedLLMService
+from app.engines.finbert_engine import finbert_engine
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +273,7 @@ class SocialMediaService:
     
     async def process_social_media_post(self, post_data: Dict[str, Any], source: str) -> Dict[str, Any]:
         """
-        Process a single social media post and extract sentiment
+        Process a single social media post and extract sentiment using FinBERT NLP engine
         """
         try:
             # Extract relevant information from the post
@@ -289,18 +290,23 @@ class SocialMediaService:
                 engagement.get('upvotes', 0) * 0.4
             )
             
-            # Use LLM to analyze sentiment
-            sentiment_result = await self.analyze_sentiment_with_llm(message_text)
+            # Use FinBERT sequence classification engine to analyze sentiment
+            sentiment_result = await self.analyze_sentiment_with_finbert(post_data)
+            
+            # Enlarge additional_data with FinBERT sentence-level classification breakdown
+            enriched_additional_data = dict(post_data)
+            enriched_additional_data['finbert_breakdown'] = sentiment_result.get('finbert_breakdown', [])
+            enriched_additional_data['model_engine'] = sentiment_result.get('model', 'ProsusAI/finbert')
             
             processed_post = {
-                'message_id': post_data.get('id'),
+                'message_id': str(post_data.get('id', '')),
                 'message_text': message_text,
                 'author': post_data.get('author', 'unknown'),
                 'sentiment_score': sentiment_result.get('score', 0.0),
                 'sentiment_label': sentiment_result.get('label', 'neutral'),
                 'engagement_score': engagement_score,
                 'timestamp': datetime.fromisoformat(post_data.get('timestamp', datetime.utcnow().isoformat())),
-                'additional_data': post_data
+                'additional_data': enriched_additional_data
             }
             
             return processed_post
@@ -309,42 +315,39 @@ class SocialMediaService:
             logger.error(f"Error processing social media post: {e}")
             return None
     
-    async def analyze_sentiment_with_llm(self, text: str) -> Dict[str, Any]:
+    async def analyze_sentiment_with_finbert(self, post_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze sentiment of text using LLM
+        Analyze sentiment of social media post using FinBERT financial sequence classification
         """
         try:
-            # Prepare prompt for sentiment analysis
-            prompt = f"""
-            Analyze the sentiment of the following financial social media post:
-            
-            "{text}"
-            
-            Return a JSON object with:
-            - "score": A sentiment score from -1 (very negative) to 1 (very positive)
-            - "label": The sentiment label ("positive", "negative", or "neutral")
-            - "confidence": Confidence level from 0 to 1
-            """
-            
-            # Use the enhanced LLM service for sentiment analysis
-            # Check if the method exists
-            if hasattr(self.enhanced_llm_service, 'process_request'):
-                result = await self.enhanced_llm_service.process_request(
-                    prompt=prompt,
-                    analysis_type="sentiment",
-                    provider=None  # Use default provider
-                )
-
-                # Parse the result
-                if isinstance(result, dict) and 'sentiment' in result:
-                    return result['sentiment']
-
-            # If LLM method doesn't exist or fails, use simple analysis
-            return self.simple_sentiment_analysis(text)
-                
+            # Run FinBERT post analysis asynchronously via event loop or direct engine call
+            result = finbert_engine.analyze_social_post(post_data)
+            return result
         except Exception as e:
-            logger.error(f"Error in LLM sentiment analysis: {e}")
-            # Fallback to simple sentiment analysis
+            logger.error(f"Error in FinBERT sentiment analysis ({e}), falling back to simple keyword analysis.")
+            text = post_data.get('text', post_data.get('message', ''))
+            return self.simple_sentiment_analysis(text)
+
+    async def analyze_sentiment_with_llm(self, text: str) -> Dict[str, Any]:
+        """
+        Analyze sentiment of text using LLM or FinBERT engine
+        """
+        try:
+            # First try FinBERT sentence evaluation
+            sentence_breakdown = finbert_engine.predict_text(text)
+            if sentence_breakdown:
+                avg_score = sum(r['sentiment_score'] for r in sentence_breakdown) / len(sentence_breakdown)
+                label = 'positive' if avg_score > 0.06 else 'negative' if avg_score < -0.06 else 'neutral'
+                conf = sum(r['confidence'] for r in sentence_breakdown) / len(sentence_breakdown)
+                return {
+                    'score': round(avg_score, 4),
+                    'label': label,
+                    'confidence': round(conf, 4),
+                    'finbert_breakdown': sentence_breakdown
+                }
+            return self.simple_sentiment_analysis(text)
+        except Exception as e:
+            logger.error(f"Error in LLM/FinBERT sentiment analysis: {e}")
             return self.simple_sentiment_analysis(text)
     
     def simple_sentiment_analysis(self, text: str) -> Dict[str, Any]:
@@ -374,10 +377,8 @@ class SocialMediaService:
             score = 0.0
         else:
             score = (pos_count - neg_count) / max(1, (pos_count + neg_count + 1))
-            # Normalize to -1 to 1 range
             score = max(-1.0, min(1.0, score))
         
-        # Determine label
         if score > 0.1:
             label = 'positive'
         elif score < -0.1:
@@ -388,7 +389,7 @@ class SocialMediaService:
         return {
             'score': score,
             'label': label,
-            'confidence': 0.6  # Default confidence for simple analysis
+            'confidence': 0.6
         }
     
     async def store_social_sentiment(self, db: Session, symbol: str, source: str, processed_post: Dict[str, Any]):

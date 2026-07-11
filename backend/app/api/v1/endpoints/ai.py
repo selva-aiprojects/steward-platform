@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
 from app.core.rbac import get_current_user
 from app.models.user import User
 from app.services.llm_service import llm_service
+from app.engines.finbert_engine import finbert_engine
 import httpx
 import logging
 
@@ -102,3 +104,87 @@ def market_research(
                 {"symbol": "HDFCBANK", "bias": "BUY", "note": "Breakout watch above 1,680"}
             ]
         }
+
+
+class FinBERTAnalyzeRequest(BaseModel):
+    text: str
+
+class FinBERTBatchRequest(BaseModel):
+    texts: List[str]
+
+class FinBERTDocumentRequest(BaseModel):
+    title: str
+    body: Optional[str] = ""
+
+@router.post("/finbert/analyze-text", summary="Analyze financial text using FinBERT sequence classification")
+async def analyze_text_finbert(
+    request: FinBERTAnalyzeRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sentence-level financial sentiment analysis exact to ProsusAI/finBERT sequence classification.
+    Returns softmax probability distribution (positive, negative, neutral) and score (prob_pos - prob_neg).
+    """
+    try:
+        results = finbert_engine.predict_text(request.text)
+        avg_score = sum(r['sentiment_score'] for r in results) / len(results) if results else 0.0
+        label = 'positive' if avg_score > 0.06 else 'negative' if avg_score < -0.06 else 'neutral'
+        return {
+            "overall_score": round(avg_score, 4),
+            "overall_label": label,
+            "sentence_count": len(results),
+            "sentence_breakdown": results,
+            "model": "ProsusAI/finbert (Financial PhraseBank sequence classification)"
+        }
+    except Exception as e:
+        logger.error(f"Error in FinBERT text analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"FinBERT analysis failed: {str(e)}")
+
+
+@router.post("/finbert/batch-sentiment", summary="Batched FinBERT sequence classification across multiple texts")
+async def batch_sentiment_finbert(
+    request: FinBERTBatchRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run batched sequence classification over multiple tweets, headlines, or documents.
+    """
+    try:
+        batch_results = finbert_engine.predict_batch(request.texts)
+        summary = []
+        for i, text in enumerate(request.texts):
+            res = batch_results[i]
+            score = sum(r['sentiment_score'] for r in res) / len(res) if res else 0.0
+            label = 'positive' if score > 0.06 else 'negative' if score < -0.06 else 'neutral'
+            summary.append({
+                "index": i,
+                "text_preview": text[:80] + ("..." if len(text) > 80 else ""),
+                "sentiment_score": round(score, 4),
+                "prediction": label,
+                "sentence_count": len(res),
+                "details": res
+            })
+        return {
+            "total_items": len(request.texts),
+            "batch_summary": summary,
+            "model": "ProsusAI/finbert"
+        }
+    except Exception as e:
+        logger.error(f"Error in FinBERT batch analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"FinBERT batch analysis failed: {str(e)}")
+
+
+@router.post("/finbert/document", summary="Comprehensive document sentiment analysis using FinBERT")
+async def analyze_document_finbert(
+    request: FinBERTDocumentRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Evaluates headline vs body, computes weighted sentiment score, and isolates top bullish/bearish catalysts.
+    """
+    try:
+        doc_res = finbert_engine.analyze_document(request.title, request.body)
+        return doc_res
+    except Exception as e:
+        logger.error(f"Error in FinBERT document analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"FinBERT document analysis failed: {str(e)}")
