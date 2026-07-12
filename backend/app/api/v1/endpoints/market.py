@@ -3,7 +3,10 @@ from typing import Any, Dict, Optional
 from app.core.config import settings
 import random
 import logging
-import yfinance as yf
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
 import time
 import asyncio
 from datetime import datetime, timezone
@@ -171,6 +174,8 @@ def _chart_quotes_sync(symbols: list[str], timeout_s: int = 3) -> Dict[str, Dict
 
 
 async def _yf_download(symbols: list[str], period: str = "5d", timeout_s: int = 2):
+    if yf is None:
+        raise RuntimeError("yfinance not installed in Serverless bundle")
     global _yf_failure_streak, _yf_cooldown_until
     now = time.time()
     if now < _yf_cooldown_until:
