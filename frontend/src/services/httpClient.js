@@ -11,9 +11,15 @@ const getRuntimeOrigin = () => {
 
 const resolveApiBaseUrl = () => {
   const configured = (process.env.REACT_APP_API_URL || '').trim();
-  if (configured) return configured;
-
   const runtimeOrigin = getRuntimeOrigin();
+
+  if (configured && typeof window !== 'undefined' && !isLocalHost(window.location?.hostname)) {
+    if (configured.includes('localhost') || configured.includes('127.0.0.1') || configured.includes('backend.local')) {
+      return runtimeOrigin || '';
+    }
+  }
+
+  if (configured) return configured;
   if (runtimeOrigin) return runtimeOrigin;
 
   // Non-browser fallback keeps local scripts and tests working.
