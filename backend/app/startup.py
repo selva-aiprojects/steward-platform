@@ -19,8 +19,7 @@ async def initialize_services() -> None:
         Base.metadata.create_all(bind=sync_engine)
         logger.info("Database initialized successfully")
     except Exception as error:
-        logger.error(f"Database initialization failed: {error}")
-        raise
+        logger.warning(f"Database initialization fallback (Serverless/read-only): {error}")
 
 
 async def initialize_optional_services() -> dict:

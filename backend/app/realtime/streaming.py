@@ -385,7 +385,7 @@ async def admin_feed(sio: socketio.AsyncServer):
 
 
 def start_background_tasks(sio: socketio.AsyncServer) -> None:
-    if os.getenv("DISABLE_BACKGROUND_TASKS") == "1":
+    if os.getenv("DISABLE_BACKGROUND_TASKS") == "1" or os.getenv("VERCEL"):
         return
     asyncio.create_task(market_feed(sio))
     asyncio.create_task(admin_feed(sio))

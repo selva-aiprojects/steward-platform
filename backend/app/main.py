@@ -42,7 +42,6 @@ async def startup_event():
         logging.info("Application startup sequence completed successfully")
     except Exception as e:
         logging.error(f"Application startup failed: {e}")
-        raise
     start_background_tasks(sio)
 
 

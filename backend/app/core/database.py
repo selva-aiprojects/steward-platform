@@ -18,8 +18,11 @@ def _build_engine(db_url: str):
 def _ensure_engine():
     global engine, SessionLocal, _current_database_url
 
-    # Always use settings.DATABASE_URL which is already cleaned by Pydantic validator
+    import os
     db_url = settings.DATABASE_URL
+    if os.getenv("VERCEL") and ("stocksteward.db" in db_url or "sqlite" in db_url):
+        if not db_url.startswith("sqlite:////tmp/"):
+            db_url = "sqlite:////tmp/stocksteward.db"
 
     if engine is None or db_url != _current_database_url:
         engine = _build_engine(db_url)
