@@ -75,12 +75,15 @@ class FinBERTEngine:
         self.positive_lexicon = {
             'bullish': 1.8, 'upgrade': 1.7, 'upgraded': 1.7, 'outperform': 1.6, 'buy': 1.5,
             'strong': 1.4, 'profit': 1.6, 'profitable': 1.5, 'gain': 1.4, 'gains': 1.4,
-            'surge': 1.7, 'surged': 1.7, 'rally': 1.6, 'rallied': 1.6, 'breakout': 1.6,
-            'beat': 1.5, 'beating': 1.5, 'exceeded': 1.5, 'exceeds': 1.5, 'growth': 1.3,
+            'surge': 1.7, 'surged': 1.7, 'surges': 1.7, 'rally': 1.6, 'rallied': 1.6, 'rallies': 1.6,
+            'breakout': 1.6, 'beat': 1.5, 'beating': 1.5, 'exceeded': 1.5, 'exceeds': 1.5, 'growth': 1.3,
             'growing': 1.3, 'higher': 1.2, 'increased': 1.3, 'increasing': 1.3, 'revenue up': 1.6,
             'record high': 1.8, 'accumulate': 1.4, 'dividend increase': 1.6, 'positive': 1.3,
-            'expanded': 1.3, 'expansion': 1.4, 'optimistic': 1.4, 'guidance raised': 1.8,
-            'target raised': 1.7, 'overweight': 1.5, 'momentum': 1.3, 'solid': 1.2
+            'expanded': 1.3, 'expands': 1.4, 'expand': 1.3, 'expansion': 1.4, 'optimistic': 1.4,
+            'guidance raised': 1.8, 'target raised': 1.7, 'overweight': 1.5, 'momentum': 1.3,
+            'solid': 1.2, 'investment': 1.3, 'investments': 1.3, 'acquisitions': 1.4, 'acquisition': 1.4,
+            'leader': 1.3, 'leading': 1.3, 'record': 1.5, 'boost': 1.5, 'boosts': 1.5, 'soars': 1.7,
+            'outperforms': 1.6, 'won': 1.4, 'partnership': 1.3, 'commitments': 1.3, 'commitment': 1.3
         }
         
         self.negative_lexicon = {

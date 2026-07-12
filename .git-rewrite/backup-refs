@@ -1,0 +1,8 @@
+7591ad61cc3b6170c389c95c639c254e909c516a commit	refs/heads/main
+567e306280007f7942dac214e65e2b36772ff613 commit	refs/remotes/github/main
+9e2a316061caee8787d74e0bf27319e28b56d2ff commit	refs/remotes/origin/HEAD
+9e2a316061caee8787d74e0bf27319e28b56d2ff commit	refs/remotes/origin/main
+c4a64c213206a741c5136d2026a11c369b4702d1 commit	refs/stash
+e224814af40677a194b1c2345a01c040fa08425c tag	refs/tags/initial-kit
+949781f024a6476a2c3f59d4ecad4e655f036ec6 tag	refs/tags/v0.1.0
+31070e02793a8f9790afb0acfeb8cc2586142bc7 tag	refs/tags/v1.0-workable
