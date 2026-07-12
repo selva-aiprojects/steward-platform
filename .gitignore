@@ -66,3 +66,5 @@ secrets.enc
 backend/.env.local
 backend/requirements.localfix.txt
 backend/requirements.py313.txt
+
+.vercel
