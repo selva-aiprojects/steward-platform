@@ -20,6 +20,7 @@ def _auto_seed_if_empty():
     if SessionLocal is None or engine is None:
         return
     try:
+        import app.models  # Ensure all tables are registered with Base.metadata before create_all
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
         try:
