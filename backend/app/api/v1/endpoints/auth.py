@@ -112,6 +112,14 @@ def login(
             "access_token": access_token,
             "token_type": "bearer"
         }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        import traceback
+        err_trace = traceback.format_exc()
+        import logging
+        logging.error(f"Login failed: {err_trace}")
+        raise HTTPException(status_code=500, detail=f"Serverless Login Error: {str(e)} | Trace: {err_trace}")
     finally:
         db.close()
 
