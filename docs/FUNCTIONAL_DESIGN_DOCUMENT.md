@@ -169,9 +169,75 @@ Ensures platform security, segregation of duties, and regulatory accountability.
 
 ---
 
-## 4. End-to-End Functional Workflows
+## 4. Trader Investigation Laboratory & Practice Proving Ground
 
-### 4.1 Order Execution & Risk Gatekeeper Workflow
+StockSteward AI is explicitly engineered to serve as both an **Advanced Investigation Laboratory** for financial research and a **High-Fidelity Practice Proving Ground** for quantitative and retail traders before deploying real capital.
+
+```mermaid
+graph LR
+    subgraph Investigation [Phase 1: Research & Investigation Hub]
+        F_NLP[FinBERT Document Polarity & Conviction Splitter]
+        S_Multi[Social Media Credibility Multipliers]
+        Macro[Cross-Asset Telemetry: Equities / MCX Gold / USDINR]
+        BT[Backtesting Grid Search & Institutional KPIs]
+    end
+
+    subgraph Practice [Phase 2: Practice & Skill Sandbox]
+        Paper[PAPER_TRADING Mode: Zero Capital Risk]
+        Friction[Realistic Microstructure: 0.05% Slippage + ₹20 Fees]
+        Algos[Institutional Execution Practice: TWAP / VWAP]
+        Gate[Risk Discipline Practice: Idempotency & Approvals]
+    end
+
+    subgraph Live [Phase 3: Live Capital Deployment]
+        Zero[Zerodha KiteConnect Cryptographic Gateway]
+        LiveMode[LIVE_TRADING Mode Toggle]
+    end
+
+    Investigation -->|Validate Hypotheses| Practice
+    Practice -->|Master Execution Discipline| Live
+```
+
+### 4.1 Trader Investigation & Research Capabilities
+Rather than relying on fragmented tools (news terminals, social media scanners, charting apps, and Excel), traders conduct comprehensive, quantitative investigations natively:
+1. **AI-Driven Document & Sentiment Investigation (`FinBERTEngine`)**:
+   - **Conviction Sentence Isolation**: When evaluating complex SEC/SEBI filings or quarterly earnings transcripts (`/api/v1/enhanced-ai/analyze`), the engine isolates the exact *Top Positive Conviction Sentence* and *Top Negative Conviction Sentence*. Traders instantly spot buried risks (`e.g., margin compression warnings`) without reading 50-page reports.
+   - **Weighted Social Media Signal Investigation**: Scans `StockTwits`, `X/Twitter`, and `Reddit` (`analyze_social_post`), applying dynamic credibility multipliers (`1.1x` to `1.5x`) based on user engagement (`likes`, `retweets`, `follower counts`).
+   - **Macro Regime Classification**: Instantly calculates the deterministic macro regime (`BULLISH_EXPANSION` down to `BEARISH_CONTRACTION`) across all aggregated documents.
+2. **Quantitative Hypothesis Investigation (`Backtesting Engine`)**:
+   - Traders investigate whether their technical or quantitative hypotheses (`SMA crossovers`, `RSI mean-reversion`, `MACD momentum`) yield true alpha over multi-year tick/bar datasets (`/api/v1/backtesting`).
+   - **Institutional Performance Validation**: Evaluates strategies against institutional benchmarks (`Sharpe Ratio`, `Sortino Ratio`, `Maximum Drawdown`, and `Win/Loss Profit Factor`).
+   - **Automated Grid Search Optimization**: Iterates across parameter permutations (`SMA 20/50` vs `SMA 50/200`) to uncover statistically optimal configuration matrices.
+3. **Cross-Asset Macroeconomic Investigation**:
+   - Unified telemetry (`/api/v1/market/movers`) tracks top equities alongside real-time macro drivers: `USDINR=X` exchange rates, `Gold (`MCX`)` futures, and `Crude Oil (`MCX`)` trends.
+
+### 4.2 High-Fidelity Practice & Training Sandbox (`PAPER_TRADING`)
+To prevent costly learning curves and emotional trading errors, StockSteward AI provides a realistic, zero-risk practice sandbox:
+1. **Default Safe State (`EXECUTION_MODE = "PAPER_TRADING"`)**:
+   - All newly registered accounts default to `PAPER_TRADING`. Orders simulate execution against live exchange order books without actual financial exposure.
+2. **Authentic Market Microstructure Simulation**:
+   - **Slippage Modeling**: Applies dynamic price slippage (`0.05%` default) based on order volume and liquidity depth, preventing unrealistic fills common in standard demo accounts.
+   - **Brokerage & Fee Deduction**: Automatically deducts real-world Indian exchange fees and brokerage (`₹20 per executed order` for equities) to reflect true net profit/loss.
+3. **Mastering Institutional Algorithmic Execution (`TWAP` / `VWAP`)**:
+   - Retail traders practice institutional execution algorithms without requiring an institutional trading desk:
+     - **`TWAP` (Time-Weighted Average Price)**: Practice slicing block orders (`e.g., 10,000 shares`) into smaller tranches over configurable time windows (`e.g., 60 minutes`) to minimize market impact.
+     - **`VWAP` (Volume-Weighted Average Price)**: Practice executing orders proportionally across historical intraday volume curves.
+4. **Institutional Risk Discipline Proving Ground**:
+   - Traders practice operating under strict risk guardrails:
+     - **Idempotency Training**: Learn how unique order tokens (`TTL: 300s`) protect against duplicate executions during network drops.
+     - **Supervisory Gatekeeper Interception**: Practice portfolio sizing under automated thresholds (`HIGH_VALUE_TRADE_THRESHOLD = ₹1,00,000+`). Orders exceeding this limit intercept and queue for supervisory review (`/api/v1/approvals`).
+     - **Global Kill Switch Drills**: Practice emergency flattening and order halting protocols during high-volatility flash crashes (`GLOBAL_KILL_SWITCH = True`).
+
+### 4.3 Seamless Transition to Live Execution (`LIVE_TRADING`)
+Once a trader completes their fundamental investigation, optimizes their parameters via backtesting, and demonstrates consistent profitability in `PAPER_TRADING`, transitioning to live execution requires **zero UI changes or software reconfiguration**:
+- Traders simply toggle `EXECUTION_MODE = "LIVE_TRADING"` and link their `Zerodha KiteConnect` API credentials.
+- The exact same execution workflows, AI sentiment overlays (`FinBERTEngine`), and risk gatekeeper checks seamlessly route to live exchange order books (`NSE`/`BSE`/`MCX`) with sub-100ms execution latency.
+
+---
+
+## 5. End-to-End Functional Workflows
+
+### 5.1 Order Execution & Risk Gatekeeper Workflow
 ```mermaid
 sequenceDiagram
     autonumber
@@ -209,30 +275,30 @@ sequenceDiagram
 
 ---
 
-## 5. API Interface Directory
+## 6. API Interface Directory
 
-### 5.1 Market Data & System Status
+### 6.1 Market Data & System Status
 | HTTP Method | Endpoint Path | Description | Access Role |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/health` | Lightweight Serverless health check & build verification. | Public |
 | `GET` | `/api/v1/market/status` | Current market status, exchange latency (`NSE/BSE/MCX`), and engine mode. | Public / All Roles |
 | `GET` | `/api/v1/market/movers` | Top 10 Gainers, Losers, Currencies, and Precious Metals. | All Roles |
 
-### 5.2 FinBERT & AI Intelligence
+### 6.2 FinBERT & AI Intelligence
 | HTTP Method | Endpoint Path | Description | Access Role |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/ai/prediction` | Generate AI quantitative market predictions with `signal_mix` & `confidence`. | `TRADER`, `SUPERADMIN` |
 | `POST` | `/api/v1/enhanced-ai/analyze` | Ingest multi-document earnings/news and calculate sequence classifications. | `TRADER`, `SUPERADMIN` |
 | `GET` | `/api/v1/enhanced-ai/models` | List active models (`ProsusAI/finbert`, `Llama-3.3-70B`) and active execution mode. | All Roles |
 
-### 5.3 Trading & Portfolio
+### 6.3 Trading & Portfolio
 | HTTP Method | Endpoint Path | Description | Access Role |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/trades/order` | Submit manual or algorithmic trade orders. Requires JWT token. | `TRADER`, `SUPERADMIN` |
 | `GET` | `/api/v1/trades/` | Retrieve active orders, positions, and historical trade logs. | `TRADER`, `AUDITOR` |
 | `GET` | `/api/v1/portfolio/summary` | Real-time portfolio valuation, P&L breakdown, and asset allocation pie. | `TRADER`, `SUPERADMIN` |
 
-### 5.4 Governance & Audit
+### 6.4 Governance & Audit
 | HTTP Method | Endpoint Path | Description | Access Role |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/audit/logs` | Fetch immutable system audit logs and regulatory compliance traces. | `AUDITOR`, `SUPERADMIN` |
@@ -240,12 +306,12 @@ sequenceDiagram
 
 ---
 
-## 6. Serverless Optimization & Deployment Architecture
+## 7. Serverless Optimization & Deployment Architecture
 
-### 6.1 The 500MB Vercel Bundle Challenge
+### 7.1 The 500MB Vercel Bundle Challenge
 When deploying FastAPI applications to Vercel Serverless Functions (`api/index.py`), AWS Lambda enforces a rigid **500MB uncompressed bundle limit**. Standard Python AI stacks (`torch` ~2.5GB, `transformers` ~300MB, `scipy` + `pandas` ~200MB) immediately fail deployment with `Max bundle size exceeded`.
 
-### 6.2 Architectural Resolution
+### 7.2 Architectural Resolution
 StockSteward AI resolves this through a **Dual-Requirements Profile & Conditional Runtime Loader**:
 1. **Root Profile (`requirements.txt`)**: Contains full data science drivers (`pandas`, `numpy`, `scipy`, `yfinance`) for local execution (`npm run dev` / `setup_local.py`) or Docker container deployments.
 2. **Serverless Profile (`api/requirements.txt`)**: Contains only core ASGI and network libraries (`fastapi`, `uvicorn`, `sqlalchemy`, `pydantic`, `openai`, `anthropic`, `groq`), weighing only **~70MB uncompressed**.
@@ -257,7 +323,7 @@ StockSteward AI resolves this through a **Dual-Requirements Profile & Conditiona
 
 ---
 
-## 7. Verification & Acceptance Criteria
+## 8. Verification & Acceptance Criteria
 
 To verify full functional compliance across all environments, run the automated smoke verification script (`python verify_app.py` or local `pytest` suite):
 
