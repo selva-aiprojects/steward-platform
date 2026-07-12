@@ -8,7 +8,7 @@ import base64
 class SecretsManager:
     def __init__(self, password=None):
         self.password = password or os.getenv('SECRET_MANAGER_PASSWORD', 'default_local_password')
-        self.secrets_file = os.path.join(os.path.dirname(__file__), '..', 'secrets.enc')
+        self.secrets_file = os.path.join('/tmp', 'secrets.enc') if os.getenv('VERCEL') else os.path.join(os.path.dirname(__file__), '..', 'secrets.enc')
         self.key = self._derive_key()
         
     def _derive_key(self):

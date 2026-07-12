@@ -17,8 +17,7 @@ class Settings(BaseSettings):
     DEFAULT_CONFIDENCE_THRESHOLD: float = 0.6
     
     # Database
-    # Default to local SQLite to avoid startup failures when DATABASE_URL is not provided.
-    DATABASE_URL: str = "sqlite:///./stocksteward.db"
+    DATABASE_URL: str = "sqlite:////tmp/stocksteward.db" if os.getenv("VERCEL") else "sqlite:///./stocksteward.db"
     
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
