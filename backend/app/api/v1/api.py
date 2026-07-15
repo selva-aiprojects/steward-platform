@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 # Fixed: Added users and updated portfolio prefix
-from app.api.v1.endpoints import trades, portfolios, users, strategies, projections, logs, audit, tickets, ai, enhanced_ai, market, watchlist, approvals, auth, backtesting, kyc, portfolio_optimization, social_media, admin
+from app.api.v1.endpoints import trades, portfolios, users, strategies, projections, logs, audit, tickets, ai, enhanced_ai, market, watchlist, approvals, auth, backtesting, kyc, portfolio_optimization, social_media, admin, portfolio_investment
 
 api_router = APIRouter()
 api_router.include_router(trades.router, prefix="/trades", tags=["trades"])
@@ -22,3 +22,4 @@ api_router.include_router(kyc.router, prefix="/kyc", tags=["kyc"])
 api_router.include_router(portfolio_optimization.router, prefix="/portfolio-optimization", tags=["portfolio-optimization"])
 api_router.include_router(social_media.router, prefix="/social-media", tags=["social-media"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(portfolio_investment.router, tags=["portfolio-investment"])

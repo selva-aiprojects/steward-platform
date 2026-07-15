@@ -16,6 +16,7 @@ class Portfolio(Base):
     user = relationship("User", back_populates="portfolios")
     holdings = relationship("Holding", back_populates="portfolio")
     trades = relationship("Trade", back_populates="portfolio")
+    allocations = relationship("PortfolioAllocation", back_populates="portfolio")
 
 class Holding(Base):
     __tablename__ = "holdings"

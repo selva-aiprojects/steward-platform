@@ -30,3 +30,4 @@ class User(Base):
     kyc_applications = relationship("KYCApplication", foreign_keys="[KYCApplication.user_id]", back_populates="user")
     watchlist_items = relationship("WatchlistItem", back_populates="user")
     social_sentiments = relationship("SocialSentiment", back_populates="user")
+    portfolio_allocations = relationship("PortfolioAllocation", back_populates="user", foreign_keys="[PortfolioAllocation.user_id]")
