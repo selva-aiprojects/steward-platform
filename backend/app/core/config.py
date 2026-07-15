@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     HUGGINGFACE_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None
 
     # Market Data API Keys
     MARKETSTACK_API_KEY: Optional[str] = None
@@ -131,6 +132,8 @@ class Settings(BaseSettings):
             self.__dict__['ANTHROPIC_API_KEY'] = secrets_manager.get_secret('ANTHROPIC_API_KEY')
         if not self.HUGGINGFACE_API_KEY:
             self.__dict__['HUGGINGFACE_API_KEY'] = secrets_manager.get_secret('HUGGINGFACE_API_KEY')
+        if not self.GOOGLE_API_KEY:
+            self.__dict__['GOOGLE_API_KEY'] = secrets_manager.get_secret('GOOGLE_API_KEY')
 
     @field_validator("EXECUTION_MODE", mode="before")
     @classmethod

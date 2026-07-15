@@ -21,35 +21,33 @@ class LLMService:
         api_key = self._get_api_key()
         if api_key and not self.client:
             try:
-                from groq import Groq
-                self.client = Groq(api_key=api_key)
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                self.client = genai.GenerativeModel('gemini-1.5-flash')
                 self.api_key = api_key
-                logger.info("Groq client initialized successfully")
+                logger.info("Google Gemini client initialized successfully")
             except Exception as e:
-                if "unexpected keyword argument 'proxies'" in str(e):
-                    logger.warning("Groq client init failed due to incompatible httpx version. Install `httpx<0.28`.")
-                else:
-                    logger.error(f"Failed to initialize Groq client: {e}")
+                logger.error(f"Failed to initialize Google Gemini client: {e}")
                 self.client = None
     
     def _get_api_key(self):
         """Get API key from various sources"""
         # Try to get API key from settings first
-        api_key = settings.GROQ_API_KEY
+        api_key = settings.GOOGLE_API_KEY
         
         # If not in settings, try to load from encrypted storage
         if not api_key:
             try:
                 from app.utils.secrets_manager import secrets_manager
-                api_key = secrets_manager.get_secret('GROQ_API_KEY')
+                api_key = secrets_manager.get_secret('GOOGLE_API_KEY')
                 if api_key:
-                    logger.info("GROQ_API_KEY loaded from encrypted storage")
+                    logger.info("GOOGLE_API_KEY loaded from encrypted storage")
             except Exception as e:
                 logger.error(f"Error loading API key from encrypted storage: {e}")
         
         # If still not found, try environment variable
         if not api_key:
-            api_key = os.getenv("GROQ_API_KEY")
+            api_key = os.getenv("GOOGLE_API_KEY")
         
         return api_key
 
@@ -61,7 +59,7 @@ class LLMService:
         # If still no client after initialization attempt, use offline response
         if not self.client:
             # Graceful Fallback for Demo/Audit without API Key
-            logger.warning("Groq client not available, using offline response")
+            logger.warning("Gemini client not available, using offline response")
             return self._generate_offline_response(message, context)
 
         system_prompt = (
@@ -76,51 +74,17 @@ class LLMService:
             system_prompt += f"\nContext: {context}"
 
         try:
-            # Try different models in order of preference
-            for model in self.available_models:
-                try:
-                    completion = self.client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": message}
-                        ],
-                        model=model,
-                        max_tokens=300,
-                        temperature=0.7
-                    )
-                    response = completion.choices[0].message.content.strip()
-                    logger.info(f"Successfully generated response using model: {model}")
-                    return response
-                except Exception as model_error:
-                    logger.warning(f"Model {model} failed: {model_error}")
-                    continue  # Try next model
-
-            # If all models fail, return offline response
-            logger.error("All Groq models failed, falling back to offline response")
-            return self._generate_offline_response(message, context)
+            full_prompt = f"System: {system_prompt}\n\nUser: {message}"
+            response = self.client.generate_content(full_prompt)
+            if response.text:
+                logger.info(f"Successfully generated response using model: gemini-1.5-flash")
+                return response.text.strip()
+            else:
+                logger.error("Empty response from Gemini")
+                return self._generate_offline_response(message, context)
 
         except Exception as e:
-            logger.error(f"Groq API error: {e}")
-            # Try to reinitialize client in case of error
-            self.client = None
-            self._initialize_client_if_key_available()
-            if self.client:
-                # Retry once after reinitializing
-                try:
-                    completion = self.client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": message}
-                        ],
-                        model=self.available_models[0],
-                        max_tokens=300,
-                        temperature=0.7
-                    )
-                    response = completion.choices[0].message.content.strip()
-                    logger.info(f"Successfully generated response using model: {self.available_models[0]} after reinitialization")
-                    return response
-                except:
-                    pass
+            logger.error(f"Gemini API error: {e}")
             return f"I encountered an error processing your request: {str(e)}. Using offline mode."
 
     def _generate_offline_response(self, message: str, context: str = "") -> str:
@@ -174,10 +138,13 @@ class LLMService:
                         )
 
             # 1. Portfolio Queries
-            if "portfolio" in msg_lower or "balance" in msg_lower or "value" in msg_lower:
+            if "portfolio" in msg_lower or "balance" in msg_lower or "value" in msg_lower or msg_lower.strip() in ["yes", "y", "create it"]:
                 # Query specific user's portfolio
                 port = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
                 if port:
+                    if "create" in msg_lower and "portfolio" in msg_lower:
+                        return f"User #{user_id} already has a portfolio with a total value of ₹{port.invested_amount + port.cash_balance:,.2f}."
+                        
                     total_val = port.invested_amount + port.cash_balance
                     return (
                         f"**Portfolio Summary for User #{user_id}:**\n"
@@ -187,6 +154,24 @@ class LLMService:
                         f"- **Win Rate:** {port.win_rate}%\n\n"
                         f"I can fetch more details if you ask about 'strategies' or 'trades'."
                     )
+                
+                # If no portfolio exists and they want to create one (either explicitly or answering 'yes')
+                if "create" in msg_lower or msg_lower.strip() in ["yes", "y", "create it"]:
+                    import re
+                    # Extract the investment amount if specified
+                    amount_match = re.search(r'(?:rs|inr|₹|\$)?\s*(\d+(?:,\d+)*(?:\.\d+)?)', msg_lower.replace(',', ''))
+                    amount = float(amount_match.group(1)) if amount_match else 100000.0
+                    
+                    new_port = Portfolio(
+                        user_id=user_id, 
+                        name="Main Portfolio",
+                        cash_balance=amount,
+                        invested_amount=0.0
+                    )
+                    db.add(new_port)
+                    db.commit()
+                    return f"**Success!** A new portfolio has been created for user #{user_id} with an initial cash balance of ₹{amount:,.2f}. (Offline Mode)"
+                
                 return f"No portfolio found for user #{user_id}. Would you like to create one or check another user?"
 
             # 2. Strategy Queries
