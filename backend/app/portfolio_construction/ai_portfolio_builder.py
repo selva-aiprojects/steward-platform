@@ -20,7 +20,6 @@ import logging
 import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
-from scipy.optimize import minimize
 
 from app.engines.ai_filter_engine import ai_filter_engine
 from app.engines.finbert_engine import finbert_engine
@@ -478,6 +477,7 @@ class AIPortfolioBuilder:
             return {s: 1.0 / n for s in symbols}
 
         try:
+            from scipy.optimize import minimize
             # Try to get historical returns for covariance matrix
             from app.realtime.market_provider import get_market_provider
             provider = get_market_provider()

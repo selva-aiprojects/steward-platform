@@ -4,7 +4,6 @@ Technical Analysis Utilities for Algorithmic Trading
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
-from scipy import stats
 
 # Try to import TA-Lib, fall back to pure Python implementation if not available
 try:
@@ -294,7 +293,7 @@ def detect_regime_changes(prices: pd.Series, window: int = 20) -> pd.Series:
         if len(series.dropna()) < 5:
             return 0
         x = np.arange(len(series))
-        slope, _, _, _, _ = stats.linregress(x, series)
+        slope, _ = np.polyfit(x, series, 1)
         return slope
     
     trend = returns.rolling(window).apply(rolling_slope)

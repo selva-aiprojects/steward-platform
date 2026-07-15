@@ -4,8 +4,6 @@ Pure Python Technical Analysis Indicators (Fallback without TA-Lib)
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
-from scipy import stats
-
 
 def sma(close: pd.Series, timeperiod: int) -> pd.Series:
     """Simple Moving Average"""

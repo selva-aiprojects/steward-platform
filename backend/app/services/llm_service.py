@@ -23,7 +23,7 @@ class LLMService:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                self.client = genai.GenerativeModel('gemini-1.5-flash')
+                self.client = genAI.getGenerativeModel(model="gemini-3.5-flash")
                 self.api_key = api_key
                 logger.info("Google Gemini client initialized successfully")
             except Exception as e:
