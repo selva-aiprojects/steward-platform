@@ -16,8 +16,7 @@ from datetime import datetime, timedelta
 import logging
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
+# Removed sklearn dependency (IsolationForest, StandardScaler) to resolve serverless bundle size limits
 import asyncio
 
 from sqlalchemy.orm import Session
@@ -503,16 +502,21 @@ class AIFilterEngine(AIFilterEngineInterface):
                             "direction": "bearish"
                         })
             
-            # Use Isolation Forest for anomaly detection (potential pattern breaks)
-            scaler = StandardScaler()
+            # Replaced heavy IsolationForest with standard Z-score anomaly metric to optimize Vercel package size
             features = df[['open', 'high', 'low', 'close', 'volume']].fillna(0)
-            scaled_features = scaler.fit_transform(features)
+            mean = features.mean()
+            std = features.std()
+            # Handle potential zero std
+            std = std.replace(0, 1e-8)
+            scaled = (features - mean) / std
             
-            iso_forest = IsolationForest(contamination=0.1, random_state=42)
-            anomalies = iso_forest.fit_predict(scaled_features)
+            # Simple distance metric representing anomalous deviations
+            distance = np.sqrt(np.sum(scaled ** 2, axis=1))
+            # Tag the top 10% highest deviations as anomalies (contamination = 10%)
+            threshold = np.percentile(distance, 90) if len(distance) > 0 else 0
             
-            for i, anomaly in enumerate(anomalies):
-                if anomaly == -1:  # Anomaly detected
+            for i in range(len(df)):
+                if distance.iloc[i] > threshold:
                     patterns.append({
                         "type": "anomaly",
                         "confidence": 0.6,

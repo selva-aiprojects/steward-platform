@@ -26,7 +26,5 @@ ujson>=5.8.0
 numpy>=1.24.0
 pandas>=2.1.0
 google-generativeai
-kiteconnect
-scikit-learn
-scipy
 aiohttp
+kiteconnect
