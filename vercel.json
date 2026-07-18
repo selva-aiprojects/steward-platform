@@ -3,7 +3,7 @@
   "outputDirectory": "frontend/build",
   "functions": {
     "api/index.py": {
-      "excludeFiles": "{backend/tests/**,backend/*.log,backend/alembic/**,backend/Dockerfile*}"
+      "excludeFiles": "{.venv/**,node_modules/**,frontend/node_modules/**,frontend/build/**,backend/tests/**,backend/*.log,backend/alembic/**,backend/Dockerfile*}"
     }
   },
   "rewrites": [
