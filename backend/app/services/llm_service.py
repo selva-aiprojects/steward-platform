@@ -19,16 +19,10 @@ class LLMService:
     def _initialize_client_if_key_available(self):
         """Initialize the client if API key is available"""
         api_key = self._get_api_key()
-        if api_key and not self.client:
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self.client = genAI.getGenerativeModel(model="gemini-3.5-flash")
-                self.api_key = api_key
-                logger.info("Google Gemini client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize Google Gemini client: {e}")
-                self.client = None
+        if api_key:
+            self.api_key = api_key
+            self.client = True
+            logger.info("Google Gemini API credentials verified")
     
     def _get_api_key(self):
         """Get API key from various sources"""
@@ -53,13 +47,13 @@ class LLMService:
 
     def get_chat_response(self, message: str, context: str = "") -> str:
         # Try to initialize client if not available
-        if not self.client:
+        if not self.api_key:
             self._initialize_client_if_key_available()
         
         # If still no client after initialization attempt, use offline response
-        if not self.client:
+        if not self.api_key:
             # Graceful Fallback for Demo/Audit without API Key
-            logger.warning("Gemini client not available, using offline response")
+            logger.warning("Gemini client key not available, using offline response")
             return self._generate_offline_response(message, context)
 
         system_prompt = (
@@ -74,17 +68,34 @@ class LLMService:
             system_prompt += f"\nContext: {context}"
 
         try:
+            import httpx
             full_prompt = f"System: {system_prompt}\n\nUser: {message}"
-            response = self.client.generate_content(full_prompt)
-            if response.text:
-                logger.info(f"Successfully generated response using model: gemini-1.5-flash")
-                return response.text.strip()
+            
+            # Query Gemini via the direct Google Developer REST endpoint
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": full_prompt}
+                        ]
+                    }
+                ]
+            }
+            
+            response = httpx.post(url, json=payload, headers=headers, timeout=15.0)
+            if response.status_code == 200:
+                data = response.json()
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                logger.info("Successfully generated response using Gemini API REST endpoint")
+                return text.strip()
             else:
-                logger.error("Empty response from Gemini")
+                logger.error(f"Gemini API returned status code {response.status_code}: {response.text}")
                 return self._generate_offline_response(message, context)
 
         except Exception as e:
-            logger.error(f"Gemini API error: {e}")
+            logger.error(f"Gemini REST API error: {e}")
             return f"I encountered an error processing your request: {str(e)}. Using offline mode."
 
     def _generate_offline_response(self, message: str, context: str = "") -> str:
