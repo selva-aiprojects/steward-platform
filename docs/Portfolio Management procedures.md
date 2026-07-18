@@ -43,53 +43,88 @@ Rather than relying on single-model predictions, the system uses a hybrid model 
 
 ## 2. Dynamic Portfolio Construction Pipeline
 
-The core engine responsible for constructing portfolios is located in the [AIPortfolioBuilder](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/ai_portfolio_builder.py) class. When a trader requests portfolio creation or investment, the builder follows a rigorous 6-step pipeline:
+The core engine responsible for constructing portfolios is located in the [AIPortfolioBuilder](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/ai_portfolio_builder.py) class. When a trader requests portfolio creation or investment, the builder follows a rigorous pipeline:
 
 ### Step 1: Candidate Selection
 The system automatically identifies highly liquid candidate symbols (such as the top Nifty components or symbols inside the trader's active watchlists) or analyzes the specific list of scripts requested by the user.
 
-### Step 2: 4-Model AI Ensemble Scoring
+### Step 3: 4-Model AI Ensemble Scoring
 Each candidate script is evaluated using a weighted multi-model ensemble:
 1. **FinBERT Sentiment Analysis:** Evaluates market sentiment from news, financial reports, and social feeds using the local FinBERT models in [AIFilterEngine](file:///d:/Training/working/stocksteward-ai/backend/app/engines/finbert_engine.py).
 2. **LLM Fundamental Grading:** Employs advanced LLM reasoning (via Groq/OpenAI/Anthropic) in the [EnhancedLLMService](file:///d:/Training/working/stocksteward-ai/backend/app/services/enhanced_llm_service.py) to assess corporate health, growth forecasts, and valuation ratios.
 3. **LSTM Price Prediction:** Leverages long short-term memory (LSTM) neural networks via the [LSTMPredictor](file:///d:/Training/working/stocksteward-ai/backend/app/ml_models/lstm_predictor.py) to analyze the last 90 days of OHLCV data for technical momentum.
 4. **Risk Score Assessment:** Projects tail risk, historical volatility, and Value-at-Risk (VaR) utilizing the portfolio risk metrics.
 
-The ensemble weights are customized dynamically based on the trader’s selected risk profile:
+---
 
-| Model Indicator | Conservative Profile | Moderate Profile | Aggressive Profile |
-| :--- | :---: | :---: | :---: |
-| **FinBERT Sentiment** | 30% | 25% | 20% |
-| **LLM Fundamental** | 30% | 25% | 20% |
-| **LSTM Price Predict** | 10% | 30% | 40% |
-| **Risk Score (Inverted)** | 30% | 20% | 20% |
+## 3. Sector & Industry Diversification Controls
 
-> [!NOTE]
-> For the Risk Score weight, the system inverts the rating so that lower-risk assets contribute positively to the overall score. Candidate scripts with an aggregate AI score below `0.10` are automatically excluded from the allocation plan to maintain quality.
+To protect the portfolio from sector-wide downtrends and systemic industry shocks, StockSteward AI employs strict diversification controls:
 
-### Step 3: Modern Portfolio Theory (MPT) Optimization
-For portfolios constructed under the **AI Hybrid** or **MPT Only** strategies, the engine runs a Markowitz covariance-based optimization:
-* Annualized mean returns and a covariance matrix are calculated using the trailing **252 days of historical data**.
-* A Scipy SLSQP (Sequential Least Squares Programming) optimizer solves for the asset weights that maximize the Sharpe ratio:
-  $$\max \text{Sharpe Ratio} = \frac{R_p - R_f}{\sigma_p}$$
-* The risk-free rate ($R_f$) varies by profile: **4%** for Conservative, **3%** for Moderate, and **2%** for Aggressive.
-
-### Step 4: Hybrid Weight Allocation
-The final weights are calculated by blending the AI ensemble scores (converted via softmax to sum to 1) and the MPT weights using a standard hybrid factor ($\alpha = 0.5$):
-$$\text{Weight}_{\text{final}} = 0.5 \cdot \text{Weight}_{\text{AI}} + 0.5 \cdot \text{Weight}_{\text{MPT}}$$
-
-### Step 5: Concentration Limits & Risk Constraints
-To prevent over-concentration, the builder enforces strict safety limits:
-* **Max Single Position:** No single stock can exceed **20%** of the active portfolio value.
-* **Min Single Position:** Micro-allocations below **2%** are pruned.
-* **Max Sector Exposure:** Total exposure to a single industry/sector cannot exceed **40%**.
-* **Min Diversification:** The portfolio must hold at least **5 distinct positions**.
-
-Excess allocations resulting from these rules are automatically redistributed proportionally or routed back into the cash buffer.
+* **Sector Mapping Heuristics:** The system dynamically classifies candidate symbols into primary industries (e.g., *Banking*, *IT*, *FMCG*, *Energy & Telecom*, *Automobiles*, *Metals & Mining*) using mapped definitions in [_guess_sector](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/ai_portfolio_builder.py#L723).
+* **Sector Cap Limit:** Under [_apply_concentration_limits](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/ai_portfolio_builder.py#L603), the engine restricts aggregate exposure to any single sector to a maximum of **40%** (`MAX_SECTOR_PCT = 0.40`).
+* **Redistribution Logic:** If a sector's cumulative weight exceeds 40%, the excess allocation is pruned and redistributed proportionally across other qualified sectors.
 
 ---
 
-## 3. The 25% Risk & Rotation Buffer
+## 4. Real-Time Sentiment Analysis via FinBERT
+
+Market sentiment analysis is executed through a specialized NLP pipeline:
+* **Model Framework:** The system relies on **FinBERT** (via [FinBERTEngine](file:///d:/Training/working/stocksteward-ai/backend/app/engines/finbert_engine.py)), a language model pre-trained specifically on financial text corpora to achieve high classification accuracy for market terminology.
+* **Ingested Feeds:** Sentiment is parsed from live news headers and social streams (simulated StockTwits, Twitter, and Reddit) gathered by [SocialMediaService](file:///d:/Training/working/stocksteward-ai/backend/app/services/social_media_service.py).
+* **Scoring Bounds:** The model extracts positive, negative, and neutral probabilities, generating an aggregate sentiment score between `-1.0` (highly bearish) and `+1.0` (highly bullish), which is factored directly into the AI ensemble weight.
+
+---
+
+## 5. Rejection & Filtering Logic (Pruning Criteria)
+
+Before any capital is allocated to a script, the candidate must pass rigorous filtering checks to protect the trader from low-quality or highly volatile assets:
+
+1. **AI Score Rejection:** Any script with a combined AI ensemble score below **0.10** (`MIN_AI_SCORE_TO_INCLUDE = 0.10`) is instantly rejected and excluded from the portfolio.
+2. **Liquidity Filter:** The engine checks average trading volumes over the trailing 90 days. Illiquid scripts with sparse volumes are pruned to avoid slippage during order execution.
+3. **Volatility & Risk Check:** Script volatility is evaluated by [AIFilterEngine.assess_risk](file:///d:/Training/working/stocksteward-ai/backend/app/engines/ai_filter_engine.py#L432). High-risk parameters penalize the script’s ensemble score (calculated as `1 - risk_score`), reducing its likelihood of selection.
+
+---
+
+## 6. Dynamic Allocation Strategies
+
+Traders can configure their portfolio construction using several strategy types defined in the [InvestmentStrategy](file:///d:/Training/working/stocksteward-ai/backend/app/schemas/portfolio_construction.py) schema:
+
+1. **AI Hybrid (Default):** Blends AI scoring with MPT optimization. Weights are calculated via:
+   $$\text{Final Weight} = 0.5 \cdot \text{AI Weight (Softmax of Ensemble)} + 0.5 \cdot \text{MPT Weight (Sharpe Maximizer)}$$
+2. **AI Only:** Ignores covariance structures and builds weights purely on the softmax of the AI ensemble scores.
+3. **MPT Only:** Ignores AI predictions and optimizes allocation strictly based on historical covariance matrixes.
+4. **Markowitz Optimization:** Runs standard Sharpe ratio maximization over a trailing 252-day window using the Scipy SLSQP solver.
+
+> [!IMPORTANT]
+> The engine restricts individual holdings under all strategies to a minimum of **2%** (to avoid micro-positions) and a maximum of **20%** of the active capital (to prevent single-stock concentration).
+
+---
+
+## 7. Handling Trader Intent & Investment Horizon
+
+If the system does not explicitly know the trader's intent or time horizon, it defaults to a **Medium-Term Horizon (1–6 months)** with a **Moderate Risk Profile**.
+
+However, if the trader's intent is defined (either selected via the dashboard or parsed from chatbot prompts), the system dynamically shifts the weight of its ensemble models and adjusts target margins:
+
+| Trader Horizon | Primary Driver | Ensemble Weights (Sentiment / Fundamentals / LSTM Price / Risk) | Execution Parameters |
+| :--- | :--- | :--- | :--- |
+| **Short-Term** | Technical Momentum | High weight on **LSTM Technical Forecasts** (40%) and **FinBERT Sentiment** (25%). Low weight on fundamentals. | Tight stop-losses (**2% - 3%**) and rapid position rotations. |
+| **Medium-Term (Default)** | Balanced Sharpe | Balanced split: Sentiment (25%), Fundamentals (25%), LSTM (30%), Risk (20%). | Standard stop-losses (**5%**) and target profit limits (**15%**). |
+| **Long-Term** | Value Investing | Heavy weight on **LLM Fundamental Quality** (30%) and **MPT Covariance Optimization** (30%). Low weight on short-term technicals. | Wider stop-loss boundaries (**8% - 12%**) to absorb market noise. |
+
+---
+
+## 8. Standing Recommendations and AI Previews
+
+Traders do not need to create a live portfolio to see what the AI currently favors. StockSteward AI supports a "Standing Recommendations" preview flow:
+* **API Endpoint:** `GET /api/v1/portfolio-ai/ai-scores` in [portfolio_investment.py](file:///d:/Training/working/stocksteward-ai/backend/app/api/v1/endpoints/portfolio_investment.py#L358).
+* **Flow:** Returns the current ensemble ratings, sentiment classifications, and technical predictions for the stock universe.
+* **Chatbot Integration:** The [ChatWidget](file:///d:/Training/working/stocksteward-ai/frontend/src/components/ChatWidget.jsx) accesses this API to suggest the platform's current top-performing and highly rated scripts to the trader dynamically during conversation.
+
+---
+
+## 9. The 25% Risk & Rotation Buffer
 
 A core differentiator of StockSteward AI is the mandatory preservation of a **25% cash buffer** on all automated portfolios. Managed by the [RiskBufferManager](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/risk_buffer_manager.py), this buffer serves two distinct purposes:
 
@@ -120,7 +155,7 @@ A core differentiator of StockSteward AI is the mandatory preservation of a **25
 
 ---
 
-## 4. Continuous Monitoring & Active Rotation
+## 10. Continuous Monitoring & Active Rotation
 
 Portfolios are monitored in real time. As market conditions evolve, the [RiskBufferManager](file:///d:/Training/working/stocksteward-ai/backend/app/portfolio_construction/risk_buffer_manager.py) and [PortfolioAgent](file:///d:/Training/working/stocksteward-ai/backend/app/agents/portfolio_agent.py) handle active rotation:
 
@@ -130,20 +165,3 @@ Portfolios are monitored in real time. As market conditions evolve, the [RiskBuf
 
 > [!WARNING]
 > To protect capital, the amount deployed into any single rotation trade is capped at **30% of the available buffer** or **5% of the total portfolio value**, ensuring that tactical entries remain sized safely.
-
----
-
-## 5. Screen & Chatbot Integration Flows
-
-Traders can review, analyze, and trigger these portfolio procedures directly inside the user interface:
-
-### Chatbot Dialogue Flow
-1. Open the [ChatWidget](file:///d:/Training/working/stocksteward-ai/frontend/src/components/ChatWidget.jsx) in the bottom-right corner of the application.
-2. Ask the bot questions like: *"What is the AI score for RELIANCE?"* or *"Can you recommend a conservative strategy portfolio?"*
-3. The widget routes the prompt to `/api/v1/enhanced-ai/chat` or `/api/v1/portfolio-ai/ai-scores` to fetch real-time multi-model analysis, displaying clear technical, fundamental, and sentiment summaries directly in the conversation.
-
-### Manual Portfolio Deployment Flow
-1. Navigate to the **Investment Dashboard** at `/investment` ([InvestmentDashboard.jsx](file:///d:/Training/working/stocksteward-ai/frontend/src/pages/InvestmentDashboard.jsx)) or the **Portfolio** tab at `/portfolio` ([Portfolio.jsx](file:///d:/Training/working/stocksteward-ai/frontend/src/pages/Portfolio.jsx)).
-2. The UI renders the [ConfidenceInvestmentCard](file:///d:/Training/working/stocksteward-ai/frontend/src/components/ConfidenceInvestmentCard.jsx) showing your available cash balance.
-3. Click **Launch Intelligent Investment**. The frontend calls `POST /api/v1/portfolio-ai/invest` in [portfolio_investment.py](file:///d:/Training/working/stocksteward-ai/backend/app/api/v1/endpoints/portfolio_investment.py#L46), executing the 4-model ensemble, setting up the 25% buffer, and deploying the capital safely.
-4. Active rebalances and rotation opportunities can then be tracked and manually approved or automated in real time.
