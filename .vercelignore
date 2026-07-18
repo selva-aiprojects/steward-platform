@@ -1,0 +1,30 @@
+# Exclude local python virtual environments
+.venv
+.venv/
+venv/
+env/
+
+# Exclude node_modules from upload
+node_modules
+node_modules/
+frontend/node_modules
+frontend/node_modules/
+
+# Exclude git metadata
+.git
+.git/
+.github
+.github/
+
+# Exclude temporary backend logs and caches
+*.log
+__pycache__
+__pycache__/
+.pytest_cache
+.pytest_cache/
+
+# Exclude testing folders
+cypress
+cypress/
+backend/tests
+backend/tests/

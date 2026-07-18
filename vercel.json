@@ -1,11 +1,6 @@
 {
   "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "frontend/build",
-  "functions": {
-    "api/index.py": {
-      "excludeFiles": "{.venv/**,node_modules/**,frontend/node_modules/**,frontend/build/**,backend/tests/**,backend/*.log,backend/alembic/**,backend/Dockerfile*}"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
