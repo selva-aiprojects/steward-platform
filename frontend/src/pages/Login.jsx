@@ -77,21 +77,21 @@ export function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 relative overflow-hidden">
             {/* Background elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-                <div className="absolute top-[-12%] left-[-12%] w-[55%] h-[55%] bg-emerald-300/30 rounded-full blur-[140px]" />
-                <div className="absolute bottom-[-12%] right-[-12%] w-[55%] h-[55%] bg-emerald-500/20 rounded-full blur-[160px]" />
-                <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(16,185,129,0.2) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+                <div className="absolute top-[-12%] left-[-12%] w-[55%] h-[55%] bg-purple-900/40 rounded-full blur-[140px]" />
+                <div className="absolute bottom-[-12%] right-[-12%] w-[55%] h-[55%] bg-amber-500/20 rounded-full blur-[160px]" />
+                <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(139,92,246,0.15) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
             </div>
 
-            <Card className="w-full max-w-md bg-white border-slate-200 shadow-2xl z-10 p-8 rounded-2xl">
+            <Card className="w-full max-w-md bg-slate-900 border-purple-950/40 shadow-2xl z-10 p-8 rounded-2xl text-slate-200">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="h-16 w-16 bg-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30">
-                        <ShieldCheck className="text-white" size={32} />
+                    <div className="h-16 w-16 bg-amber-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-amber-500/30">
+                        <ShieldCheck className="text-slate-950" size={32} />
                     </div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">StockSteward AI</h1>
-                    <p className="text-sm text-slate-500 font-medium mt-1">Institutional Grade Wealth Management</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight">QuantEdge</h1>
+                    <p className="text-sm text-slate-400 font-medium mt-1">Institutional Grade Wealth Management</p>
                 </div>
 
                 <div className="space-y-4">
@@ -102,7 +102,7 @@ export function Login() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="user@stocksteward.ai"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                            className="w-full bg-slate-950 border border-purple-950/30 rounded-xl px-3 py-2 text-xs font-bold text-white"
                         />
                     </div>
 
@@ -113,7 +113,7 @@ export function Login() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Use: trader123 / admin123 / owner123 / audit123"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+                            className="w-full bg-slate-950 border border-purple-950/30 rounded-xl px-3 py-2 text-xs font-bold text-white"
                         />
                     </div>
 
@@ -122,52 +122,52 @@ export function Login() {
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-300"
+                            className="h-4 w-4 rounded border-slate-700 bg-slate-950"
                         />
                         Remember Me
                     </label>
 
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-950 border border-purple-950/30 rounded-lg px-3 py-2">
                         Demo Logins: admin@stocksteward.ai / admin123 · owner@stocksteward.ai / owner123 · alex@stocksteward.ai / trader123 · sarah.c@sky.net / trader123 · tony@starkintl.ai / trader123 · bruce@waynecorp.com / trader123 · nat@shield.gov / trader123 · auditor@stocksteward.ai / audit123
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-widest">
-                        <button type="button" data-testid="login-admin" onClick={() => quickLogin('admin')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                        <button type="button" data-testid="login-admin" onClick={() => quickLogin('admin')} className="rounded-lg border border-purple-950/30 bg-slate-950 text-slate-400 hover:bg-slate-900">
                             Admin
                         </button>
-                        <button type="button" data-testid="login-business-owner" onClick={() => quickLogin('business-owner')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                        <button type="button" data-testid="login-business-owner" onClick={() => quickLogin('business-owner')} className="rounded-lg border border-purple-950/30 bg-slate-950 text-slate-400 hover:bg-slate-900">
                             Business Owner
                         </button>
-                        <button type="button" data-testid="login-trader" onClick={() => quickLogin('trader')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                        <button type="button" data-testid="login-trader" onClick={() => quickLogin('trader')} className="rounded-lg border border-purple-950/30 bg-slate-950 text-slate-400 hover:bg-slate-900">
                             Trader
                         </button>
-                        <button type="button" data-testid="login-auditor" onClick={() => quickLogin('auditor')} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-slate-50">
+                        <button type="button" data-testid="login-auditor" onClick={() => quickLogin('auditor')} className="rounded-lg border border-purple-950/30 bg-slate-950 text-slate-400 hover:bg-slate-900">
                             Auditor
                         </button>
                     </div>
 
                     {error && (
-                        <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                        <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-950/20 border border-red-900/30 rounded-lg px-3 py-2">
                             {error}
                         </div>
                     )}
 
-                    <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all flex items-center gap-3 text-left shadow-lg shadow-emerald-600/20">
-                        <div className="h-8 w-8 bg-white/20 rounded-lg flex items-center justify-center text-white"><Lock size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black text-white">Secure Login</h3><p className="text-[10px] text-white/60">Role-based access</p></div>
-                        <ArrowRight size={14} className="text-white/70 group-hover:text-white transition-colors" />
+                    <button data-testid="login-submit" onClick={handleLogin} disabled={loading} className="w-full group relative p-3 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl transition-all flex items-center gap-3 text-left shadow-lg shadow-amber-500/20">
+                        <div className="h-8 w-8 bg-slate-950/20 rounded-lg flex items-center justify-center text-slate-950"><Lock size={16} /></div>
+                        <div className="flex-1"><h3 className="text-xs font-black text-slate-950">Secure Login</h3><p className="text-[10px] text-slate-950/60">Role-based access</p></div>
+                        <ArrowRight size={14} className="text-slate-950/70 group-hover:text-slate-950 transition-colors" />
                     </button>
                     <Link
                         to="/kyc"
-                        className="w-full group relative p-3 bg-white border border-emerald-200 text-emerald-700 rounded-xl transition-all flex items-center gap-3 text-left shadow-sm hover:shadow-md"
+                        className="w-full group relative p-3 bg-slate-950 border border-purple-950/40 text-purple-400 rounded-xl transition-all flex items-center gap-3 text-left shadow-sm hover:shadow-md hover:bg-slate-900"
                     >
-                        <div className="h-8 w-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600"><ShieldCheck size={16} /></div>
-                        <div className="flex-1"><h3 className="text-xs font-black">Start KYC Application</h3><p className="text-[10px] text-emerald-600/70">New investor onboarding</p></div>
-                        <ArrowRight size={14} className="text-emerald-500/70 group-hover:text-emerald-700 transition-colors" />
+                        <div className="h-8 w-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400"><ShieldCheck size={16} /></div>
+                        <div className="flex-1"><h3 className="text-xs font-black">Start KYC Application</h3><p className="text-[10px] text-purple-400/70">New investor onboarding</p></div>
+                        <ArrowRight size={14} className="text-purple-400/70 group-hover:text-purple-400 transition-colors" />
                     </Link>
                 </div>
 
                 {loading && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center rounded-2xl z-20">
                         <Loader2 className="animate-spin text-primary" size={32} />
                     </div>
                 )}

@@ -1,22 +1,23 @@
 :root {
-  /* Brand Constants - StockSteward AI */
-  --ss-navy: #0A2A4D;
-  --ss-navy-light: #163E66;
-  --ss-green: #2DBD42;
-  --ss-green-light: #4CAF50;
+  /* Brand Constants - QuantEdge (Nano Banana) */
+  --ss-violet-dark: #090312;
+  --ss-violet: #1e0b36;
+  --ss-violet-light: #2d1052;
+  --ss-gold: #F2C94C;
+  --ss-gold-light: #FFD966;
   --ss-grey: #CCD1D9;
   --ss-white: #FFFFFF;
 
   /* Mapped Brand Colors */
-  --brand-primary: var(--ss-green);
-  --brand-primary-light: var(--ss-green-light);
-  --brand-primary-dark: #239935;
-  --brand-secondary: var(--ss-navy);
+  --brand-primary: var(--ss-gold);
+  --brand-primary-light: var(--ss-gold-light);
+  --brand-primary-dark: #D4AC0D;
+  --brand-secondary: var(--ss-violet);
 
   /* Semantic Colors */
-  --success: var(--ss-green);
+  --success: #2DBD42;
   --danger: #ef4444;
-  --warning: #f59e0b;
+  --warning: var(--ss-gold);
   --info: #3b82f6;
 
   /* Spacing System */
@@ -33,42 +34,42 @@
   --font-main: var(--font-body);
 
   /* Transitions */
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.33s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 0.15s ease;
 }
 
 [data-theme='light'],
 :root {
-  --bg-app: #ffffff;
+  --bg-app: #fcfbfe;
   --bg-surface: #ffffff;
-  --bg-sidebar: linear-gradient(180deg, #0A2A4D 0%, #020617 100%);
+  --bg-sidebar: linear-gradient(180deg, #1e0b36 0%, #0d0418 100%);
   --sidebar-border: rgba(255, 255, 255, 0.05);
-  --sidebar-active: rgba(45, 189, 66, 0.15);
-  /* Primary Green tint */
+  --sidebar-active: rgba(242, 201, 76, 0.15);
+  /* Gold tint */
   --bg-header: rgba(255, 255, 255, 0.8);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #120921;
+  --text-secondary: #4a3e5e;
+  --text-muted: #8d7f9e;
   --text-on-dark: #ffffff;
 
-  --border-subtle: #f1f5f9;
+  --border-subtle: #f5f2f9;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 [data-theme='dark'] {
-  --bg-app: #020617;
-  --bg-surface: #0f172a;
-  --bg-sidebar: #020617;
-  --bg-header: rgba(2, 6, 23, 0.8);
+  --bg-app: #090312;
+  --bg-surface: #150926;
+  --bg-sidebar: #090312;
+  --bg-header: rgba(9, 3, 18, 0.8);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-on-dark: #f8fafc;
+  --text-primary: #f5f2fa;
+  --text-secondary: #a89bb8;
+  --text-muted: #736782;
+  --text-on-dark: #f5f2fa;
 
-  --border-subtle: #1e293b;
+  --border-subtle: #24143a;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
 }

@@ -25,10 +25,10 @@ export function Layout({ children }) {
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-[#0A2A4D] text-white sticky top-0 z-50 shadow-md">
+            <div className="md:hidden flex items-center justify-between p-4 bg-[#1e0b36] text-white sticky top-0 z-50 shadow-md border-b border-white/5">
                 <Link to="/" className="flex items-center gap-2">
                     <img src={logo} alt="Logo" className="h-6 w-6" />
-                    <span className="font-heading font-black text-sm tracking-tight text-white">Stock<span className="text-green-400">Steward</span></span>
+                    <span className="font-heading font-black text-sm tracking-tight text-white">Quant<span className="text-amber-400">Edge</span></span>
                 </Link>
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-white/10 rounded-lg">
                     {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -38,7 +38,7 @@ export function Layout({ children }) {
             {/* Sidebar */}
             <div className={`
                 fixed inset-0 z-40 md:relative z-auto
-                w-72 flex flex-col bg-[#0A2A4D] shadow-2xl transition-transform duration-300 ease-in-out
+                w-72 flex flex-col bg-[#1e0b36] border-r border-white/5 shadow-2xl transition-transform duration-300 ease-in-out
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
                 <div className="mb-10 p-8 hidden md:block">
@@ -47,10 +47,10 @@ export function Layout({ children }) {
                             <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
                         </div>
                         <div className="flex flex-col">
-                            <div className="font-heading text-xl font-black tracking-tight text-white leading-none group-hover:text-green-400 transition-colors">
-                                Stock<span className="text-primary text-green-400">Steward</span>
+                            <div className="font-heading text-xl font-black tracking-tight text-white leading-none group-hover:text-amber-400 transition-colors">
+                                Quant<span className="text-amber-400">Edge</span>
                             </div>
-                            <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mt-1.5 ml-0.5">AI PLATFORM</span>
+                            <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mt-1.5 ml-0.5">QUANT ENGINE</span>
                         </div>
                     </Link>
                 </div>
@@ -200,7 +200,7 @@ export function Layout({ children }) {
                                             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Market Connection: Secure</span>
                                         </div>
-                                        <span className="text-[10px] font-bold bg-[#0A2A4D] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
+                                        <span className="text-[10px] font-bold bg-[#1e0b36] text-white px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-tighter">
                                             Role: {user.role}
                                         </span>
                                     </div>
