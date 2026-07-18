@@ -1,5 +1,5 @@
-"""
-AI Portfolio Builder — Core engine for constructing AI-powered investment portfolios.
+﻿"""
+AI Portfolio Builder â€” Core engine for constructing AI-powered investment portfolios.
 
 This is the central piece that:
 1. Scores candidate symbols using a 4-model AI ensemble
@@ -17,7 +17,6 @@ Ensemble Weights (configurable by risk profile):
 | Risk Score         | 30%         | 20%      | 20%        |
 """
 import logging
-import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 
@@ -403,7 +402,7 @@ class AIPortfolioBuilder:
                             "reason": "Insufficient data for prediction",
                         }
             else:
-                # No OHLCV data available — use neutral scores
+                # No OHLCV data available â€” use neutral scores
                 for symbol in symbols:
                     scores[symbol] = {
                         "normalized_score": 0,
@@ -544,8 +543,8 @@ class AIPortfolioBuilder:
             return {s: 1.0 / n for s in symbols}
 
         except ImportError:
-            # scipy not available — skip MPT
-            logger.warning("scipy not available — skipping MPT optimization")
+            # scipy not available â€” skip MPT
+            logger.warning("scipy not available â€” skipping MPT optimization")
             return {s: 1.0 / n for s in symbols}
         except Exception as e:
             logger.error(f"MPT optimization error: {e}")
@@ -670,7 +669,7 @@ class AIPortfolioBuilder:
                 "predicted_return": scored_symbols.get(s, {}).get("lstm_prediction", 0),
             })
 
-            # Track sector (simplified — from symbol prefix)
+            # Track sector (simplified â€” from symbol prefix)
             sector = self._guess_sector(s)
             sector_exposure[sector] = sector_exposure.get(sector, 0) + w
 
@@ -754,3 +753,4 @@ class AIPortfolioBuilder:
 
 # Singleton instance
 ai_portfolio_builder = AIPortfolioBuilder()
+

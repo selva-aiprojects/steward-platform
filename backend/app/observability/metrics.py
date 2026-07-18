@@ -1,4 +1,7 @@
-from prometheus_client import Counter, Histogram, Gauge
+﻿try:
+    from prometheus_client import Counter, Histogram, Gauge
+except ImportError:
+    Counter = Histogram = Gauge = None
 from datetime import datetime, timedelta
 import logging
 from sqlalchemy import func
@@ -336,3 +339,4 @@ def update_user_metrics(db) -> None:
         STRATEGY_TOTAL.set(db.query(func.count(Strategy.id)).scalar() or 0)
     except Exception as exc:
         logger.warning("Failed updating user metrics: %s", exc)
+

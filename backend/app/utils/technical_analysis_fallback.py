@@ -1,8 +1,6 @@
-"""
+﻿"""
 Pure Python Technical Analysis Indicators (Fallback without TA-Lib)
 """
-import pandas as pd
-import numpy as np
 from typing import Dict, List, Tuple
 
 def sma(close: pd.Series, timeperiod: int) -> pd.Series:
@@ -195,3 +193,4 @@ def obv(close: pd.Series, volume: pd.Series) -> pd.Series:
             obv.iloc[i] = obv.iloc[i-1]
     
     return obv
+

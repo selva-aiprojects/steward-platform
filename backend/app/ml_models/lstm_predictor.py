@@ -1,4 +1,4 @@
-"""
+﻿"""
 Lightweight LSTM Price Movement Predictor for portfolio candidate scoring.
 
 Architecture:
@@ -11,7 +11,6 @@ This model is used as one component of the AI ensemble (30% weight)
 to predict short-to-medium term price movements for portfolio allocation.
 """
 import logging
-import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 
@@ -58,7 +57,7 @@ if HAS_TORCH:
 else:
     # Placeholder when PyTorch is not available
     class _PriceLSTM:
-        """Placeholder — PyTorch not installed."""
+        """Placeholder â€” PyTorch not installed."""
         def __init__(self, *args, **kwargs):
             raise ImportError("PyTorch is required for _PriceLSTM")
         def forward(self, x):
@@ -161,7 +160,7 @@ class LSTMPredictor:
         Train the LSTM on historical OHLCV data for multiple symbols.
 
         Args:
-            historical_data_map: {symbol: [OHLCV_dict, ...]} — each list must be long enough
+            historical_data_map: {symbol: [OHLCV_dict, ...]} â€” each list must be long enough
             epochs: Number of training epochs
             lr: Learning rate
 
@@ -231,7 +230,7 @@ class LSTMPredictor:
                 epoch_loss += loss.item()
 
             if (epoch + 1) % 10 == 0:
-                logger.info(f"LSTM Epoch {epoch + 1}/{epochs} — Loss: {epoch_loss / (dataset_size / batch_size):.6f}")
+                logger.info(f"LSTM Epoch {epoch + 1}/{epochs} â€” Loss: {epoch_loss / (dataset_size / batch_size):.6f}")
 
         self.is_trained = True
         logger.info(f"LSTM training complete. Samples: {dataset_size}, Epochs: {epochs}")
@@ -368,3 +367,4 @@ class LSTMPredictor:
 
 # Singleton instance for global use
 lstm_predictor = LSTMPredictor()
+

@@ -1,9 +1,7 @@
-"""
+﻿"""
 Advanced Algorithmic Trading Strategies
 """
 from typing import Dict, Any, List, Optional
-import pandas as pd
-import numpy as np
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -764,3 +762,4 @@ def macd_strategy(row: pd.Series, positions: Dict[str, Any], cash: float) -> Opt
         'symbol': signal.symbol,
         'order_type': 'MARKET'
     }
+

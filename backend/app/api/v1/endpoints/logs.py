@@ -1,9 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+﻿from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import logging
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from prometheus_client.parser import text_string_to_metric_families
+try:
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+except ImportError:
+    generate_latest = None
+    CONTENT_TYPE_LATEST = 'text/plain'
+try:
+    from prometheus_client.parser import text_string_to_metric_families
+except ImportError:
+    text_string_to_metric_families = None
 from app.core.rbac import get_current_user
 from app.core.database import get_db
 from sqlalchemy.orm import Session
@@ -203,3 +210,4 @@ def get_metrics_summary(current_user: User = Depends(get_current_user)):
             "Track strategy update failures; if non-zero, inspect DB write path and user strategy availability."
         ],
     }
+

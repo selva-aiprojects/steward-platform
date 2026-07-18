@@ -1,4 +1,4 @@
-"""
+﻿"""
 AI Filter Engine for Futures, Options, and Currencies
 
 This module implements the AI Filter Engine responsible for:
@@ -14,8 +14,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
-import numpy as np
-import pandas as pd
 # Removed sklearn dependency (IsolationForest, StandardScaler) to resolve serverless bundle size limits
 import asyncio
 

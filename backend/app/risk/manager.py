@@ -1,11 +1,9 @@
-"""
+﻿"""
 Advanced Risk Management System for Algorithmic Trading
 """
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import numpy as np
-import pandas as pd
 from enum import Enum
 
 

@@ -1,16 +1,16 @@
-"""
-Risk Buffer Manager — handles the 25% buffer for rotation and risk management.
+﻿"""
+Risk Buffer Manager â€” handles the 25% buffer for rotation and risk management.
 
 Buffer Composition:
-- 60% of buffer → Rotation Reserve (for opportunistic trades)
-- 40% of buffer → Risk Hedge (emergency protection)
+- 60% of buffer â†’ Rotation Reserve (for opportunistic trades)
+- 40% of buffer â†’ Risk Hedge (emergency protection)
 
 Rotation Logic:
 - Monitor AI scores continuously
-- If a new symbol's score exceeds a current holding's score by threshold → rotate
-- If an existing holding's score drops below threshold → trim and move to buffer
+- If a new symbol's score exceeds a current holding's score by threshold â†’ rotate
+- If an existing holding's score drops below threshold â†’ trim and move to buffer
 
-The buffer is the key differentiator — it allows the portfolio to:
+The buffer is the key differentiator â€” it allows the portfolio to:
 1. Seize AI-detected opportunities without selling core holdings
 2. Absorb drawdowns without forced liquidation
 3. Maintain dry powder for market dips
@@ -18,7 +18,6 @@ The buffer is the key differentiator — it allows the portfolio to:
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
-import numpy as np
 
 from app.schemas.portfolio_construction import (
     RotationOpportunity, RebalanceOrder, RiskProfile,
@@ -81,7 +80,7 @@ class RiskBufferManager:
             score_delta = current_score - prev_score
 
             if symbol in active_positions:
-                # Existing holding — check if score dropped significantly
+                # Existing holding â€” check if score dropped significantly
                 if score_delta < -REBALANCE_AI_SCORE_DELTA_THRESHOLD:
                     opportunities.append(RotationOpportunity(
                         symbol=symbol,
@@ -94,7 +93,7 @@ class RiskBufferManager:
                         confidence=min(0.95, abs(score_delta) * 2),
                     ))
             else:
-                # Candidate — check if it's significantly better than any existing holding
+                # Candidate â€” check if it's significantly better than any existing holding
                 for active_sym in active_symbols:
                     active_score = active_positions[active_sym].get("ai_score", 0)
                     if current_score > active_score + REBALANCE_AI_SCORE_DELTA_THRESHOLD:
@@ -257,3 +256,4 @@ class RiskBufferManager:
 
 # Singleton instance
 risk_buffer_manager = RiskBufferManager()
+

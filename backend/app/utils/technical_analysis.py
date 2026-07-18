@@ -1,8 +1,6 @@
-"""
+﻿"""
 Technical Analysis Utilities for Algorithmic Trading
 """
-import pandas as pd
-import numpy as np
 from typing import Dict, List, Tuple
 
 # Try to import TA-Lib, fall back to pure Python implementation if not available

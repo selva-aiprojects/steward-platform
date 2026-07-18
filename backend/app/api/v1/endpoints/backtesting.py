@@ -1,10 +1,13 @@
-"""
+﻿"""
 Backtesting API Endpoints
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 import time
 
 from app.schemas.backtesting import BacktestRequest, BacktestResponse, OptimizationRequest, OptimizationResult

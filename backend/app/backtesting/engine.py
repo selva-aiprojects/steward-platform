@@ -1,10 +1,16 @@
-"""
+﻿"""
 Advanced Backtesting Engine for Algorithmic Trading Strategies
 """
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime, timedelta
-import pandas as pd
-import numpy as np
+try:
+    import pandas as pd
+    import numpy as np
+    _ANALYTICS_AVAILABLE = True
+except ImportError:
+    pd = None
+    np = None
+    _ANALYTICS_AVAILABLE = False
 from dataclasses import dataclass
 from enum import Enum
 import asyncio
@@ -603,3 +609,4 @@ def calculate_performance_metrics(portfolio_history: pd.DataFrame) -> Dict[str, 
         'win_rate': 0.0,
         'profit_factor': 0.0
     }
+

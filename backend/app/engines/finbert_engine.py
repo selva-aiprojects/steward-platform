@@ -1,4 +1,4 @@
-"""
+﻿"""
 FinBERT Financial Sentiment & NLP Engine for StockSteward AI
 Inspired by and extending ProsusAI/finBERT (https://github.com/ProsusAI/finBERT)
 
@@ -17,8 +17,6 @@ import math
 import logging
 from typing import Dict, Any, List, Optional, Union, Tuple
 from datetime import datetime
-import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -532,3 +530,4 @@ class FinBERTEngine:
 
 # Global Singleton Instance
 finbert_engine = FinBERTEngine()
+

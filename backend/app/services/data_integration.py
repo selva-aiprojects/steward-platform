@@ -1,11 +1,9 @@
-"""
+﻿"""
 Data Integration Service for StockSteward AI
 Integrates multiple data sources including NSE Historical, Kaggle datasets, and public datasets
 """
 
 import os
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 import logging

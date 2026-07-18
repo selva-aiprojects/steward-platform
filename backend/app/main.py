@@ -1,8 +1,13 @@
-import logging
+﻿import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_fastapi_instrumentator import Instrumentator
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    _PROMETHEUS_AVAILABLE = True
+except ImportError:
+    Instrumentator = None
+    _PROMETHEUS_AVAILABLE = False
 
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -64,4 +69,5 @@ Instrumentator(
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "build": "realtime-module-refactor"}
+
 
