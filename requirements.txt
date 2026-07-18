@@ -29,3 +29,4 @@ google-generativeai
 kiteconnect
 scikit-learn
 scipy
+aiohttp
