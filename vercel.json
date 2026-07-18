@@ -20,7 +20,7 @@
       "destination": "/api/index.py"
     },
     {
-      "source": "/((?!api/|docs|openapi.json).*)",
+      "source": "/((?!api/|docs|openapi.json|static/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
